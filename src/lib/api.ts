@@ -363,8 +363,12 @@ export const adminApi = {
     api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/loans/${id}/reject`, { reason }),
   disputes: (status?: string) =>
     api.get<ApiResponse<AdminDispute[]>>("/admin/disputes", { params: status ? { status } : undefined }),
+  reviewDispute: (id: string) =>
+    api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/disputes/${id}/review`),
   resolveDispute: (id: string, resolution: string) =>
     api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/disputes/${id}/resolve`, { resolution }),
+  rejectDispute: (id: string, reason: string) =>
+    api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/disputes/${id}/reject`, { reason }),
   auditLogs: (params?: { page?: number; limit?: number; userId?: string; action?: string }) =>
     api.get<ApiResponse<AuditLog[]>>("/admin/audit-logs", { params }),
   // Insurance
@@ -395,6 +399,7 @@ export const disputesApi = {
   get: (id: string) => api.get<ApiResponse<Dispute>>(`/disputes/${id}`),
   create: (data: { subject: string; description: string; transactionId?: string }) =>
     api.post<ApiResponse<Dispute>>("/disputes", data),
+  close: (id: string) => api.patch<ApiResponse<Dispute>>(`/disputes/${id}/close`),
 };
 
 export const insuranceApi = {
@@ -712,17 +717,6 @@ export interface AmortizationEntry {
   principal: number;
   interest: number;
   balance: number;
-}
-
-export interface Dispute {
-  id: string;
-  subject: string;
-  description: string;
-  status: string;
-  resolution?: string;
-  resolvedAt?: string;
-  createdAt: string;
-  transactionId?: string;
 }
 
 export interface Notification {

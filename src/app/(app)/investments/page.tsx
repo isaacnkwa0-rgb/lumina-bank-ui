@@ -51,7 +51,7 @@ function TradeModal({
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState("");
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Fetch quote when ticker selected
   useEffect(() => {
@@ -258,7 +258,7 @@ export default function InvestmentsPage() {
   const [watchQuery, setWatchQuery] = useState("");
   const [watchResults, setWatchResults] = useState<SearchResult[]>([]);
   const [watchSearching, setWatchSearching] = useState(false);
-  const watchDebounce = useRef<ReturnType<typeof setTimeout>>();
+  const watchDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const load = useCallback(async () => {
     setLoading(true);

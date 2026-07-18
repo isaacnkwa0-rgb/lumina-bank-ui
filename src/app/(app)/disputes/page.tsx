@@ -73,7 +73,11 @@ export default function DisputesPage() {
             const sc = statusConfig(d.status);
             const Icon = sc.icon;
             return (
-              <div key={d.id} className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-4">
+              <button
+                key={d.id}
+                onClick={() => router.push(`/disputes/${d.id}`)}
+                className="w-full text-left bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-4 hover:border-[#CCCCCC] hover:shadow-md transition-all"
+              >
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <p className="text-sm font-semibold text-[#333] flex-1 leading-snug">{d.subject}</p>
                   <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${sc.color} ${sc.bg} ${sc.border}`}>
@@ -93,7 +97,7 @@ export default function DisputesPage() {
                   {d.resolvedAt && <span>Resolved {formatDate(d.resolvedAt)}</span>}
                   {d.transactionId && <span className="font-mono">Ref: {d.transactionId.slice(-8)}</span>}
                 </div>
-              </div>
+              </button>
             );
           })
         )}

@@ -252,13 +252,33 @@ function DisputesTab() {
 
   useEffect(() => { load(); }, [load]);
 
+  async function review(id: string) {
+    setActionId(id + ":review");
+    try {
+      await adminApi.reviewDispute(id);
+      setItems((p) => p.map((d) => d.id === id ? { ...d, status: "UNDER_REVIEW" as AdminDispute["status"] } : d));
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
   async function resolve(id: string) {
     const resolution = prompt("Enter resolution:");
     if (!resolution?.trim()) return;
-    setActionId(id);
+    setActionId(id + ":resolve");
     try {
       await adminApi.resolveDispute(id, resolution.trim());
-      setItems((p) => p.map((d) => d.id === id ? { ...d, status: "RESOLVED" as any, resolution } : d));
+      setItems((p) => p.map((d) => d.id === id ? { ...d, status: "RESOLVED" as AdminDispute["status"], resolution } : d));
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
+  async function rejectDispute(id: string) {
+    const reason = prompt("Enter rejection reason:");
+    if (!reason?.trim()) return;
+    setActionId(id + ":reject");
+    try {
+      await adminApi.rejectDispute(id, reason.trim());
+      setItems((p) => p.map((d) => d.id === id ? { ...d, status: "REJECTED" as AdminDispute["status"], resolution: reason.trim() } : d));
     } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
     finally { setActionId(""); }
   }
@@ -289,15 +309,28 @@ function DisputesTab() {
                     <p className="text-xs text-[#AAAAAA] mb-1">Description</p>
                     <p className="text-sm text-[#333] leading-relaxed whitespace-pre-wrap">{d.description}</p>
                   </div>
+                  {d.transactionId && (
+                    <p className="text-xs text-[#767676]">Transaction: <span className="font-mono">{d.transactionId}</span></p>
+                  )}
                   {d.resolution && (
-                    <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-                      <p className="text-xs text-green-700 font-semibold mb-0.5">Resolution</p>
-                      <p className="text-sm text-green-800">{d.resolution}</p>
+                    <div className={`${d.status === "REJECTED" ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"} border rounded-xl px-4 py-3`}>
+                      <p className={`text-xs font-semibold mb-0.5 ${d.status === "REJECTED" ? "text-red-700" : "text-green-700"}`}>
+                        {d.status === "REJECTED" ? "Rejection reason" : "Resolution"}
+                      </p>
+                      <p className={`text-sm ${d.status === "REJECTED" ? "text-red-800" : "text-green-800"}`}>{d.resolution}</p>
                     </div>
                   )}
-                  {(d.status === "OPEN" || d.status === "UNDER_REVIEW") && (
+                  {d.status === "OPEN" && (
                     <div className="flex gap-2">
-                      <ActButton label="Resolve" variant="resolve" onClick={() => resolve(d.id)} loading={actionId === d.id} />
+                      <ActButton label="Review" variant="approve" onClick={() => review(d.id)} loading={actionId === d.id + ":review"} />
+                      <ActButton label="Resolve" variant="resolve" onClick={() => resolve(d.id)} loading={actionId === d.id + ":resolve"} />
+                      <ActButton label="Reject" variant="reject" onClick={() => rejectDispute(d.id)} loading={actionId === d.id + ":reject"} />
+                    </div>
+                  )}
+                  {d.status === "UNDER_REVIEW" && (
+                    <div className="flex gap-2">
+                      <ActButton label="Resolve" variant="resolve" onClick={() => resolve(d.id)} loading={actionId === d.id + ":resolve"} />
+                      <ActButton label="Reject" variant="reject" onClick={() => rejectDispute(d.id)} loading={actionId === d.id + ":reject"} />
                     </div>
                   )}
                 </div>

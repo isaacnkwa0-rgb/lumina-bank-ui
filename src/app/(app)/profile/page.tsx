@@ -242,9 +242,9 @@ export default function ProfilePage() {
             <Divider />
             <InfoRow icon={Phone}   label="Phone number"  value={(user as { phone?: string } | null)?.phone ?? "Not set"} />
             <Divider />
-            <InfoRow icon={Calendar} label="Date of birth" value={(user as { dateOfBirth?: string } | null)?.dateOfBirth ? new Date((user as { dateOfBirth: string }).dateOfBirth).toLocaleDateString("en-GB") : "Not set"} />
+            <InfoRow icon={Calendar} label="Date of birth" value={user?.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString("en-GB") : "Not set"} />
             <Divider />
-            <InfoRow icon={Globe}   label="Nationality"   value={(user as { nationality?: string } | null)?.nationality ?? "Not set"} />
+            <InfoRow icon={Globe}   label="Nationality"   value={user?.nationality ?? "Not set"} />
             <Divider />
             <InfoRow icon={MapPin}  label="Address"       value={addressStr} />
             <Divider />

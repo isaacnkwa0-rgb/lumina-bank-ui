@@ -302,7 +302,7 @@ function TransferPageInner() {
         {tab === "domestic" && (
           <DomesticForm
             accounts={accounts}
-            beneficiaries={beneficiaries.filter((b) => b.type === "domestic")}
+            beneficiaries={beneficiaries}
             prefillAccNumber={prefillAccNumber}
             prefillBankCode={prefillBankCode}
             prefillName={prefillName}
@@ -492,7 +492,7 @@ function DomesticForm({
   function pickBeneficiary(b: Beneficiary) {
     setSelectedBeneficiary(b);
     setValue("toAccountNumber", b.accountNumber);
-    setValue("toAccountName", b.name);
+    setValue("toAccountName", b.accountName);
     if (b.bankCode) setValue("toBankCode", b.bankCode);
     setUseManual(false);
   }
@@ -583,7 +583,7 @@ function DomesticForm({
             {!useManual && (
               <div className="space-y-2">
                 {beneficiaries.map((b) => {
-                  const initials = b.name
+                  const initials = b.nickname || b.accountName
                     .split(" ")
                     .map((n) => n[0])
                     .join("")
@@ -604,7 +604,7 @@ function DomesticForm({
                         <span className="text-xs font-bold text-[#767676]">{initials}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#333333] truncate">{b.name}</p>
+                        <p className="text-sm font-semibold text-[#333333] truncate">{b.nickname || b.accountName}</p>
                         <p className="text-xs text-[#767676]">
                           {b.bankName} · ••{b.accountNumber.slice(-4)}
                         </p>

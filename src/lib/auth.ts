@@ -10,6 +10,8 @@ export interface AuthUser {
   phone?: string;
   role?: string;
   gender?: string;
+  dateOfBirth?: string;
+  nationality?: string;
 }
 
 export function getToken(): string | null {
