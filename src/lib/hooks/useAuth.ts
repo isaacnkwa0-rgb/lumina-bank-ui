@@ -71,7 +71,7 @@ export function useAuth(): UseAuthReturn {
     setUser(data.user);
     setTokenState(data.accessToken);
     setUserState(data.user);
-    router.push("/dashboard");
+    router.push(data.user.role === "ADMIN" ? "/admin" : "/dashboard");
   }, [router]);
 
   return {
