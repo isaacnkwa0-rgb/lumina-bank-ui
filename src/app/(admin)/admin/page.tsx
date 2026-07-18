@@ -6,16 +6,16 @@ import {
   type AdminTransfer, type AdminUser, type AdminLoan, type AdminDispute,
   type AdminInsuranceQuote, type AdminCard, type AdminTransaction,
   type AdminExchangeRate, type AdminPortfolio, type AdminGoal, type AdminAccount,
-  type AdminCryptoOrder,
+  type AdminCryptoOrder, type AuditLog,
 } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   ShieldCheck, CheckCircle2, Users, ArrowLeftRight, Landmark, AlertCircle,
   ChevronRight, Search, RefreshCw, CreditCard, Receipt, Globe,
-  TrendingUp, Target, Home, ShieldAlert, Bitcoin,
+  TrendingUp, Target, Home, ShieldAlert, Bitcoin, ScrollText,
 } from "lucide-react";
 
-type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto";
+type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "audit";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -1042,6 +1042,110 @@ function Empty({ icon: Icon, label }: { icon: React.ElementType; label: string }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+function AuditLogsTab() {
+  const [logs, setLogs]         = useState<AuditLog[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [search, setSearch]     = useState("");
+  const [page, setPage]         = useState(1);
+  const [hasMore, setHasMore]   = useState(true);
+  const LIMIT = 50;
+
+  const fetchLogs = useCallback(async (p: number, q: string) => {
+    setLoading(true);
+    try {
+      const res = await adminApi.auditLogs({ page: p, limit: LIMIT, action: q || undefined });
+      const data = res.data.data as AuditLog[];
+      setLogs(p === 1 ? data : (prev) => [...prev, ...data]);
+      setHasMore(data.length === LIMIT);
+    } catch {}
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { setPage(1); fetchLogs(1, search); }, [search, fetchLogs]);
+
+  function loadMore() {
+    const next = page + 1;
+    setPage(next);
+    fetchLogs(next, search);
+  }
+
+  const actionColor = (action: string) => {
+    if (/login|register|verify/i.test(action)) return "text-green-700 bg-green-100";
+    if (/delete|suspend|block|reject/i.test(action)) return "text-red-700 bg-red-100";
+    if (/update|change|patch/i.test(action)) return "text-blue-700 bg-blue-100";
+    if (/create|add/i.test(action)) return "text-purple-700 bg-purple-100";
+    return "text-[#555] bg-[#F0F0F0]";
+  };
+
+  return (
+    <div className="p-4 space-y-3">
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#AAAAAA]" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Filter by action…"
+          className="w-full pl-8 pr-4 py-2.5 bg-white border border-[#E8E8E8] rounded-xl text-sm focus:outline-none focus:border-[#DB0011]"
+        />
+      </div>
+
+      <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm overflow-hidden">
+        {loading && page === 1 ? (
+          <div className="flex items-center justify-center py-12">
+            <RefreshCw size={20} className="animate-spin text-[#AAAAAA]" />
+          </div>
+        ) : logs.length === 0 ? (
+          <p className="text-center text-sm text-[#AAAAAA] py-10">No audit logs found.</p>
+        ) : (
+          <>
+            {logs.map((log, i) => (
+              <div key={log.id} className={`px-4 py-3.5 ${i < logs.length - 1 ? "border-b border-[#F5F5F5]" : ""}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${actionColor(log.action)}`}>
+                        {log.action}
+                      </span>
+                      {log.resource && (
+                        <span className="text-[10px] text-[#AAAAAA] font-mono">
+                          {log.resource}{log.resourceId ? `:${log.resourceId.slice(0, 8)}` : ""}
+                        </span>
+                      )}
+                    </div>
+                    {log.user && (
+                      <p className="text-xs text-[#555] mt-1">
+                        {log.user.firstName} {log.user.lastName}
+                        <span className="text-[#AAAAAA] ml-1">· {log.user.email}</span>
+                      </p>
+                    )}
+                    {log.ipAddress && (
+                      <p className="text-[10px] text-[#AAAAAA] font-mono mt-0.5">{log.ipAddress}</p>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-[#AAAAAA] flex-shrink-0 text-right">
+                    {new Date(log.createdAt).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
+              </div>
+            ))}
+            {hasMore && (
+              <button
+                onClick={loadMore}
+                disabled={loading}
+                className="w-full py-3 text-xs font-semibold text-[#DB0011] hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+              >
+                {loading ? <RefreshCw size={12} className="animate-spin" /> : null}
+                Load more
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "transfers",    label: "Transfers",    icon: ArrowLeftRight },
   { id: "loans",        label: "Loans",        icon: Landmark       },
@@ -1055,6 +1159,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "investments",  label: "Investments",  icon: TrendingUp     },
   { id: "goals",        label: "Goals",        icon: Target         },
   { id: "users",        label: "Users",        icon: Users          },
+  { id: "audit",        label: "Audit Log",    icon: ScrollText     },
 ];
 
 export default function AdminPage() {
@@ -1097,6 +1202,7 @@ export default function AdminPage() {
         {activeTab === "investments"  && <InvestmentsTab />}
         {activeTab === "goals"        && <GoalsTab />}
         {activeTab === "users"        && <UsersTab />}
+        {activeTab === "audit"        && <AuditLogsTab />}
       </div>
     </div>
   );

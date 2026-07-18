@@ -135,6 +135,8 @@ export const authApi = {
     api.post<ApiResponse<{ message: string }>>("/auth/2fa/disable", { token }),
   verify2FA: (token: string) =>
     api.post<ApiResponse<{ accessToken: string }>>("/auth/2fa/verify", { token }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.post<ApiResponse<{ message: string }>>("/auth/change-password", { currentPassword, newPassword }),
   verifyPassword: (password: string) =>
     api.post<ApiResponse<{ verified: boolean }>>("/auth/verify-password", { password }),
 };

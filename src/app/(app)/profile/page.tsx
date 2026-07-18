@@ -152,6 +152,10 @@ export default function ProfilePage() {
     if (saved) setNotifSettings((p) => ({ ...p, ...saved }));
     kycApi.status().then((r) => setKycStatus(r.data.data.status)).catch(() => {});
     usersApi.getDevices().then((r) => setDevices(r.data.data)).catch(() => {});
+    usersApi.getNotifPrefs().then((r) => {
+      const prefs = r.data.data as Record<string, boolean>;
+      setNotifSettings((p) => ({ ...p, ...prefs }));
+    }).catch(() => {});
   }, []);
 
   function openEdit() { populateForm(); setSaveError(""); setSaveSuccess(false); setShowEdit(true); }
@@ -189,11 +193,10 @@ export default function ProfilePage() {
   }
 
   function toggleNotif(key: keyof typeof notifSettings) {
-    setNotifSettings((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      try { localStorage.setItem(NOTIF_KEY, JSON.stringify(next)); } catch {}
-      return next;
-    });
+    const next = { ...notifSettings, [key]: !notifSettings[key] };
+    setNotifSettings(next);
+    try { localStorage.setItem(NOTIF_KEY, JSON.stringify(next)); } catch {}
+    usersApi.updateNotifPrefs(next).catch(() => {});
   }
 
   const addr = (user as { address?: { street?: string; city?: string; postalCode?: string; country?: string } | null } | null)?.address;
@@ -255,7 +258,8 @@ export default function ProfilePage() {
         {/* Security */}
         <Card>
           <CardHeader label="Security" />
-          <MenuRow icon={Lock}       bg="bg-red-100"   color="text-[#DB0011]"   label="Change password" />
+          <MenuRow icon={Lock}       bg="bg-red-100"   color="text-[#DB0011]"   label="Change password"
+            onClick={() => router.push("/profile/change-password")} />
           <Divider />
           <MenuRow icon={Shield}     bg="bg-amber-100" color="text-amber-600"   label="Two-factor authentication"
             badge={(user as { twoFactorEnabled?: boolean })?.twoFactorEnabled ? "On" : "Off"}
@@ -329,7 +333,8 @@ export default function ProfilePage() {
         {/* Support */}
         <Card>
           <CardHeader label="Support" />
-          <MenuRow icon={HelpCircle} bg="bg-[#F0F0F0]" color="text-[#767676]" label="Help & support" />
+          <MenuRow icon={HelpCircle} bg="bg-[#F0F0F0]" color="text-[#767676]" label="Help & support"
+            onClick={() => router.push("/support")} />
         </Card>
 
         {/* Sign out */}
