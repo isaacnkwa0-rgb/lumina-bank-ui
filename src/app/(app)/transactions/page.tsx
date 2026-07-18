@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { RefreshCw, Filter, X, ArrowLeftRight, Download } from "lucide-react";
 import { transactionsApi, type Transaction } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
 import { formatDate } from "@/lib/utils";
 import { TransactionItem } from "@/components/transactions/TransactionItem";
 import { Button } from "@/components/ui/Button";
@@ -10,20 +11,14 @@ import { SkeletonList } from "@/components/ui/LoadingSpinner";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 const CATEGORIES = [
-  "All",
-  "SHOPPING",
-  "FOOD",
-  "TRANSPORT",
-  "UTILITIES",
-  "ENTERTAINMENT",
-  "HEALTH",
-  "TRAVEL",
-  "OTHER",
+  "All", "SHOPPING", "FOOD", "TRANSPORT", "UTILITIES",
+  "ENTERTAINMENT", "HEALTH", "TRAVEL", "OTHER",
 ];
 
 const PAGE_SIZE = 25;
 
 export default function TransactionsPage() {
+  const { t } = useLanguage();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -38,10 +33,7 @@ export default function TransactionsPage() {
 
   const fetchTransactions = useCallback(
     async (reset = false) => {
-      if (reset) {
-        setLoading(true);
-        setOffset(0);
-      }
+      if (reset) { setLoading(true); setOffset(0); }
       setError("");
       try {
         const res = await transactionsApi.list({
@@ -57,13 +49,13 @@ export default function TransactionsPage() {
         setHasMore(data.length === PAGE_SIZE);
         if (!reset) setOffset((prev) => prev + data.length);
       } catch {
-        setError("Could not load transactions. Please try again.");
+        setError(t("transactions.couldNotLoad"));
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [category, type, startDate, endDate, offset]
+    [category, type, startDate, endDate, offset, t]
   );
 
   useEffect(() => {
@@ -71,17 +63,11 @@ export default function TransactionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, type, startDate, endDate]);
 
-  function handleRefresh() {
-    setRefreshing(true);
-    fetchTransactions(true);
-  }
+  function handleRefresh() { setRefreshing(true); fetchTransactions(true); }
 
   async function handleExport() {
     try {
-      const res = await transactionsApi.export({
-        dateFrom: startDate || undefined,
-        dateTo: endDate || undefined,
-      });
+      const res = await transactionsApi.export({ dateFrom: startDate || undefined, dateTo: endDate || undefined });
       const blob = new Blob([res.data as unknown as string], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -92,7 +78,6 @@ export default function TransactionsPage() {
     } catch {}
   }
 
-  // Group by date
   const grouped = transactions.reduce<Record<string, Transaction[]>>((acc, tx) => {
     const key = formatDate(tx.createdAt);
     if (!acc[key]) acc[key] = [];
@@ -100,20 +85,23 @@ export default function TransactionsPage() {
     return acc;
   }, {});
 
-  const hasActiveFilters =
-    category !== "All" || type !== "all" || startDate || endDate;
+  const hasActiveFilters = category !== "All" || type !== "all" || startDate || endDate;
+  const creditCount = transactions.filter((tx) => tx.type === "CREDIT").length;
+  const debitCount = transactions.filter((tx) => tx.type === "DEBIT").length;
 
-  const creditCount = transactions.filter((t) => t.type === "CREDIT").length;
-  const debitCount = transactions.filter((t) => t.type === "DEBIT").length;
+  const typeLabels: Record<"all" | "debit" | "credit", string> = {
+    all: t("transactions.all"),
+    debit: t("transactions.debit"),
+    credit: t("transactions.credit"),
+  };
 
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-8">
-      {/* Header */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <ArrowLeftRight size={18} className="text-white/80" />
-            <h1 className="text-lg font-bold">Transactions</h1>
+            <h1 className="text-lg font-bold">{t("transactions.title")}</h1>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -121,7 +109,7 @@ export default function TransactionsPage() {
               className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white text-xs font-semibold px-3 py-2 rounded-full hover:bg-white/25 transition-colors"
             >
               <Download size={12} />
-              CSV
+              {t("transactions.export")}
             </button>
             <button
               onClick={handleRefresh}
@@ -129,7 +117,7 @@ export default function TransactionsPage() {
               className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white text-xs font-semibold px-3 py-2 rounded-full hover:bg-white/25 transition-colors disabled:opacity-50"
             >
               <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
-              Refresh
+              {t("transactions.refresh")}
             </button>
           </div>
         </div>
@@ -137,50 +125,45 @@ export default function TransactionsPage() {
           <div className="flex items-center gap-4">
             <div>
               <p className="text-3xl font-bold">{transactions.length}</p>
-              <p className="text-white/40 text-xs">Loaded</p>
+              <p className="text-white/40 text-xs">{t("transactions.loaded")}</p>
             </div>
             <div className="h-8 w-px bg-white/10" />
             <div>
               <p className="text-xl font-bold text-green-400">{creditCount}</p>
-              <p className="text-white/40 text-xs">Credits</p>
+              <p className="text-white/40 text-xs">{t("transactions.credits")}</p>
             </div>
             <div className="h-8 w-px bg-white/10" />
             <div>
               <p className="text-xl font-bold text-white">{debitCount}</p>
-              <p className="text-white/40 text-xs">Debits</p>
+              <p className="text-white/40 text-xs">{t("transactions.debits")}</p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Filter bar floating over header */}
       <div className="mx-4 -mt-8 relative z-10 bg-white rounded-2xl shadow-lg border border-[#E8E8E8] overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3.5">
           <div className="flex gap-1.5">
-            {(["all", "debit", "credit"] as const).map((t) => (
+            {(["all", "debit", "credit"] as const).map((tab) => (
               <button
-                key={t}
-                onClick={() => setType(t)}
+                key={tab}
+                onClick={() => setType(tab)}
                 className={`px-3 py-1.5 text-xs font-bold rounded-lg capitalize transition-all ${
-                  type === t
-                    ? "bg-[#1a1a2e] text-white shadow-sm"
-                    : "bg-[#F5F5F5] text-[#777]"
+                  type === tab ? "bg-[#1a1a2e] text-white shadow-sm" : "bg-[#F5F5F5] text-[#777]"
                 }`}
               >
-                {t}
+                {typeLabels[tab]}
               </button>
             ))}
           </div>
           <button
             onClick={() => setShowFilters((p) => !p)}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-              showFilters || hasActiveFilters
-                ? "bg-[#DB0011] text-white"
-                : "bg-[#F5F5F5] text-[#777]"
+              showFilters || hasActiveFilters ? "bg-[#DB0011] text-white" : "bg-[#F5F5F5] text-[#777]"
             }`}
           >
             <Filter size={12} />
-            Filters
+            {t("transactions.filters")}
             {hasActiveFilters && (
               <span className="h-4 w-4 bg-white text-[#DB0011] text-[9px] rounded-full flex items-center justify-center font-black">!</span>
             )}
@@ -190,7 +173,7 @@ export default function TransactionsPage() {
         {showFilters && (
           <div className="px-4 pb-4 space-y-3 border-t border-[#F0F0F0] pt-3">
             <div>
-              <p className="text-[10px] font-bold text-[#AAAAAA] mb-2 uppercase tracking-widest">Category</p>
+              <p className="text-[10px] font-bold text-[#AAAAAA] mb-2 uppercase tracking-widest">{t("transactions.category")}</p>
               <div className="flex flex-wrap gap-1.5">
                 {CATEGORIES.map((cat) => (
                   <button
@@ -210,7 +193,7 @@ export default function TransactionsPage() {
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <p className="text-[10px] font-bold text-[#AAAAAA] mb-1 uppercase tracking-widest">From</p>
+                <p className="text-[10px] font-bold text-[#AAAAAA] mb-1 uppercase tracking-widest">{t("transactions.from")}</p>
                 <input
                   type="date"
                   value={startDate}
@@ -219,7 +202,7 @@ export default function TransactionsPage() {
                 />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-[#AAAAAA] mb-1 uppercase tracking-widest">To</p>
+                <p className="text-[10px] font-bold text-[#AAAAAA] mb-1 uppercase tracking-widest">{t("transactions.to")}</p>
                 <input
                   type="date"
                   value={endDate}
@@ -234,35 +217,31 @@ export default function TransactionsPage() {
                 onClick={() => { setCategory("All"); setType("all"); setStartDate(""); setEndDate(""); }}
                 className="flex items-center gap-1 text-xs font-semibold text-[#DB0011]"
               >
-                <X size={12} /> Clear all filters
+                <X size={12} /> {t("transactions.clearFilters")}
               </button>
             )}
           </div>
         )}
       </div>
 
-      {/* Transaction list */}
       <div className="mx-4 mt-4 bg-white rounded-2xl shadow-sm border border-[#E8E8E8] overflow-hidden">
         {error && (
           <div className="mx-4 mt-4 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
             <p className="text-sm text-[#DB0011]">{error}</p>
           </div>
         )}
-
         {loading ? (
           <SkeletonList count={10} />
         ) : Object.keys(grouped).length === 0 ? (
           <EmptyState
-            title="No transactions"
-            description="No transactions match the selected filters."
+            title={t("transactions.noTransactions")}
+            description={t("transactions.noTransactionsDesc")}
           />
         ) : (
           Object.entries(grouped).map(([date, txs]) => (
             <div key={date}>
               <div className="px-4 py-2.5 bg-[#F8F8F8] border-b border-[#EFEFEF]">
-                <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest">
-                  {date}
-                </p>
+                <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest">{date}</p>
               </div>
               {txs.map((tx) => (
                 <TransactionItem key={tx.id} transaction={tx} />
@@ -270,16 +249,10 @@ export default function TransactionsPage() {
             </div>
           ))
         )}
-
         {hasMore && transactions.length > 0 && (
           <div className="p-4">
-            <Button
-              variant="secondary"
-              fullWidth
-              onClick={() => fetchTransactions(false)}
-              isLoading={loading && offset > 0}
-            >
-              Load more transactions
+            <Button variant="secondary" fullWidth onClick={() => fetchTransactions(false)} isLoading={loading && offset > 0}>
+              {t("transactions.loadMore")}
             </Button>
           </div>
         )}

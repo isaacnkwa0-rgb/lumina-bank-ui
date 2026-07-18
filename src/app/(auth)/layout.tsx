@@ -1,5 +1,8 @@
+"use client";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
@@ -8,13 +11,14 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <div className="bg-[#DB0011] h-2 w-full" />
 
       {/* Header */}
-      <header className="bg-white border-b border-[#E3E3E3] py-4 px-6 flex items-center justify-center">
+      <header className="bg-white border-b border-[#E3E3E3] py-4 px-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <DiamondLogo />
           <span className="font-semibold text-[#333333] text-lg tracking-tight">
             Lumina Bank
           </span>
         </Link>
+        <LanguageSwitcher compact />
       </header>
 
       {/* Content */}

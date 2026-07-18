@@ -10,6 +10,7 @@ import {
   LogOut, ChevronRight, RefreshCw, AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 const navGroups = [
   {
@@ -136,6 +137,9 @@ export function Sidebar() {
 
       {/* Bottom actions */}
       <div className="border-t border-[#E3E3E3] p-3 space-y-1 flex-shrink-0">
+        <div className="px-3 py-2">
+          <LanguageSwitcher compact />
+        </div>
         <Link
           href="/profile"
           className={cn(

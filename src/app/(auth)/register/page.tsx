@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { authApi } from "@/lib/api";
 import { setUser } from "@/lib/auth";
+import { useLanguage } from "@/lib/i18n";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -30,6 +31,7 @@ type RegisterForm = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [apiError, setApiError] = useState<string>("");
 
   const {
@@ -56,7 +58,7 @@ export default function RegisterPage() {
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || "Registration failed. Please try again.";
+          ?.message || t("auth.register.failed");
       setApiError(message);
     }
   }
@@ -65,10 +67,10 @@ export default function RegisterPage() {
     <div className="bg-white border border-[#E3E3E3] rounded-sm">
       <div className="border-b border-[#E3E3E3] px-6 py-5">
         <h1 className="text-xl font-semibold text-[#333333]">
-          Create your account
+          {t("auth.register.heading")}
         </h1>
         <p className="text-sm text-[#767676] mt-1">
-          Join Lumina Bank — takes less than 5 minutes.
+          {t("auth.register.subheading")}
         </p>
       </div>
 
@@ -81,14 +83,14 @@ export default function RegisterPage() {
 
         <div className="grid grid-cols-2 gap-4">
           <Input
-            label="First name"
+            label={t("auth.register.firstName")}
             type="text"
             autoComplete="given-name"
             error={errors.firstName?.message}
             {...register("firstName")}
           />
           <Input
-            label="Last name"
+            label={t("auth.register.lastName")}
             type="text"
             autoComplete="family-name"
             error={errors.lastName?.message}
@@ -96,21 +98,21 @@ export default function RegisterPage() {
           />
         </div>
 
-        {/* Gender selector */}
         <Controller
           name="gender"
           control={control}
           render={({ field }) => (
             <div>
               <label className="block text-sm font-medium text-[#333333] mb-2">
-                Gender <span className="text-[#767676] font-normal">(optional)</span>
+                {t("auth.register.gender")}{" "}
+                <span className="text-[#767676] font-normal">{t("auth.register.genderOptional")}</span>
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { value: "MALE",   label: "Male",            icon: "♂" },
-                  { value: "FEMALE", label: "Female",          icon: "♀" },
-                  { value: "OTHER",  label: "Prefer not to say", icon: "○" },
-                ].map((opt) => (
+                  { value: "MALE",   labelKey: "auth.register.genderMale",   icon: "♂" },
+                  { value: "FEMALE", labelKey: "auth.register.genderFemale", icon: "♀" },
+                  { value: "OTHER",  labelKey: "auth.register.genderOther",  icon: "○" },
+                ] .map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
@@ -122,7 +124,7 @@ export default function RegisterPage() {
                     }`}
                   >
                     <span className="text-base">{opt.icon}</span>
-                    <span className="text-xs">{opt.label}</span>
+                    <span className="text-xs">{t(opt.labelKey as Parameters<typeof t>[0])}</span>
                   </button>
                 ))}
               </div>
@@ -131,7 +133,7 @@ export default function RegisterPage() {
         />
 
         <Input
-          label="Email address"
+          label={t("auth.register.email")}
           type="email"
           autoComplete="email"
           error={errors.email?.message}
@@ -139,7 +141,7 @@ export default function RegisterPage() {
         />
 
         <Input
-          label="Phone number"
+          label={t("auth.register.phone")}
           type="tel"
           autoComplete="tel"
           error={errors.phone?.message}
@@ -147,16 +149,16 @@ export default function RegisterPage() {
         />
 
         <Input
-          label="Password"
+          label={t("auth.register.password")}
           type="password"
           autoComplete="new-password"
-          hint="Minimum 8 characters"
+          hint={t("auth.register.passwordHint")}
           error={errors.password?.message}
           {...register("password")}
         />
 
         <Input
-          label="Confirm password"
+          label={t("auth.register.confirmPassword")}
           type="password"
           autoComplete="new-password"
           error={errors.confirmPassword?.message}
@@ -165,22 +167,21 @@ export default function RegisterPage() {
 
         <div className="pt-2">
           <Button type="submit" fullWidth size="lg" isLoading={isSubmitting}>
-            Register
+            {t("auth.register.submit")}
           </Button>
         </div>
 
         <p className="text-center text-sm text-[#767676]">
-          Already have an account?{" "}
+          {t("auth.register.alreadyHaveAccount")}{" "}
           <Link href="/login" className="text-[#DB0011] font-medium hover:underline">
-            Log on
+            {t("auth.register.logOn")}
           </Link>
         </p>
       </form>
 
       <div className="bg-[#F8F8F8] border-t border-[#E3E3E3] px-6 py-4">
         <p className="text-xs text-[#767676]">
-          By registering, you agree to our Terms & Conditions and Privacy
-          Policy. Your data is protected under UK GDPR.
+          {t("auth.register.gdprNotice")}
         </p>
       </div>
     </div>

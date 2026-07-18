@@ -10,6 +10,7 @@ import {
 } from "react";
 import translations, { type Language, type TranslationKey } from "./translations";
 import { usersApi } from "@/lib/api";
+import { getToken } from "@/lib/auth";
 
 const LANG_KEY = "lumina_lang";
 const SUPPORTED: Language[] = ["EN", "ES", "FR", "PT", "DE"];
@@ -62,8 +63,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       } catch {
         // ignore
       }
-      // Sync to API for logged-in users (fire-and-forget)
-      usersApi.updateProfile({ preferredLanguage: next }).catch(() => {});
+      // Sync to API only when authenticated — avoids redirect on landing page
+      if (getToken()) {
+        usersApi.updateProfile({ preferredLanguage: next }).catch(() => {});
+      }
     },
     []
   );
