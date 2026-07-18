@@ -7,7 +7,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
 import {
   Home, ChevronDown, ChevronUp, CheckCircle2,
-  Clock, AlertCircle, Calendar, Percent, Banknote, Star, TrendingDown,
+  Clock, AlertCircle, Calendar, Percent, Banknote, Star, TrendingDown, ChevronRight,
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -20,20 +20,23 @@ function statusConfig(status: string) {
   }
 }
 
-function MortgageCard({ loan }: { loan: Loan }) {
+function MortgageCard({ loan, onClick }: { loan: Loan; onClick: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const principal   = Number(loan.principalAmount);
   const outstanding = Number(loan.outstandingBalance);
   const paid        = principal - outstanding;
   const progress    = Math.min((paid / principal) * 100, 100);
-  const rate        = Number(loan.interestRate);
+  const rate        = Number(loan.interestRate) * 100;
   const sc          = statusConfig(loan.status);
   const StatusIcon  = sc.icon;
 
   return (
     <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm overflow-hidden">
-      {/* Card header */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-5 py-5 text-white">
+      {/* Card header — clickable */}
+      <button
+        onClick={onClick}
+        className="w-full text-left bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-5 py-5 text-white hover:opacity-95 transition-opacity"
+      >
         <div className="flex items-start justify-between mb-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -43,9 +46,15 @@ function MortgageCard({ loan }: { loan: Loan }) {
             <p className="text-3xl font-bold leading-none">{formatCurrency(outstanding)}</p>
             <p className="text-white/40 text-xs mt-1">Outstanding balance</p>
           </div>
-          <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs font-semibold ${sc.bg} ${sc.border} ${sc.color}`}>
-            <StatusIcon size={11} />
-            {sc.label}
+          <div className="flex flex-col items-end gap-1.5">
+            <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs font-semibold ${sc.bg} ${sc.border} ${sc.color}`}>
+              <StatusIcon size={11} />
+              {sc.label}
+            </div>
+            <div className="flex items-center gap-1 text-white/60 text-xs">
+              <span>View details</span>
+              <ChevronRight size={12} />
+            </div>
           </div>
         </div>
         <div>
@@ -60,7 +69,7 @@ function MortgageCard({ loan }: { loan: Loan }) {
             />
           </div>
         </div>
-      </div>
+      </button>
 
       {/* Stats */}
       <div className="grid grid-cols-3 divide-x divide-[#F0F0F0] border-b border-[#F0F0F0]">
@@ -77,22 +86,24 @@ function MortgageCard({ loan }: { loan: Loan }) {
         ))}
       </div>
 
-      {/* Next payment */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-[#F5F5F5]">
-        <div className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
-            <Calendar size={15} className="text-[#DB0011]" />
+      {/* Next payment — only shown when available */}
+      {loan.nextPaymentDate && (
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#F5F5F5]">
+          <div className="flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+              <Calendar size={15} className="text-[#DB0011]" />
+            </div>
+            <div>
+              <p className="text-[11px] text-[#AAAAAA] uppercase tracking-wide font-semibold">Next payment</p>
+              <p className="text-sm font-bold text-[#333]">{formatDate(loan.nextPaymentDate)}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-[11px] text-[#AAAAAA] uppercase tracking-wide font-semibold">Next payment</p>
-            <p className="text-sm font-bold text-[#333]">{formatDate(loan.nextPaymentDate)}</p>
+          <div className="text-right">
+            <p className="text-[11px] text-[#AAAAAA]">Amount due</p>
+            <p className="text-base font-bold text-[#DB0011]">{formatCurrency(Number(loan.nextPaymentAmount ?? loan.monthlyPayment))}</p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-[11px] text-[#AAAAAA]">Amount due</p>
-          <p className="text-base font-bold text-[#DB0011]">{formatCurrency(Number(loan.nextPaymentAmount))}</p>
-        </div>
-      </div>
+      )}
 
       {/* Payment history */}
       {loan.payments && loan.payments.length > 0 && (
@@ -190,7 +201,9 @@ export default function MortgagePage() {
             />
           </div>
         ) : (
-          mortgages.map((loan) => <MortgageCard key={loan.id} loan={loan} />)
+          mortgages.map((loan) => (
+            <MortgageCard key={loan.id} loan={loan} onClick={() => router.push(`/mortgage/${loan.id}`)} />
+          ))
         )}
 
         {/* Apply CTA */}

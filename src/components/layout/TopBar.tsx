@@ -160,6 +160,7 @@ const menuItems = [
   { href: "/analytics", label: "Spending Analytics" },
   { href: "/rates", label: "Exchange Rates" },
   { href: "/loans", label: "Loans" },
+  { href: "/mortgage", label: "Mortgage" },
   { href: "/investments", label: "Investments" },
   { href: "/goals", label: "Savings Goals" },
   { href: "/disputes", label: "My Disputes" },

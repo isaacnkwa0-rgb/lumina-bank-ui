@@ -222,6 +222,7 @@ export const cardsApi = {
 
 export const loansApi = {
   list: () => api.get<ApiResponse<Loan[]>>("/loans"),
+  get: (id: string) => api.get<ApiResponse<Loan>>(`/loans/${id}`),
   eligibility: () => api.get<ApiResponse<LoanEligibility>>("/loans/eligibility"),
   apply: (data: { type: string; amount: number; termMonths: number; accountId?: string }) =>
     api.post<ApiResponse<Loan>>("/loans/apply", data),
@@ -554,7 +555,10 @@ export interface Loan {
 
 export interface LoanPayment {
   id: string;
+  loanId?: string;
   amount: string;
+  principalPortion?: string;
+  interestPortion?: string;
   paymentDate: string;
   status: string;
 }
