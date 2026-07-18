@@ -4,42 +4,45 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
 import { Menu, X, ChevronRight, Landmark, CalendarDays, RefreshCw, Send } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { t } = useLanguage();
 
   const products = [
-    { label: "Current accounts", href: "/register" },
-    { label: "Savings accounts", href: "/register" },
-    { label: "Credit cards", href: "/register" },
-    { label: "Loans", href: "/register" },
-    { label: "Mortgages", href: "/register" },
-    { label: "Investments", href: "/register" },
-    { label: "International banking", href: "/register" },
-    { label: "Insurance", href: "/register" },
+    { labelKey: "products.currentAccounts" as const, href: "/register" },
+    { labelKey: "products.savingsAccounts" as const, href: "/register" },
+    { labelKey: "products.creditCards" as const, href: "/register" },
+    { labelKey: "products.loans" as const, href: "/register" },
+    { labelKey: "products.mortgages" as const, href: "/register" },
+    { labelKey: "products.investments" as const, href: "/register" },
+    { labelKey: "products.internationalBanking" as const, href: "/register" },
+    { labelKey: "products.insurance" as const, href: "/register" },
   ];
 
   const menuLinks = [
-    "Current accounts",
-    "Savings",
-    "Credit cards",
-    "Loans",
-    "Mortgages",
-    "Investments",
-    "International",
-    "Insurance",
-    "Help & support",
-  ];
+    "menu.currentAccounts",
+    "menu.savings",
+    "menu.creditCards",
+    "menu.loans",
+    "menu.mortgages",
+    "menu.investments",
+    "menu.international",
+    "menu.insurance",
+    "menu.helpSupport",
+  ] as const;
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "var(--font-open-sans), 'Open Sans', Arial, sans-serif" }}>
 
       {/* ── HEADER ── */}
-      <header className="sticky top-0 z-40 bg-white border-b border-[#E3E3E3] h-14 flex items-center px-4">
+      <header className="sticky top-0 z-40 bg-white border-b border-[#E3E3E3] h-14 flex items-center px-4 gap-2">
         <button
           onClick={() => setMenuOpen(true)}
           className="p-1 -ml-1 text-[#333]"
-          aria-label="Open menu"
+          aria-label={t("nav.openMenu")}
         >
           <MenuThick />
         </button>
@@ -51,11 +54,14 @@ export default function LandingPage() {
           </span>
         </div>
 
+        {/* Language switcher — compact, top-right */}
+        <LanguageSwitcher compact className="mr-2" />
+
         <Link
           href="/login"
-          className="bg-[#DB0011] text-white text-xs font-semibold px-4 h-8 flex items-center hover:bg-[#b8000e] transition-colors"
+          className="bg-[#DB0011] text-white text-xs font-semibold px-4 h-8 flex items-center hover:bg-[#b8000e] transition-colors whitespace-nowrap"
         >
-          Log on
+          {t("nav.logOn")}
         </Link>
       </header>
 
@@ -74,13 +80,13 @@ export default function LandingPage() {
               </button>
             </div>
             <nav className="flex-1 overflow-y-auto">
-              {menuLinks.map((item) => (
+              {menuLinks.map((key) => (
                 <button
-                  key={item}
+                  key={key}
                   onClick={() => setMenuOpen(false)}
                   className="w-full flex items-center justify-between px-4 py-4 text-base text-[#333] border-b border-[#E3E3E3] hover:bg-[#F8F8F8] text-left"
                 >
-                  {item}
+                  {t(key)}
                   <ChevronRight size={18} className="text-[#DB0011]" />
                 </button>
               ))}
@@ -90,7 +96,7 @@ export default function LandingPage() {
                 href="/login"
                 className="block bg-[#DB0011] text-white text-center font-semibold py-3 text-sm hover:bg-[#b8000e]"
               >
-                Log on to Online Banking
+                {t("nav.logOnFull")}
               </Link>
             </div>
           </div>
@@ -114,23 +120,23 @@ export default function LandingPage() {
         {/* Text card overlaps the bottom of the image */}
         <div className="relative -mt-6 mx-4 bg-white px-4 pt-5 pb-6">
           <h3 className="text-[1.95rem] font-light text-[#333] mb-4" style={{ letterSpacing: "0.04em", wordSpacing: "0.1em", whiteSpace: "nowrap", lineHeight: "1.2" }}>
-            Your next credit card?
+            {t("hero.heading")}
           </h3>
           <p className="text-[15px] text-[#333] mb-6" style={{ lineHeight: "1.9", letterSpacing: "0.01em" }}>
-            Get £25 cashback when you spend or transfer a balance of £500 or more with a Balance Transfer or Purchase Plus card. Offer ends 10 August 2026. Representative 24.9% APR (variable). Credit is subject to status. T&Cs apply.
+            {t("hero.body")}
           </p>
           <Link
             href="/register"
             className="inline-block bg-[#DB0011] text-white font-semibold py-3 px-8 text-sm hover:bg-[#b8000e] transition-colors"
           >
-            Apply now
+            {t("hero.applyNow")}
           </Link>
           <p className="text-[12px] text-[#555] mt-3 leading-[1.7]">
-            Available to new and existing customers. Offer and eligibility criteria apply.{" "}
+            {t("hero.disclaimer")}{" "}
             <a href="#" className="underline text-[#555]">
-              View offer terms and conditions
+              {t("hero.viewTerms")}
             </a>{" "}
-            Offer may be withdrawn at any time.
+            {t("hero.offerMayBeWithdrawn")}
           </p>
         </div>
       </section>
@@ -140,34 +146,32 @@ export default function LandingPage() {
         {/* Card 1 — Premier */}
         <div className="bg-white border border-[#E3E3E3] px-4 py-5">
           <h2 className="text-[1.45rem] font-light text-[#333] mb-2" style={{ letterSpacing: "0.03em", wordSpacing: "0.08em", lineHeight: "1.2" }}>
-            Join <span className="font-light text-[1.7rem]">Lumina</span> Premier today
+            {t("premier.heading")}
           </h2>
           <p className="text-[15px] text-[#333] mb-4" style={{ lineHeight: "1.9", letterSpacing: "0.01em" }}>
-            Lumina Premier is our premium account that gives you more than banking with
-            wealth, health and travel benefits, and rewards too. Eligibility criteria and T&Cs apply.
+            {t("premier.body")}
           </p>
           <Link
             href="/register"
             className="inline-flex items-center gap-1 text-sm font-semibold text-[#333] hover:text-[#DB0011] transition-colors"
           >
-            Premier Bank Account <ChevronRight size={16} className="text-[#DB0011]" />
+            {t("premier.link")} <ChevronRight size={16} className="text-[#DB0011]" />
           </Link>
         </div>
 
         {/* Card 2 — Buy & manage */}
         <div className="bg-white border border-[#E3E3E3] px-4 py-5">
           <h2 className="text-[1.45rem] font-light text-[#333] mb-2" style={{ letterSpacing: "0.03em", wordSpacing: "0.08em", lineHeight: "1.2" }}>
-            Buy and manage funds online
+            {t("buyManage.heading")}
           </h2>
           <p className="text-[15px] text-[#333] mb-4" style={{ lineHeight: "1.9", letterSpacing: "0.01em" }}>
-            It's now even easier for Lumina UK current account customers to manage,
-            buy and sell investments online. Capital at risk. Fees apply.
+            {t("buyManage.body")}
           </p>
           <Link
             href="/login"
             className="inline-flex items-center gap-1 text-sm font-semibold text-[#333] hover:text-[#DB0011] transition-colors"
           >
-            Learn more <ChevronRight size={16} className="text-[#DB0011]" />
+            {t("buyManage.link")} <ChevronRight size={16} className="text-[#DB0011]" />
           </Link>
         </div>
       </div>
@@ -178,11 +182,11 @@ export default function LandingPage() {
       <section className="px-4">
         {products.map((product) => (
           <Link
-            key={product.label}
+            key={product.labelKey}
             href={product.href}
             className="flex items-center py-5 hover:opacity-70 transition-opacity"
           >
-            <span className="text-[1.35rem] font-normal text-[#333]" style={{ letterSpacing: "0.01em" }}>{product.label}</span>
+            <span className="text-[1.35rem] font-normal text-[#333]" style={{ letterSpacing: "0.01em" }}>{t(product.labelKey)}</span>
             <ChevronRight size={20} className="text-[#DB0011] flex-shrink-0 ml-1" />
           </Link>
         ))}
@@ -203,23 +207,23 @@ export default function LandingPage() {
           />
           <div className="px-4 py-5">
             <h2 className="text-[1.45rem] font-light text-[#333] mb-2" style={{ letterSpacing: "0.03em", wordSpacing: "0.08em", lineHeight: "1.2" }}>
-              Looking for help?
+              {t("help.heading")}
             </h2>
             <p className="text-[15px] text-[#333] mb-4" style={{ lineHeight: "1.9", letterSpacing: "0.01em" }}>
-              Find answers to your questions and get the latest guidance.
+              {t("help.body")}
             </p>
             <div className="space-y-2">
               <Link
                 href="#"
                 className="flex items-center gap-1 text-sm font-semibold text-[#333] hover:text-[#DB0011]"
               >
-                Digital reset <ChevronRight size={14} className="text-[#DB0011]" />
+                {t("help.digitalReset")} <ChevronRight size={14} className="text-[#DB0011]" />
               </Link>
               <Link
                 href="#"
                 className="flex items-center gap-1 text-sm font-semibold text-[#333] hover:text-[#DB0011]"
               >
-                Managing your account <ChevronRight size={14} className="text-[#DB0011]" />
+                {t("help.managingAccount")} <ChevronRight size={14} className="text-[#DB0011]" />
               </Link>
             </div>
           </div>
@@ -240,16 +244,16 @@ export default function LandingPage() {
           />
           <div className="px-4 py-5">
             <h2 className="text-[1.45rem] font-light text-[#333] mb-2" style={{ letterSpacing: "0.03em", wordSpacing: "0.08em", lineHeight: "1.2" }}>
-              Growing your money
+              {t("growMoney.heading")}
             </h2>
             <p className="text-[15px] text-[#333] mb-4" style={{ lineHeight: "1.9", letterSpacing: "0.01em" }}>
-              Explore ways you could make the most of your money to help reach your goals.
+              {t("growMoney.body")}
             </p>
             <Link
               href="/login"
               className="flex items-center gap-1 text-sm font-semibold text-[#333] hover:text-[#DB0011]"
             >
-              Stocks &amp; shares ISA <ChevronRight size={14} className="text-[#DB0011]" />
+              {t("growMoney.link")} <ChevronRight size={14} className="text-[#DB0011]" />
             </Link>
           </div>
         </div>
@@ -269,16 +273,16 @@ export default function LandingPage() {
           />
           <div className="px-4 py-5">
             <h2 className="text-[1.45rem] font-light text-[#333] mb-2" style={{ letterSpacing: "0.03em", wordSpacing: "0.08em", lineHeight: "1.2" }}>
-              Lumina Small Business Banking Account
+              {t("smallBiz.heading")}
             </h2>
             <p className="text-[15px] text-[#333] mb-4" style={{ lineHeight: "1.9", letterSpacing: "0.01em" }}>
-              We're here to support your business all the way, that's why there's no monthly account fee and free UK digital banking.
+              {t("smallBiz.body")}
             </p>
             <Link
               href="/register"
               className="flex items-center gap-1 text-sm font-semibold text-[#333] hover:text-[#DB0011]"
             >
-              Small Business Banking Account <ChevronRight size={14} className="text-[#DB0011]" />
+              {t("smallBiz.link")} <ChevronRight size={14} className="text-[#DB0011]" />
             </Link>
           </div>
         </div>
@@ -287,20 +291,20 @@ export default function LandingPage() {
       {/* ── WHY BANK WITH LUMINA ── */}
       <section className="bg-[#F4F4F4] border-t border-b border-[#E3E3E3] px-4 py-8">
         <h2 className="text-[1.45rem] font-light text-[#333] mb-7" style={{ letterSpacing: "0.03em", wordSpacing: "0.08em", lineHeight: "1.2" }}>
-          Why bank with <span className="font-medium">Lumina?</span>
+          {t("whyLumina.heading")}
         </h2>
         <div className="space-y-7">
           {([
-            { icon: Landmark, desc: "With one of the UK's most accessible banking networks, we're easy to find." },
-            { icon: CalendarDays, desc: "Meet with us for advice on selecting the right account for you, building your savings, managing debt or investing in your future." },
-            { icon: RefreshCw, desc: "Have foreign cash delivered free to your home or your nearest Lumina Banking Centre." },
-            { icon: Send, desc: "Send money to over 120 countries using Lumina Global Money Transfer and pay no transfer fee." },
-          ] as const).map(({ icon: Icon, desc }) => (
-            <div key={desc} className="flex items-start gap-4">
+            { icon: Landmark, descKey: "whyLumina.reason1" },
+            { icon: CalendarDays, descKey: "whyLumina.reason2" },
+            { icon: RefreshCw, descKey: "whyLumina.reason3" },
+            { icon: Send, descKey: "whyLumina.reason4" },
+          ] as const).map(({ icon: Icon, descKey }) => (
+            <div key={descKey} className="flex items-start gap-4">
               <div className="flex-shrink-0 w-10 h-10 border border-[#DB0011] rounded-full flex items-center justify-center">
                 <Icon size={18} className="text-[#DB0011]" strokeWidth={1.5} />
               </div>
-              <p className="text-[15px] text-[#333] pt-1.5" style={{ lineHeight: "1.8", letterSpacing: "0.01em" }}>{desc}</p>
+              <p className="text-[15px] text-[#333] pt-1.5" style={{ lineHeight: "1.8", letterSpacing: "0.01em" }}>{t(descKey)}</p>
             </div>
           ))}
         </div>
@@ -308,14 +312,14 @@ export default function LandingPage() {
           href="/register"
           className="inline-flex items-center gap-1 text-sm font-semibold text-[#DB0011] mt-7 hover:underline"
         >
-          Learn about more ways to bank <ChevronRight size={15} className="text-[#DB0011]" />
+          {t("whyLumina.learnMore")} <ChevronRight size={15} className="text-[#DB0011]" />
         </Link>
       </section>
 
       {/* ── DISCOVER OTHER WAYS ── */}
       <div className="px-4 pt-16 pb-12 text-center">
         <h2 className="text-[1.45rem] font-light text-[#333]" style={{ letterSpacing: "0.03em", wordSpacing: "0.08em", lineHeight: "1.55" }}>
-          Discover other ways we can help you
+          {t("discover.heading")}
         </h2>
       </div>
 
@@ -330,16 +334,16 @@ export default function LandingPage() {
           />
           <div className="px-4 py-5">
             <h2 className="text-[1.45rem] font-light text-[#333] mb-2" style={{ letterSpacing: "0.03em", wordSpacing: "0.08em", lineHeight: "1.2" }}>
-              Your security, our priority
+              {t("security.heading")}
             </h2>
             <p className="text-[15px] text-[#333] mb-4" style={{ lineHeight: "1.9", letterSpacing: "0.01em" }}>
-              We use advanced encryption and multi-factor authentication to keep your account and money safe at all times.
+              {t("security.body")}
             </p>
             <Link
               href="/register"
               className="flex items-center gap-1 text-sm font-semibold text-[#333] hover:text-[#DB0011]"
             >
-              Learn about security <ChevronRight size={14} className="text-[#DB0011]" />
+              {t("security.link")} <ChevronRight size={14} className="text-[#DB0011]" />
             </Link>
           </div>
         </div>
@@ -355,18 +359,18 @@ export default function LandingPage() {
             className="w-full h-auto block"
           />
           <div className="px-4 py-5">
-            <p className="text-[11px] font-semibold text-[#333] uppercase tracking-widest mb-2">Investing</p>
+            <p className="text-[11px] font-semibold text-[#333] uppercase tracking-widest mb-2">{t("investing.tag")}</p>
             <h2 className="text-[1.45rem] font-light text-[#333] mb-2" style={{ letterSpacing: "0.03em", wordSpacing: "0.08em", lineHeight: "1.2" }}>
-              Trade smarter, not harder
+              {t("investing.heading")}
             </h2>
             <p className="text-[15px] text-[#333] mb-4" style={{ lineHeight: "1.9", letterSpacing: "0.01em" }}>
-              Open a Lumina Investor's Edge account and access stocks, ETFs, and more with no commission on eligible trades.
+              {t("investing.body")}
             </p>
             <Link
               href="/login"
               className="flex items-center gap-1 text-sm font-semibold text-[#333] hover:text-[#DB0011]"
             >
-              Learn more <ChevronRight size={14} className="text-[#DB0011]" />
+              {t("investing.link")} <ChevronRight size={14} className="text-[#DB0011]" />
             </Link>
           </div>
         </div>
@@ -375,10 +379,10 @@ export default function LandingPage() {
       {/* ── PRE-CARD DIVIDER TEXT ── */}
       <div className="px-4 py-7 border-t border-[#E3E3E3]">
         <h2 className="text-[1.45rem] font-light text-[#333] mb-2" style={{ letterSpacing: "0.03em", wordSpacing: "0.08em", lineHeight: "1.2" }}>
-          Cards designed for you
+          {t("cards.heading")}
         </h2>
         <p className="text-[15px] text-[#333]" style={{ lineHeight: "1.9", letterSpacing: "0.01em" }}>
-          Whether you're spending at home or abroad, our range of Visa cards puts you in control — with cashback, travel perks, and zero foreign fees.
+          {t("cards.body")}
         </p>
       </div>
 
@@ -394,18 +398,20 @@ export default function LandingPage() {
         />
         {/* Dark feature strip below */}
         <div className="bg-[#1A1A1A] px-5 py-6">
-          <p className="text-[#DB0011] text-xs font-semibold uppercase tracking-widest mb-2">Featured</p>
+          <p className="text-[#DB0011] text-xs font-semibold uppercase tracking-widest mb-2">{t("cards.featured")}</p>
           <h2 className="text-[1.5rem] font-light text-white mb-3" style={{ letterSpacing: "0.03em", lineHeight: "1.25" }}>
-            Lumina Business<br />Visa Signature
+            {t("cards.cardName").split("\n").map((line, i) => (
+              <span key={i}>{line}{i === 0 && <br />}</span>
+            ))}
           </h2>
           <p className="text-[14px] text-white/70 mb-5" style={{ lineHeight: "1.85", letterSpacing: "0.01em" }}>
-            No foreign transaction fees, unlimited cashback, and premium travel benefits worldwide. Built for business, designed for life.
+            {t("cards.cardBody")}
           </p>
           <Link
             href="/register"
             className="inline-block bg-[#DB0011] text-white font-semibold py-3 px-7 text-sm hover:bg-[#b8000e] transition-colors"
           >
-            Apply now
+            {t("cards.applyNow")}
           </Link>
         </div>
       </section>
@@ -427,7 +433,7 @@ export default function LandingPage() {
           </div>
         </div>
         <p className="text-[15px] text-[#333] max-w-xs mx-auto" style={{ lineHeight: "1.8", letterSpacing: "0.01em" }}>
-          Lumina Bank is a member of the Financial Services Compensation Scheme (FSCS).
+          {t("fscs.body")}
         </p>
       </section>
 
@@ -450,15 +456,31 @@ export default function LandingPage() {
           {/* Nav columns */}
           <div className="grid grid-cols-2 gap-x-6 mb-10">
             <div>
-              <p className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-3">Banking</p>
-              {["Current accounts", "Savings", "Credit cards", "Mortgages", "Loans", "Investments", "International"].map(l => (
-                <p key={l} className="text-white/75 text-[13px] mb-2.5 hover:text-white cursor-pointer" style={{ lineHeight: "1.4" }}>{l}</p>
+              <p className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-3">{t("footer.banking")}</p>
+              {([
+                "footer.currentAccounts",
+                "footer.savings",
+                "footer.creditCards",
+                "footer.mortgages",
+                "footer.loans",
+                "footer.investments",
+                "footer.international",
+              ] as const).map(l => (
+                <p key={l} className="text-white/75 text-[13px] mb-2.5 hover:text-white cursor-pointer" style={{ lineHeight: "1.4" }}>{t(l)}</p>
               ))}
             </div>
             <div>
-              <p className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-3">Company</p>
-              {["About Lumina", "Help & FAQs", "Security centre", "Careers", "Privacy policy", "Terms of use", "Complaints"].map(l => (
-                <p key={l} className="text-white/75 text-[13px] mb-2.5 hover:text-white cursor-pointer" style={{ lineHeight: "1.4" }}>{l}</p>
+              <p className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-3">{t("footer.company")}</p>
+              {([
+                "footer.aboutLumina",
+                "footer.helpFaqs",
+                "footer.securityCentre",
+                "footer.careers",
+                "footer.privacyPolicy",
+                "footer.termsOfUse",
+                "footer.complaints",
+              ] as const).map(l => (
+                <p key={l} className="text-white/75 text-[13px] mb-2.5 hover:text-white cursor-pointer" style={{ lineHeight: "1.4" }}>{t(l)}</p>
               ))}
             </div>
           </div>
@@ -475,13 +497,13 @@ export default function LandingPage() {
 
           {/* Legal bottom */}
           <p className="text-white/40 text-[11px] leading-relaxed mb-3">
-            Lumina Bank is authorised by the Prudential Regulation Authority and regulated by the Financial Conduct Authority and the Prudential Regulation Authority. Financial Services Register number: 123456.
+            {t("footer.legal1")}
           </p>
           <p className="text-white/40 text-[11px] leading-relaxed mb-5">
-            Eligible deposits are protected up to £85,000 per person by the Financial Services Compensation Scheme (FSCS). This website is designed for use in the United Kingdom.
+            {t("footer.legal2")}
           </p>
           <p className="text-white/30 text-[11px]">
-            © Lumina Group 2025–2026. All rights reserved.
+            {t("footer.copyright")}
           </p>
         </div>
       </footer>
@@ -489,24 +511,25 @@ export default function LandingPage() {
   );
 }
 
-const ALL_QUESTIONS = [
-  { q: "How do I open a Lumina Bank account?", a: "You can open an account online in minutes. Click 'Open an account' on our homepage, complete the form, and verify your identity. Your account will be ready within 24 hours." },
-  { q: "What is a pending transaction?", a: "A pending transaction is a payment that has been authorised but not yet fully processed. It temporarily reduces your available balance until the payment is settled, usually within 1–3 working days." },
-  { q: "How do I make a credit card payment?", a: "Log on to Online Banking, go to Cards, select your credit card and choose 'Make a payment'. You can pay the minimum amount, full balance, or a custom amount from any linked account." },
-  { q: "How do I transfer money to another account?", a: "Go to Transfer & Pay in the app or Online Banking. Choose Internal Transfer for your own accounts or Domestic Transfer for other UK banks. International transfers are also supported." },
-  { q: "How do I freeze or unfreeze my card?", a: "Go to Cards in Online Banking or the app, select the card you want to manage and tap 'Freeze card'. You can unfreeze it at any time using the same option." },
-  { q: "What are the daily transfer limits?", a: "Standard current account limits are £10,000 per day for domestic transfers and £25,000 for international transfers. Lumina Premier customers benefit from higher limits." },
-  { q: "How do I dispute a transaction?", a: "If you see a transaction you don't recognise, go to Transactions, select the item and tap 'Dispute this transaction'. Our team will investigate and respond within 5 working days." },
-  { q: "What is the difference between available and current balance?", a: "Your current balance is the total funds in your account. Your available balance is what you can actually spend — it excludes any pending transactions or holds on your account." },
-  { q: "How do I update my personal details?", a: "Log on to Online Banking, go to Profile and select the detail you wish to update. Some changes such as address updates may require identity verification." },
-  { q: "How do I apply for a loan?", a: "Go to Loans in Online Banking and check your eligibility. If eligible, you can apply online and receive a decision instantly. Funds are typically transferred within one working day." },
-];
-
 function QuestionsSection() {
   const [open, setOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const { t } = useLanguage();
+
+  const ALL_QUESTIONS = [
+    { q: t("faq.q1"), a: t("faq.a1") },
+    { q: t("faq.q2"), a: t("faq.a2") },
+    { q: t("faq.q3"), a: t("faq.a3") },
+    { q: t("faq.q4"), a: t("faq.a4") },
+    { q: t("faq.q5"), a: t("faq.a5") },
+    { q: t("faq.q6"), a: t("faq.a6") },
+    { q: t("faq.q7"), a: t("faq.a7") },
+    { q: t("faq.q8"), a: t("faq.a8") },
+    { q: t("faq.q9"), a: t("faq.a9") },
+    { q: t("faq.q10"), a: t("faq.a10") },
+  ];
 
   const visible = showAll ? ALL_QUESTIONS : ALL_QUESTIONS.slice(0, 5);
 
@@ -514,14 +537,14 @@ function QuestionsSection() {
     <section className="bg-white px-4 py-16 border-t border-[#E3E3E3]">
       {/* Heading */}
       <h2 className="text-[2rem] font-light text-[#333] text-center mb-10" style={{ letterSpacing: "0.02em" }}>
-        Questions?
+        {t("questions.heading")}
       </h2>
 
       {/* Search box */}
       <div className="flex border border-[#999] mb-8">
         <input
           type="text"
-          placeholder="Enter your question"
+          placeholder={t("questions.placeholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 px-4 py-3 text-[15px] text-[#333] outline-none placeholder-[#999]"
@@ -538,7 +561,7 @@ function QuestionsSection() {
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 mx-auto text-[#DB0011] text-[15px] font-semibold border-b border-[#DB0011] pb-0.5 mb-6"
       >
-        Top questions
+        {t("questions.topQuestions")}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DB0011" strokeWidth="2.5" strokeLinecap="round">
           {open ? <path d="m18 15-6-6-6 6" /> : <path d="m6 9 6 6 6-6" />}
         </svg>
@@ -547,8 +570,10 @@ function QuestionsSection() {
       {/* Accordion */}
       {open && (
         <div>
-          <p className="text-[15px] font-bold text-[#333] mb-1">Top questions</p>
-          <p className="text-[13px] text-[#767676] mb-4">Displaying {visible.length} out of {ALL_QUESTIONS.length} question(s)</p>
+          <p className="text-[15px] font-bold text-[#333] mb-1">{t("questions.topQuestions")}</p>
+          <p className="text-[13px] text-[#767676] mb-4">
+            {t("questions.displaying", { visible: visible.length, total: ALL_QUESTIONS.length })}
+          </p>
 
           <div className="border-t border-[#E3E3E3]">
             {visible.map((item, i) => (
@@ -574,7 +599,7 @@ function QuestionsSection() {
               onClick={() => setShowAll(true)}
               className="w-full mt-5 border border-[#DB0011] text-[#DB0011] font-semibold py-3.5 text-sm hover:bg-red-50 transition-colors"
             >
-              Show more questions
+              {t("questions.showMore")}
             </button>
           )}
         </div>

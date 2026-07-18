@@ -18,20 +18,37 @@ import {
   type Transaction,
   type Goal,
 } from "@/lib/api";
-import { formatCurrency, formatRelativeDate } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import { TransactionItem } from "@/components/transactions/TransactionItem";
 import { SkeletonBlock, SkeletonCard } from "@/components/ui/LoadingSpinner";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useMoreSheet } from "@/lib/more-sheet-context";
+import { useLanguage } from "@/lib/i18n";
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const { openSheet } = useMoreSheet();
+  const { t } = useLanguage();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Sync language preference from user profile when user loads
+  useEffect(() => {
+    if (!user) return;
+    const preferredLanguage = (user as { profile?: { preferredLanguage?: string } | null })
+      ?.profile?.preferredLanguage;
+    if (preferredLanguage && typeof window !== "undefined") {
+      const syncFn = (window as unknown as Record<string, unknown>).__luminaSyncLang as
+        | ((lang: string) => void)
+        | undefined;
+      if (typeof syncFn === "function") {
+        syncFn(preferredLanguage);
+      }
+    }
+  }, [user]);
 
   async function fetchData() {
     setLoading(true);
@@ -61,11 +78,14 @@ export default function DashboardPage() {
   const primaryCurrency = accounts[0]?.currency || "GBP";
 
   const quickActions = [
-    { label: "Send",   icon: Send,           href: "/transfer" },
-    { label: "Pay",    icon: Receipt,         href: "/pay" },
-    { label: "Top Up", icon: PlusCircle,      href: "/topup" },
-    { label: "More",   icon: MoreHorizontal,  href: null },
+    { labelKey: "dashboard.quickAction.send" as const,   icon: Send,           href: "/transfer" },
+    { labelKey: "dashboard.quickAction.pay" as const,    icon: Receipt,         href: "/pay" },
+    { labelKey: "dashboard.quickAction.topUp" as const,  icon: PlusCircle,      href: "/topup" },
+    { labelKey: "dashboard.quickAction.more" as const,   icon: MoreHorizontal,  href: null },
   ];
+
+  const accountCount = accounts.length;
+  const accountWord = accountCount === 1 ? t("dashboard.account") : t("dashboard.accounts");
 
   return (
     <div className="max-w-lg mx-auto lg:max-w-none">
@@ -80,13 +100,13 @@ export default function DashboardPage() {
         ) : (
           <div>
             <p className="text-white/70 text-xs font-medium uppercase tracking-wide mb-1">
-              {user ? `Hello, ${user.firstName}` : "Total balance"}
+              {user ? t("dashboard.hello", { name: user.firstName }) : t("dashboard.totalBalance")}
             </p>
             <p className="text-white text-4xl font-bold mb-1">
               {formatCurrency(totalBalance, primaryCurrency)}
             </p>
             <p className="text-white/60 text-xs">
-              Across {accounts.length} account{accounts.length !== 1 ? "s" : ""}
+              {t("dashboard.across", { count: accountCount })} {accountWord}
             </p>
           </div>
         )}
@@ -95,20 +115,20 @@ export default function DashboardPage() {
       {/* Quick actions */}
       <div className="bg-white border-b border-[#E3E3E3] px-4 py-5">
         <div className="grid grid-cols-4 gap-2">
-          {quickActions.map(({ label, icon: Icon, href }) =>
+          {quickActions.map(({ labelKey, icon: Icon, href }) =>
             href ? (
-              <Link key={label} href={href} className="flex flex-col items-center gap-2 group">
+              <Link key={labelKey} href={href} className="flex flex-col items-center gap-2 group">
                 <div className="h-12 w-12 rounded-full bg-[#F8F8F8] border border-[#E3E3E3] flex items-center justify-center group-hover:bg-red-50 group-hover:border-[#DB0011] transition-colors">
                   <Icon size={20} className="text-[#DB0011]" />
                 </div>
-                <span className="text-xs text-[#333333] font-medium">{label}</span>
+                <span className="text-xs text-[#333333] font-medium">{t(labelKey)}</span>
               </Link>
             ) : (
-              <button key={label} onClick={openSheet} className="flex flex-col items-center gap-2 group">
+              <button key={labelKey} onClick={openSheet} className="flex flex-col items-center gap-2 group">
                 <div className="h-12 w-12 rounded-full bg-[#F8F8F8] border border-[#E3E3E3] flex items-center justify-center group-hover:bg-red-50 group-hover:border-[#DB0011] transition-colors">
                   <Icon size={20} className="text-[#DB0011]" />
                 </div>
-                <span className="text-xs text-[#333333] font-medium">{label}</span>
+                <span className="text-xs text-[#333333] font-medium">{t(labelKey)}</span>
               </button>
             )
           )}
@@ -124,12 +144,12 @@ export default function DashboardPage() {
       {/* Your accounts */}
       <div className="bg-white mt-3 border-y border-[#E3E3E3]">
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#E3E3E3]">
-          <h2 className="text-sm font-semibold text-[#333333]">Your accounts</h2>
+          <h2 className="text-sm font-semibold text-[#333333]">{t("dashboard.yourAccounts")}</h2>
           <Link
             href="/accounts"
             className="text-xs text-[#DB0011] flex items-center gap-0.5 font-medium"
           >
-            View all <ChevronRight size={14} />
+            {t("dashboard.viewAll")} <ChevronRight size={14} />
           </Link>
         </div>
         <div className="overflow-x-auto">
@@ -154,7 +174,7 @@ export default function DashboardPage() {
       <div className="bg-white mt-3 border-y border-[#E3E3E3]">
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#E3E3E3]">
           <h2 className="text-sm font-semibold text-[#333333]">
-            Recent transactions
+            {t("dashboard.recentTransactions")}
           </h2>
           <div className="flex items-center gap-3">
             <button
@@ -168,7 +188,7 @@ export default function DashboardPage() {
               href="/transactions"
               className="text-xs text-[#DB0011] flex items-center gap-0.5 font-medium"
             >
-              View all <ChevronRight size={14} />
+              {t("dashboard.viewAll")} <ChevronRight size={14} />
             </Link>
           </div>
         </div>
@@ -188,7 +208,7 @@ export default function DashboardPage() {
           </div>
         ) : transactions.length === 0 ? (
           <div className="py-8 text-center text-sm text-[#767676]">
-            No recent transactions
+            {t("dashboard.noTransactions")}
           </div>
         ) : (
           <div>
@@ -204,13 +224,13 @@ export default function DashboardPage() {
         <div className="bg-white mt-3 border-y border-[#E3E3E3] mb-4">
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#E3E3E3]">
             <h2 className="text-sm font-semibold text-[#333333]">
-              Savings goals
+              {t("dashboard.savingsGoals")}
             </h2>
             <Link
               href="/goals"
               className="text-xs text-[#DB0011] flex items-center gap-0.5 font-medium"
             >
-              View all <ChevronRight size={14} />
+              {t("dashboard.viewAll")} <ChevronRight size={14} />
             </Link>
           </div>
 
@@ -244,7 +264,7 @@ export default function DashboardPage() {
                       </div>
                       {goal.targetDate && (
                         <p className="text-xs text-[#767676] mt-1">
-                          Target: {new Date(goal.targetDate).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}
+                          {t("dashboard.target")} {new Date(goal.targetDate).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}
                         </p>
                       )}
                     </div>
@@ -283,3 +303,4 @@ function AccountMiniCard({ account }: { account: Account }) {
     </div>
   );
 }
+

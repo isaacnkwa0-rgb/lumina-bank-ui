@@ -247,6 +247,7 @@ export const usersApi = {
     employer?: string;
     annualIncome?: number;
     preferredCurrency?: string;
+    preferredLanguage?: string;
   }) => api.patch<ApiResponse<User>>("/users/profile", data),
   getDevices: () => api.get<ApiResponse<Device[]>>("/users/devices"),
   removeDevice: (id: string) => api.delete<ApiResponse<null>>(`/users/devices/${id}`),
@@ -705,6 +706,7 @@ export interface User {
     employer?: string;
     annualIncome?: string;
     preferredCurrency: string;
+    preferredLanguage?: string;
   } | null;
 }
 

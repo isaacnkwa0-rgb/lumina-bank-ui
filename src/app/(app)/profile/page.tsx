@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { kycApi, usersApi, type Device } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
+import type { Language } from "@/lib/i18n";
 
 const NOTIF_KEY = "lumina_notif_settings";
 function loadNotifSettings() {
@@ -107,9 +109,18 @@ function InfoRow({ icon: Icon, label, value, onEdit }: {
   );
 }
 
+const SUPPORTED_LANGUAGES: { code: Language; label: string; flag: string }[] = [
+  { code: "EN", label: "English", flag: "🇬🇧" },
+  { code: "ES", label: "Español", flag: "🇪🇸" },
+  { code: "FR", label: "Français", flag: "🇫🇷" },
+  { code: "PT", label: "Português", flag: "🇵🇹" },
+  { code: "DE", label: "Deutsch", flag: "🇩🇪" },
+];
+
 export default function ProfilePage() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const { lang, setLang } = useLanguage();
   const [kycStatus, setKycStatus] = useState<string | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
   const [notifSettings, setNotifSettings] = useState({ transactions: true, security: true, marketing: false, statements: true });
@@ -130,6 +141,7 @@ export default function ProfilePage() {
   const [city, setCity]           = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [country, setCountry]     = useState("");
+  const [editLang, setEditLang]   = useState<Language>("EN");
 
   function populateForm() {
     if (!user) return;
@@ -143,8 +155,11 @@ export default function ProfilePage() {
     setCity(addr?.city ?? "");
     setPostalCode(addr?.postalCode ?? "");
     setCountry(addr?.country ?? "");
-    const prof = (user as { profile?: { occupation?: string } | null }).profile;
+    const prof = (user as { profile?: { occupation?: string; preferredLanguage?: string } | null }).profile;
     setOccupation(prof?.occupation ?? "");
+    // Pre-fill language from profile or current context
+    const profLang = prof?.preferredLanguage;
+    setEditLang((profLang as Language | undefined) ?? lang);
   }
 
   useEffect(() => {
@@ -156,6 +171,17 @@ export default function ProfilePage() {
       const prefs = r.data.data as Record<string, boolean>;
       setNotifSettings((p) => ({ ...p, ...prefs }));
     }).catch(() => {});
+    // Sync preferred language from user profile into context
+    if (user) {
+      const profLang = (user as { profile?: { preferredLanguage?: string } | null })?.profile?.preferredLanguage;
+      if (profLang) {
+        const syncFn = (window as unknown as Record<string, unknown>).__luminaSyncLang as
+          | ((l: string) => void)
+          | undefined;
+        if (typeof syncFn === "function") syncFn(profLang);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function openEdit() { populateForm(); setSaveError(""); setSaveSuccess(false); setShowEdit(true); }
@@ -172,7 +198,10 @@ export default function ProfilePage() {
         nationality: nationality || undefined,
         occupation: occupation || undefined,
         address: { street, city, postalCode, country },
+        preferredLanguage: editLang,
       });
+      // Update language context immediately
+      setLang(editLang);
       setSaveSuccess(true);
       setTimeout(() => { setShowEdit(false); setSaveSuccess(false); }, 1200);
     } catch (e: unknown) {
@@ -387,6 +416,22 @@ export default function ProfilePage() {
                 <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">Date of birth</label>
                 <input type="date" value={dob} onChange={(e) => setDob(e.target.value)}
                   className="w-full px-3 py-2.5 border-2 border-[#E3E3E3] rounded-xl text-sm focus:outline-none focus:border-[#DB0011]" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">Language</label>
+                <select
+                  value={editLang}
+                  onChange={(e) => setEditLang(e.target.value as Language)}
+                  className="w-full px-3 py-2.5 border-2 border-[#E3E3E3] rounded-xl text-sm focus:outline-none focus:border-[#DB0011] bg-white"
+                >
+                  {SUPPORTED_LANGUAGES.map((l) => (
+                    <option key={l.code} value={l.code}>
+                      {l.flag} {l.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-[#AAAAAA] mt-1">Your preferred language for the Lumina app</p>
               </div>
 
               <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest pt-1">Home address</p>

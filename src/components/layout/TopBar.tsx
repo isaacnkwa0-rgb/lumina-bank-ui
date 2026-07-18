@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Bell, Menu, X, LogOut, User } from "lucide-react";
 import { notificationsApi } from "@/lib/api";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export function TopBar() {
   const { user, logout } = useAuth();
@@ -42,6 +43,8 @@ export function TopBar() {
 
         {/* Right actions */}
         <div className="flex items-center gap-2">
+          {/* Language switcher */}
+          <LanguageSwitcher compact />
           <Link
             href="/notifications"
             className="relative p-1 text-[#333333] hover:text-[#DB0011] transition-colors"
