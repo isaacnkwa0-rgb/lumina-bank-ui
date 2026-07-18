@@ -393,6 +393,13 @@ export const adminApi = {
   // Goals
   adminGoals: (status?: string) =>
     api.get<ApiResponse<AdminGoal[]>>("/admin/goals", { params: status ? { status } : undefined }),
+  // Crypto orders
+  adminCryptoOrders: (status?: string) =>
+    api.get<ApiResponse<AdminCryptoOrder[]>>("/admin/crypto/orders", { params: status ? { status } : undefined }),
+  approveCryptoOrder: (id: string, notes?: string) =>
+    api.patch<ApiResponse<AdminCryptoOrder>>(`/admin/crypto/orders/${id}/approve`, { notes }),
+  rejectCryptoOrder: (id: string, reason: string) =>
+    api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/crypto/orders/${id}/reject`, { reason }),
 };
 
 export const disputesApi = {
@@ -410,6 +417,20 @@ export const insuranceApi = {
   getQuote: (id: string) => api.get<ApiResponse<InsuranceQuote>>(`/insurance/quotes/${id}`),
   acceptQuote: (id: string) => api.patch<ApiResponse<InsuranceQuote>>(`/insurance/quotes/${id}/accept`),
   cancelQuote: (id: string) => api.patch<ApiResponse<InsuranceQuote>>(`/insurance/quotes/${id}/cancel`),
+};
+
+export const cryptoApi = {
+  createOrder: (data: {
+    accountId: string;
+    coin: string;
+    coinId: string;
+    network: string;
+    walletAddress: string;
+    amountGbp: number;
+    priceGbp: number;
+  }) => api.post<ApiResponse<CryptoOrder>>("/crypto/orders", data),
+  listOrders: () => api.get<ApiResponse<CryptoOrder[]>>("/crypto/orders"),
+  getOrder: (id: string) => api.get<ApiResponse<CryptoOrder>>(`/crypto/orders/${id}`),
 };
 
 export const ratesApi = {
@@ -982,5 +1003,28 @@ export interface AdminGoal {
   status: string;
   emoji?: string | null;
   createdAt: string;
+  user: { id: string; firstName: string; lastName: string; email: string };
+}
+
+export interface CryptoOrder {
+  id: string;
+  userId: string;
+  accountId: string;
+  coin: string;
+  coinId: string;
+  network: string;
+  walletAddress: string;
+  amountGbp: string;
+  fee: string;
+  priceGbp: string;
+  quantity: string;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED";
+  reference: string;
+  adminNotes?: string | null;
+  processedAt?: string | null;
+  createdAt: string;
+}
+
+export interface AdminCryptoOrder extends CryptoOrder {
   user: { id: string; firstName: string; lastName: string; email: string };
 }

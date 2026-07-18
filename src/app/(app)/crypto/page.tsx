@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { accountsApi, transfersApi, type Account } from "@/lib/api";
+import { accountsApi, cryptoApi, type Account, type CryptoOrder } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
 import {
@@ -139,7 +139,7 @@ function BuyModal({
   coin: CoinMarket;
   accounts: Account[];
   onClose: () => void;
-  onDone: (msg: string) => void;
+  onDone: () => void;
 }) {
   const [amount, setAmount] = useState("");
   const [wallet, setWallet] = useState("");
@@ -163,16 +163,16 @@ function BuyModal({
     setLoading(true);
     setError("");
     try {
-      await transfersApi.domestic({
-        fromAccountId: accountId,
-        toAccountNumber: wallet.trim(),
-        toBankCode: "CREX",
-        toAccountName: `${label} Wallet`,
-        amount: num,
-        description: `Crypto purchase: ${qty.toFixed(6)} ${coin.config.symbol} → ${wallet.trim().slice(0, 14)}…`,
-        saveBeneficiary: false,
+      await cryptoApi.createOrder({
+        accountId,
+        coin: label,
+        coinId: coin.config.coingeckoId,
+        network: coin.config.network,
+        walletAddress: wallet.trim(),
+        amountGbp: num,
+        priceGbp: coin.price,
       });
-      onDone(`${label} purchase of ${formatCurrency(num)} submitted for compliance review.`);
+      onDone();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string; error?: { message?: string } } } };
       setError(
@@ -357,15 +357,20 @@ type Tab = "all" | "stable";
 export default function CryptoPage() {
   const [coins, setCoins]             = useState<CoinMarket[]>([]);
   const [accounts, setAccounts]       = useState<Account[]>([]);
+  const [orders, setOrders]           = useState<CryptoOrder[]>([]);
   const [loading, setLoading]         = useState(true);
   const [refreshing, setRefreshing]   = useState(false);
   const [lastTs, setLastTs]           = useState(Date.now());
   const [search, setSearch]           = useState("");
   const [tab, setTab]                 = useState<Tab>("all");
   const [selectedCoin, setSelectedCoin] = useState<CoinMarket | null>(null);
-  const [banner, setBanner]           = useState<string>("");
+  const [banner, setBanner]           = useState(false);
   const [apiError, setApiError]       = useState(false);
   const intervalRef                   = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  function fetchOrders() {
+    cryptoApi.listOrders().then((r) => setOrders(r.data.data)).catch(() => {});
+  }
 
   const fetchMarket = useCallback(async (silent = false) => {
     if (!silent) setLoading(true); else setRefreshing(true);
@@ -415,7 +420,11 @@ export default function CryptoPage() {
   }, []);
 
   useEffect(() => {
-    Promise.all([fetchMarket(), accountsApi.list().then((r) => setAccounts(r.data.data)).catch(() => {})]);
+    Promise.all([
+      fetchMarket(),
+      accountsApi.list().then((r) => setAccounts(r.data.data)).catch(() => {}),
+      fetchOrders(),
+    ]);
     intervalRef.current = setInterval(() => fetchMarket(true), 30000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [fetchMarket]);
@@ -510,9 +519,9 @@ export default function CryptoPage() {
           <Clock size={14} className="text-green-600 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-green-800">Order submitted</p>
-            <p className="text-xs text-green-600 mt-0.5">{banner}</p>
+            <p className="text-xs text-green-600 mt-0.5">Your purchase is under compliance review. We&apos;ll notify you once it&apos;s approved.</p>
           </div>
-          <button onClick={() => setBanner("")} className="ml-auto text-green-400 hover:text-green-600">
+          <button onClick={() => setBanner(false)} className="ml-auto text-green-400 hover:text-green-600">
             <X size={14} />
           </button>
         </div>
@@ -598,6 +607,40 @@ export default function CryptoPage() {
         )}
       </div>
 
+      {/* My Orders */}
+      {orders.length > 0 && (
+        <div className="px-4 mt-6">
+          <p className="text-xs font-bold text-[#999] uppercase tracking-widest mb-3">My Orders</p>
+          <div className="space-y-2">
+            {orders.map((order) => {
+              const statusCfg = {
+                PENDING:   { label: "Under Review", color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200" },
+                COMPLETED: { label: "Completed",    color: "text-green-600", bg: "bg-green-50", border: "border-green-200" },
+                REJECTED:  { label: "Rejected",     color: "text-[#DB0011]", bg: "bg-red-50",   border: "border-red-200"   },
+                APPROVED:  { label: "Approved",     color: "text-blue-600",  bg: "bg-blue-50",  border: "border-blue-200"  },
+              }[order.status] ?? { label: order.status, color: "text-[#555]", bg: "bg-[#F5F5F5]", border: "border-[#E8E8E8]" };
+
+              return (
+                <div key={order.id} className="bg-white rounded-2xl border border-[#E8E8E8] px-4 py-3.5 flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-[#222] truncate">{order.coin}</p>
+                    <p className="text-[11px] text-[#AAAAAA] mt-0.5">{order.network}</p>
+                    <p className="text-[10px] text-[#CCCCCC] mt-0.5 font-mono truncate">{order.reference}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-bold text-[#222]">£{Number(order.amountGbp).toFixed(2)}</p>
+                    <p className="text-[10px] text-[#AAAAAA]">{Number(order.quantity).toFixed(6)} {order.coin.split(" ")[0]}</p>
+                  </div>
+                  <div className={`px-2.5 py-1 rounded-full border text-[10px] font-bold ${statusCfg.bg} ${statusCfg.border} ${statusCfg.color}`}>
+                    {statusCfg.label}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Disclaimer */}
       <p className="mx-4 mt-6 text-[10px] text-[#CCCCCC] leading-relaxed">
         Prices sourced from CoinGecko in real time and displayed in GBP. Crypto assets are highly volatile and unregulated. Lumina Bank acts as a payment facilitator only and does not provide investment advice. All purchases subject to FCA compliance and our Crypto Purchase Policy.
@@ -609,9 +652,10 @@ export default function CryptoPage() {
           coin={selectedCoin}
           accounts={accounts}
           onClose={() => setSelectedCoin(null)}
-          onDone={(msg) => {
+          onDone={() => {
             setSelectedCoin(null);
-            setBanner(msg);
+            setBanner(true);
+            fetchOrders();
           }}
         />
       )}

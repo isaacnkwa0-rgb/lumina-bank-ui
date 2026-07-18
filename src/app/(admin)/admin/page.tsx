@@ -6,15 +6,16 @@ import {
   type AdminTransfer, type AdminUser, type AdminLoan, type AdminDispute,
   type AdminInsuranceQuote, type AdminCard, type AdminTransaction,
   type AdminExchangeRate, type AdminPortfolio, type AdminGoal, type AdminAccount,
+  type AdminCryptoOrder,
 } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   ShieldCheck, CheckCircle2, Users, ArrowLeftRight, Landmark, AlertCircle,
   ChevronRight, Search, RefreshCw, CreditCard, Receipt, Globe,
-  TrendingUp, Target, Home, ShieldAlert,
+  TrendingUp, Target, Home, ShieldAlert, Bitcoin,
 } from "lucide-react";
 
-type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users";
+type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -915,6 +916,90 @@ function UsersTab() {
   );
 }
 
+// ── Crypto Orders ─────────────────────────────────────────────────────────────
+
+function CryptoTab() {
+  const [filter, setFilter] = useState<"PENDING" | "COMPLETED" | "REJECTED" | "ALL">("PENDING");
+  const [items, setItems] = useState<AdminCryptoOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionId, setActionId] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await adminApi.adminCryptoOrders(filter === "ALL" ? undefined : filter);
+      setItems(r.data.data);
+    } catch {} finally { setLoading(false); }
+  }, [filter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function approve(id: string) {
+    const notes = prompt("Admin notes (optional):") ?? "";
+    setActionId(id + ":approve");
+    try {
+      await adminApi.approveCryptoOrder(id, notes || undefined);
+      setItems((p) => p.map((o) => o.id === id ? { ...o, status: "COMPLETED" as const } : o));
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
+  async function reject(id: string) {
+    const reason = prompt("Reason for rejection:");
+    if (!reason) return;
+    setActionId(id + ":reject");
+    try {
+      await adminApi.rejectCryptoOrder(id, reason);
+      setItems((p) => p.map((o) => o.id === id ? { ...o, status: "REJECTED" as const } : o));
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
+  return (
+    <div>
+      <FilterBar
+        filters={["PENDING", "COMPLETED", "REJECTED", "ALL"]}
+        active={filter}
+        onSelect={(f) => setFilter(f as any)}
+        labels={{ PENDING: "Pending", COMPLETED: "Completed", REJECTED: "Rejected", ALL: "All" }}
+      />
+      {loading ? <LoadingRows /> : items.length === 0 ? <Empty icon={Bitcoin} label="No crypto orders" /> : (
+        <div className="divide-y divide-[#F0F0F0]">
+          {items.map((o) => (
+            <div key={o.id} className="bg-white px-4 py-4">
+              <div className="flex items-start justify-between mb-1">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                    <span className="text-xs font-bold text-[#333]">{o.coin}</span>
+                    <Pill status={o.status} />
+                  </div>
+                  {o.user && <UserLine user={o.user} />}
+                  <p className="text-[10px] text-[#AAAAAA] font-mono mt-0.5 truncate">Wallet: {o.walletAddress}</p>
+                  <p className="text-[10px] text-[#BBBBBB] mt-0.5">{o.network} · {o.reference}</p>
+                  {o.adminNotes && (
+                    <p className="text-[10px] text-blue-600 mt-0.5">Note: {o.adminNotes}</p>
+                  )}
+                </div>
+                <div className="text-right flex-shrink-0 ml-3">
+                  <p className="text-sm font-bold text-[#333]">£{Number(o.amountGbp).toFixed(2)}</p>
+                  <p className="text-[10px] text-[#AAAAAA]">{Number(o.quantity).toFixed(6)} {o.coin.split(" ")[0]}</p>
+                  <p className="text-[10px] text-[#CCCCCC]">@ £{Number(o.priceGbp).toLocaleString()}</p>
+                </div>
+              </div>
+              {o.status === "PENDING" && (
+                <div className="flex gap-2 mt-3">
+                  <ActButton label="Approve" variant="approve" onClick={() => approve(o.id)} loading={actionId === o.id + ":approve"} />
+                  <ActButton label="Reject"  variant="reject"  onClick={() => reject(o.id)}  loading={actionId === o.id + ":reject"}  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Shared UI ─────────────────────────────────────────────────────────────────
 
 function FilterBar({ filters, active, onSelect, labels }: {
@@ -963,6 +1048,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "mortgages",    label: "Mortgages",    icon: Home           },
   { id: "disputes",     label: "Disputes",     icon: AlertCircle    },
   { id: "insurance",    label: "Insurance",    icon: ShieldAlert    },
+  { id: "crypto",       label: "Crypto",       icon: Bitcoin        },
   { id: "cards",        label: "Cards",        icon: CreditCard     },
   { id: "transactions", label: "Transactions", icon: Receipt        },
   { id: "rates",        label: "Rates",        icon: Globe          },
@@ -1004,6 +1090,7 @@ export default function AdminPage() {
         {activeTab === "mortgages"    && <LoansTab loanType="MORTGAGE" />}
         {activeTab === "disputes"     && <DisputesTab />}
         {activeTab === "insurance"    && <InsuranceTab />}
+        {activeTab === "crypto"       && <CryptoTab />}
         {activeTab === "cards"        && <CardsTab />}
         {activeTab === "transactions" && <TransactionsTab />}
         {activeTab === "rates"        && <RatesTab />}
