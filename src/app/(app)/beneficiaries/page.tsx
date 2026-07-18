@@ -57,13 +57,17 @@ function DeleteSheet({
   onConfirm: () => void;
 }) {
   const [loading, setLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   async function doDelete() {
     setLoading(true);
+    setDeleteError("");
     try {
       await beneficiariesApi.delete(beneficiary.id);
       onConfirm();
-    } catch {
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setDeleteError(e?.response?.data?.message || "Could not remove payee. Please try again.");
       setLoading(false);
     }
   }
@@ -90,6 +94,9 @@ function DeleteSheet({
           <p className="text-xs text-[#999] mb-5 leading-relaxed">
             This payee will be removed from your saved list. You can still send money to them by entering their details manually.
           </p>
+          {deleteError && (
+            <p className="text-xs text-[#DB0011] bg-red-50 rounded-lg px-3 py-2 mb-3">{deleteError}</p>
+          )}
           <div className="flex gap-3">
             <button
               onClick={onCancel}

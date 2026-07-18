@@ -15,6 +15,7 @@ export default function CardsPage() {
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
   const [actionLoading, setActionLoading] = useState<string>("");
 
   useEffect(() => {
@@ -27,23 +28,27 @@ export default function CardsPage() {
 
   async function toggleFreeze(card: Card) {
     setActionLoading(card.id);
+    setActionError("");
     try {
       const fn = card.status === "FROZEN" ? cardsApi.unfreeze : cardsApi.freeze;
       const res = await fn(card.id);
       setCards((prev) => prev.map((c) => (c.id === card.id ? res.data.data : c)));
-    } catch {
-      // silent
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setActionError(e?.response?.data?.message || "Could not update card status. Please try again.");
     } finally {
       setActionLoading("");
     }
   }
 
   async function updateControl(card: Card, key: keyof CardControls, value: boolean) {
+    setActionError("");
     try {
       const res = await cardsApi.updateControls(card.id, { [key]: value });
       setCards((prev) => prev.map((c) => (c.id === card.id ? res.data.data : c)));
-    } catch {
-      // silent
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setActionError(e?.response?.data?.message || "Could not update card settings. Please try again.");
     }
   }
 
@@ -82,9 +87,9 @@ export default function CardsPage() {
         )}
       </div>
 
-      {error && (
+      {(error || actionError) && (
         <div className="mx-4 mt-4 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
-          <p className="text-sm text-[#DB0011]">{error}</p>
+          <p className="text-sm text-[#DB0011]">{error || actionError}</p>
         </div>
       )}
 
