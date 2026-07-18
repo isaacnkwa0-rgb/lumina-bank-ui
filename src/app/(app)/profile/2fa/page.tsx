@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api";
-import { Shield, ShieldCheck, ChevronLeft, CheckCircle2 } from "lucide-react";
+import { Shield, ShieldCheck, ChevronLeft, CheckCircle2, Copy, RefreshCw } from "lucide-react";
 import { useAuth } from "@/lib/hooks/useAuth";
 
-type Step = "overview" | "setup" | "enable" | "disable" | "done";
+type Step = "overview" | "setup" | "enable" | "disable" | "done" | "recovery";
 
 function OtpInput({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
   return (
@@ -34,6 +34,7 @@ export default function TwoFAPage() {
   const [token, setToken] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
 
   const twoFaEnabled = (user as { twoFactorEnabled?: boolean })?.twoFactorEnabled ?? false;
 
@@ -58,14 +59,31 @@ export default function TwoFAPage() {
     setError("");
     setLoading(true);
     try {
-      await authApi.enable2FA(token);
-      setStep("done");
+      const res = await authApi.enable2FA(token);
+      if (res.data.data.recoveryCodes?.length) {
+        setRecoveryCodes(res.data.data.recoveryCodes);
+        setStep("recovery");
+      } else {
+        setStep("done");
+      }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setError(msg || "Invalid code. Please try again.");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleRegenerateCodes() {
+    setLoading(true);
+    try {
+      const res = await authApi.regenerateRecoveryCodes();
+      setRecoveryCodes(res.data.data.recoveryCodes);
+      setStep("recovery");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(msg || "Failed to regenerate codes.");
+    } finally { setLoading(false); }
   }
 
   async function handleDisable() {
@@ -135,12 +153,21 @@ export default function TwoFAPage() {
               <ErrorBanner />
 
               {twoFaEnabled ? (
-                <button
-                  onClick={() => { setToken(""); setError(""); setStep("disable"); }}
-                  className="w-full py-3.5 rounded-xl border-2 border-[#DB0011] text-[#DB0011] text-sm font-bold hover:bg-red-50 transition-colors"
-                >
-                  Disable 2FA
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={handleRegenerateCodes}
+                    disabled={loading}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-[#E3E3E3] text-sm font-semibold text-[#555] hover:border-[#DB0011] hover:text-[#DB0011] disabled:opacity-50 transition-colors"
+                  >
+                    <RefreshCw size={14} /> View / regenerate recovery codes
+                  </button>
+                  <button
+                    onClick={() => { setToken(""); setError(""); setStep("disable"); }}
+                    className="w-full py-3.5 rounded-xl border-2 border-[#DB0011] text-[#DB0011] text-sm font-bold hover:bg-red-50 transition-colors"
+                  >
+                    Disable 2FA
+                  </button>
+                </div>
               ) : (
                 <button
                   onClick={startSetup}
@@ -217,6 +244,39 @@ export default function TwoFAPage() {
                 Cancel
               </button>
             </>
+          )}
+
+          {/* ── Recovery codes ── */}
+          {step === "recovery" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                <Shield size={16} className="text-amber-600 flex-shrink-0" />
+                <p className="text-xs text-amber-800 font-semibold">Save these codes somewhere safe. Each can only be used once to log in if you lose your phone.</p>
+              </div>
+              <h2 className="text-base font-bold text-[#333]">Recovery codes</h2>
+              <div className="grid grid-cols-2 gap-2">
+                {recoveryCodes.map((code) => (
+                  <div key={code} className="font-mono text-sm font-bold text-[#333] bg-[#F5F5F5] rounded-lg px-3 py-2 text-center tracking-widest">
+                    {code}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  const text = recoveryCodes.join("\n");
+                  navigator.clipboard?.writeText(text).catch(() => {});
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-[#E3E3E3] text-sm font-semibold text-[#555] hover:border-[#DB0011] hover:text-[#DB0011] transition-colors"
+              >
+                <Copy size={14} /> Copy all codes
+              </button>
+              <button
+                onClick={() => router.push("/profile")}
+                className="w-full py-3.5 rounded-xl bg-[#DB0011] text-white font-bold text-sm hover:bg-[#b8000e] transition-colors"
+              >
+                I've saved them — continue
+              </button>
+            </div>
           )}
 
           {/* ── Done ── */}

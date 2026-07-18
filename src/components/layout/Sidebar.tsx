@@ -7,7 +7,7 @@ import {
   Home, Landmark, ArrowLeftRight, CreditCard, Receipt,
   BarChart2, TrendingUp, Globe, Target, PiggyBank,
   Bell, User, ShieldCheck, Building, Bitcoin,
-  LogOut, ChevronRight,
+  LogOut, ChevronRight, RefreshCw, AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,9 +24,10 @@ const navGroups = [
   {
     label: "Move Money",
     items: [
-      { href: "/transfer",     label: "Transfer",        icon: ArrowLeftRight },
-      { href: "/pay",          label: "Bill Payments",   icon: Building },
-      { href: "/beneficiaries",label: "Saved Payees",    icon: PiggyBank },
+      { href: "/transfer",          label: "Transfer",          icon: ArrowLeftRight },
+      { href: "/standing-orders",   label: "Standing Orders",   icon: RefreshCw },
+      { href: "/pay",               label: "Bill Payments",     icon: Building },
+      { href: "/beneficiaries",     label: "Saved Payees",      icon: PiggyBank },
     ],
   },
   {
@@ -51,6 +52,12 @@ const navGroups = [
     items: [
       { href: "/analytics",    label: "Analytics",       icon: BarChart2 },
       { href: "/rates",        label: "Exchange Rates",  icon: Globe },
+    ],
+  },
+  {
+    label: "Support",
+    items: [
+      { href: "/disputes",     label: "My Disputes",     icon: AlertCircle },
     ],
   },
 ];

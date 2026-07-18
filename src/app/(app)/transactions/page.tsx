@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { RefreshCw, Filter, X, ArrowLeftRight } from "lucide-react";
+import { RefreshCw, Filter, X, ArrowLeftRight, Download } from "lucide-react";
 import { transactionsApi, type Transaction } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { TransactionItem } from "@/components/transactions/TransactionItem";
@@ -76,6 +76,22 @@ export default function TransactionsPage() {
     fetchTransactions(true);
   }
 
+  async function handleExport() {
+    try {
+      const res = await transactionsApi.export({
+        dateFrom: startDate || undefined,
+        dateTo: endDate || undefined,
+      });
+      const blob = new Blob([res.data as unknown as string], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `lumina-transactions-${new Date().toISOString().split("T")[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {}
+  }
+
   // Group by date
   const grouped = transactions.reduce<Record<string, Transaction[]>>((acc, tx) => {
     const key = formatDate(tx.createdAt);
@@ -99,14 +115,23 @@ export default function TransactionsPage() {
             <ArrowLeftRight size={18} className="text-white/80" />
             <h1 className="text-lg font-bold">Transactions</h1>
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white text-xs font-semibold px-3 py-2 rounded-full hover:bg-white/25 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white text-xs font-semibold px-3 py-2 rounded-full hover:bg-white/25 transition-colors"
+            >
+              <Download size={12} />
+              CSV
+            </button>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white text-xs font-semibold px-3 py-2 rounded-full hover:bg-white/25 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
+              Refresh
+            </button>
+          </div>
         </div>
         {!loading && transactions.length > 0 && (
           <div className="flex items-center gap-4">

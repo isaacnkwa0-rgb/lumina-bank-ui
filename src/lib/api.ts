@@ -128,7 +128,9 @@ export const authApi = {
   setup2FA: () =>
     api.post<ApiResponse<{ qrCode: string; secret: string }>>("/auth/2fa/setup"),
   enable2FA: (token: string) =>
-    api.post<ApiResponse<{ message: string }>>("/auth/2fa/enable", { token }),
+    api.post<ApiResponse<{ message: string; recoveryCodes?: string[] }>>("/auth/2fa/enable", { token }),
+  regenerateRecoveryCodes: () =>
+    api.post<ApiResponse<{ recoveryCodes: string[] }>>("/auth/2fa/regenerate-recovery-codes"),
   disable2FA: (token: string) =>
     api.post<ApiResponse<{ message: string }>>("/auth/2fa/disable", { token }),
   verify2FA: (token: string) =>
@@ -153,6 +155,8 @@ export const transactionsApi = {
     endDate?: string;
   }) => api.get<ApiResponse<Transaction[]>>("/transactions", { params }),
   get: (id: string) => api.get<ApiResponse<Transaction>>(`/transactions/${id}`),
+  export: (params?: { accountId?: string; dateFrom?: string; dateTo?: string }) =>
+    api.get<string>("/transactions/export", { params, responseType: "text" }),
 };
 
 export const transfersApi = {
@@ -184,6 +188,17 @@ export const transfersApi = {
   }) => api.post<ApiResponse<Transfer>>("/transfers/international", data),
   quote: (params: { fromCurrency: string; toCurrency: string; amount: number }) =>
     api.get<ApiResponse<FxQuote>>("/transfers/quote", { params }),
+  getScheduled: () => api.get<ApiResponse<Transfer[]>>("/transfers/scheduled"),
+  cancelScheduled: (id: string) => api.delete<ApiResponse<null>>(`/transfers/${id}/cancel`),
+  schedule: (data: {
+    fromAccountId: string;
+    toAccountNumber: string;
+    toBankCode: string;
+    toAccountName: string;
+    amount: number;
+    description: string;
+    scheduledAt: string;
+  }) => api.post<ApiResponse<Transfer>>("/transfers/schedule", data),
 };
 
 export const cardsApi = {
@@ -208,6 +223,49 @@ export const loansApi = {
   eligibility: () => api.get<ApiResponse<LoanEligibility>>("/loans/eligibility"),
   apply: (data: { type: string; amount: number; termMonths: number; accountId?: string }) =>
     api.post<ApiResponse<Loan>>("/loans/apply", data),
+  schedule: (id: string) =>
+    api.get<ApiResponse<{ loan: Loan; schedule: AmortizationEntry[] }>>(`/loans/${id}/schedule`),
+  repay: (id: string, amount: number) =>
+    api.post<ApiResponse<{ loanId: string; amountPaid: number; remainingBalance: number }>>(`/loans/${id}/repay`, { amount }),
+};
+
+export const usersApi = {
+  getProfile: () => api.get<ApiResponse<User>>("/users/profile"),
+  updateProfile: (data: {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    dateOfBirth?: string;
+    nationality?: string;
+    address?: { street?: string; city?: string; state?: string; postalCode?: string; country?: string };
+    occupation?: string;
+    employer?: string;
+    annualIncome?: number;
+    preferredCurrency?: string;
+  }) => api.patch<ApiResponse<User>>("/users/profile", data),
+  getDevices: () => api.get<ApiResponse<Device[]>>("/users/devices"),
+  removeDevice: (id: string) => api.delete<ApiResponse<null>>(`/users/devices/${id}`),
+  getNotifPrefs: () => api.get<ApiResponse<Record<string, boolean>>>("/users/notifications/preferences"),
+  updateNotifPrefs: (prefs: Record<string, boolean>) =>
+    api.patch<ApiResponse<Record<string, boolean>>>("/users/notifications/preferences", prefs),
+};
+
+export const standingOrdersApi = {
+  list: () => api.get<ApiResponse<StandingOrder[]>>("/standing-orders"),
+  create: (data: {
+    fromAccountId: string;
+    toAccountNumber: string;
+    toBankCode: string;
+    toAccountName: string;
+    amount: number;
+    description: string;
+    frequency: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY";
+    startDate: string;
+    endDate?: string;
+  }) => api.post<ApiResponse<StandingOrder>>("/standing-orders", data),
+  cancel: (id: string) => api.patch<ApiResponse<StandingOrder>>(`/standing-orders/${id}/cancel`),
+  pause: (id: string) => api.patch<ApiResponse<StandingOrder>>(`/standing-orders/${id}/pause`),
+  resume: (id: string) => api.patch<ApiResponse<StandingOrder>>(`/standing-orders/${id}/resume`),
 };
 
 export const investmentsApi = {
@@ -535,6 +593,81 @@ export interface Merchant {
   merchantName: string;
   total: number;
   count: number;
+}
+
+export interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  nationality?: string;
+  address?: { street?: string; city?: string; state?: string; postalCode?: string; country?: string } | null;
+  tier: string;
+  role: string;
+  status: string;
+  kycStatus: string;
+  isEmailVerified: boolean;
+  twoFactorEnabled: boolean;
+  createdAt: string;
+  profile?: {
+    occupation?: string;
+    employer?: string;
+    annualIncome?: string;
+    preferredCurrency: string;
+  } | null;
+}
+
+export interface Device {
+  id: string;
+  deviceName: string;
+  deviceType: string;
+  os?: string;
+  browser?: string;
+  ipAddress?: string;
+  isTrusted: boolean;
+  lastSeenAt: string;
+  createdAt: string;
+}
+
+export interface StandingOrder {
+  id: string;
+  fromAccountId: string;
+  toAccountNumber: string;
+  toBankCode: string;
+  toAccountName: string;
+  amount: string;
+  currency: string;
+  description: string;
+  frequency: string;
+  nextExecutionDate: string;
+  endDate?: string;
+  status: string;
+  lastExecutedAt?: string;
+  createdAt: string;
+  fromAccount?: { id: string; accountNumber: string; type: string; currency: string };
+}
+
+export interface AmortizationEntry {
+  paymentNumber: number;
+  dueDate: string;
+  payment: number;
+  principal: number;
+  interest: number;
+  balance: number;
+}
+
+export interface Dispute {
+  id: string;
+  subject: string;
+  description: string;
+  status: string;
+  resolution?: string;
+  resolvedAt?: string;
+  createdAt: string;
+  transactionId?: string;
 }
 
 export interface Notification {

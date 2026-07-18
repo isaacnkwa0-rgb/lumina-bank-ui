@@ -151,6 +151,7 @@ const menuItems = [
   { href: "/dashboard", label: "Home" },
   { href: "/accounts", label: "Accounts" },
   { href: "/transfer", label: "Transfer" },
+  { href: "/standing-orders", label: "Standing Orders" },
   { href: "/pay", label: "Bill Payments" },
   { href: "/topup", label: "Add Money" },
   { href: "/beneficiaries", label: "Saved Payees" },
@@ -160,6 +161,7 @@ const menuItems = [
   { href: "/loans", label: "Loans" },
   { href: "/investments", label: "Investments" },
   { href: "/goals", label: "Savings Goals" },
+  { href: "/disputes", label: "My Disputes" },
   { href: "/notifications", label: "Notifications" },
   { href: "/profile", label: "Profile & Settings" },
 ];
