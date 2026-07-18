@@ -346,7 +346,7 @@ function DisputesTab() {
 // ── Insurance ─────────────────────────────────────────────────────────────────
 
 function InsuranceTab() {
-  const [filter, setFilter] = useState<"REQUESTED" | "ALL">("REQUESTED");
+  const [filter, setFilter] = useState<"QUOTED" | "ALL">("QUOTED");
   const [items, setItems] = useState<AdminInsuranceQuote[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState("");
@@ -355,7 +355,7 @@ function InsuranceTab() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await adminApi.insuranceQuotes(filter === "ALL" ? undefined : filter);
+      const r = await adminApi.insuranceQuotes(filter === "ALL" ? undefined : (filter as string));
       setItems(r.data.data);
     } catch {} finally { setLoading(false); }
   }, [filter]);
@@ -382,8 +382,8 @@ function InsuranceTab() {
 
   return (
     <div>
-      <FilterBar filters={["REQUESTED","QUOTED","ACCEPTED","DECLINED","ALL"]} active={filter} onSelect={(f) => setFilter(f as any)}
-        labels={{ REQUESTED: "Pending", QUOTED: "Quoted", ACCEPTED: "Accepted", DECLINED: "Declined", ALL: "All" }} />
+      <FilterBar filters={["QUOTED","ACCEPTED","DECLINED","ALL"]} active={filter} onSelect={(f) => setFilter(f as any)}
+        labels={{ QUOTED: "Pending review", ACCEPTED: "Accepted", DECLINED: "Declined", ALL: "All" }} />
       {loading ? <LoadingRows /> : items.length === 0 ? <Empty icon={ShieldAlert} label="No insurance quotes" /> : (
         <div className="divide-y divide-[#F0F0F0]">
           {items.map((q) => (

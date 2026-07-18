@@ -408,6 +408,7 @@ export const insuranceApi = {
   getQuotes: () => api.get<ApiResponse<InsuranceQuote[]>>("/insurance/quotes"),
   getQuote: (id: string) => api.get<ApiResponse<InsuranceQuote>>(`/insurance/quotes/${id}`),
   acceptQuote: (id: string) => api.patch<ApiResponse<InsuranceQuote>>(`/insurance/quotes/${id}/accept`),
+  cancelQuote: (id: string) => api.patch<ApiResponse<InsuranceQuote>>(`/insurance/quotes/${id}/cancel`),
 };
 
 export const ratesApi = {
