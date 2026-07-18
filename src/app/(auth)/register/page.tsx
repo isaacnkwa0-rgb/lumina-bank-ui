@@ -7,7 +7,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { authApi } from "@/lib/api";
-import { setToken, setUser } from "@/lib/auth";
+import { setUser } from "@/lib/auth";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -44,7 +44,7 @@ export default function RegisterPage() {
   async function onSubmit(data: RegisterForm) {
     setApiError("");
     try {
-      const res = await authApi.register({
+      await authApi.register({
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
@@ -52,13 +52,7 @@ export default function RegisterPage() {
         password: data.password,
         gender: data.gender,
       });
-      const { token, user } = res.data.data as {
-        token: string;
-        user: Parameters<typeof setUser>[0];
-      };
-      setToken(token);
-      setUser(user);
-      router.push("/");
+      router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data
