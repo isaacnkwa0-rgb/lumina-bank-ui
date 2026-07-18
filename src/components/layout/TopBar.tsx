@@ -152,6 +152,7 @@ const menuItems = [
   { href: "/accounts", label: "Accounts" },
   { href: "/transfer", label: "Transfer" },
   { href: "/standing-orders", label: "Standing Orders" },
+  { href: "/direct-debits", label: "Direct Debits" },
   { href: "/pay", label: "Bill Payments" },
   { href: "/topup", label: "Add Money" },
   { href: "/beneficiaries", label: "Saved Payees" },

@@ -26,7 +26,7 @@ const navGroups = [
     items: [
       { href: "/transfer",          label: "Transfer",          icon: ArrowLeftRight },
       { href: "/standing-orders",   label: "Standing Orders",   icon: RefreshCw },
-      { href: "/pay",               label: "Bill Payments",     icon: Building },
+      { href: "/direct-debits",     label: "Direct Debits",     icon: Landmark },
       { href: "/beneficiaries",     label: "Saved Payees",      icon: PiggyBank },
     ],
   },

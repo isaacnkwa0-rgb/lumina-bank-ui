@@ -411,20 +411,44 @@ export const ratesApi = {
 
 export const beneficiariesApi = {
   list: () => api.get<ApiResponse<Beneficiary[]>>("/beneficiaries"),
-  delete: (id: string) => api.delete<ApiResponse<null>>(`/beneficiaries/${id}`),
+  get: (id: string) => api.get<ApiResponse<Beneficiary>>(`/beneficiaries/${id}`),
   create: (data: {
-    name: string;
+    nickname: string;
+    accountName: string;
     accountNumber: string;
     bankName: string;
-    type: "domestic" | "international";
+    bankCode: string;
     iban?: string;
     swiftCode?: string;
+    country?: string;
+    currency?: string;
+    isFavorite?: boolean;
   }) => api.post<ApiResponse<Beneficiary>>("/beneficiaries", data),
+  update: (id: string, data: { nickname?: string; isFavorite?: boolean }) =>
+    api.patch<ApiResponse<Beneficiary>>(`/beneficiaries/${id}`, data),
+  delete: (id: string) => api.delete<ApiResponse<null>>(`/beneficiaries/${id}`),
   verify: (data: { accountNumber: string; bankCode: string }) =>
     api.post<ApiResponse<{ accountName: string; accountNumber: string; bankName: string; bankCode: string }>>(
       "/beneficiaries/verify",
       data
     ),
+};
+
+export const directDebitsApi = {
+  list: () => api.get<ApiResponse<DirectDebit[]>>("/direct-debits"),
+  create: (data: {
+    accountId: string;
+    originatorName: string;
+    originatorRef: string;
+    userRef: string;
+    amount?: number;
+    currency?: string;
+    frequency: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY";
+    startDate: string;
+  }) => api.post<ApiResponse<DirectDebit>>("/direct-debits", data),
+  cancel: (id: string) => api.patch<ApiResponse<DirectDebit>>(`/direct-debits/${id}/cancel`),
+  suspend: (id: string) => api.patch<ApiResponse<DirectDebit>>(`/direct-debits/${id}/suspend`),
+  resume: (id: string) => api.patch<ApiResponse<DirectDebit>>(`/direct-debits/${id}/resume`),
 };
 
 export const kycApi = {
@@ -724,11 +748,36 @@ export interface ConversionResult {
 
 export interface Beneficiary {
   id: string;
-  name: string;
+  userId: string;
+  nickname: string;
+  accountName: string;
   accountNumber: string;
   bankName: string;
-  bankCode?: string;
-  type: "domestic" | "international";
+  bankCode: string;
+  iban?: string;
+  swiftCode?: string;
+  country: string;
+  currency: string;
+  isFavorite: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DirectDebit {
+  id: string;
+  userId: string;
+  accountId: string;
+  originatorName: string;
+  originatorRef: string;
+  userRef: string;
+  amount: string | null;
+  currency: string;
+  frequency: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY";
+  nextCollectionDate: string;
+  lastCollectedAt: string | null;
+  status: "ACTIVE" | "SUSPENDED" | "CANCELLED";
+  createdAt: string;
+  account?: { accountNumber: string; type: string; currency: string };
 }
 
 export interface KycStatus {
