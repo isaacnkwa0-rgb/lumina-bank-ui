@@ -115,7 +115,7 @@ export default function TransactionDetailPage() {
 
   if (loading) {
     return (
-      <div className="max-w-lg lg:max-w-5xl mx-auto">
+      <div className="max-w-lg mx-auto lg:max-w-none">
         <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-16">
           <button onClick={() => router.back()} className="h-8 w-8 rounded-full bg-white/15 flex items-center justify-center mb-6">
             <ArrowLeft size={16} className="text-white" />
@@ -141,7 +141,7 @@ export default function TransactionDetailPage() {
 
   if (error || !tx) {
     return (
-      <div className="max-w-lg lg:max-w-5xl mx-auto px-4 pt-20 text-center">
+      <div className="max-w-lg mx-auto lg:max-w-none px-4 pt-20 text-center">
         <XCircle size={40} className="text-[#E3E3E3] mx-auto mb-3" />
         <p className="text-sm font-semibold text-[#333]">{error || "Transaction not found"}</p>
         <button onClick={() => router.back()} className="mt-4 text-sm text-[#DB0011] font-semibold">
@@ -168,7 +168,7 @@ export default function TransactionDetailPage() {
   const hasMerchant = tx.merchantName || tx.merchantCategory;
 
   return (
-    <div className="max-w-lg lg:max-w-5xl mx-auto pb-10">
+    <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* Hero header */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-16 text-white">
         <button

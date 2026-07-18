@@ -93,7 +93,7 @@ export default function TwoFAPage() {
   }
 
   return (
-    <div className="max-w-lg lg:max-w-5xl mx-auto pb-10">
+    <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* Header */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white">
         <button onClick={() => router.back()} className="flex items-center gap-1 text-white/70 hover:text-white mb-4 text-sm">

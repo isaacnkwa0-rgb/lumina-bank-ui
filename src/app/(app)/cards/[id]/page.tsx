@@ -156,7 +156,7 @@ export default function CardDetailPage() {
 
   if (loading) {
     return (
-      <div className="max-w-lg lg:max-w-5xl mx-auto">
+      <div className="max-w-lg mx-auto lg:max-w-none">
         <div className="bg-white border-b border-[#E3E3E3] flex items-center gap-3 px-4 py-3">
           <button onClick={() => router.back()} className="text-[#333333]">
             <ChevronLeft size={24} />
@@ -173,7 +173,7 @@ export default function CardDetailPage() {
 
   if (error || !card) {
     return (
-      <div className="max-w-lg lg:max-w-5xl mx-auto p-4">
+      <div className="max-w-lg mx-auto lg:max-w-none p-4">
         <button onClick={() => router.back()} className="mb-4 text-[#DB0011] flex items-center gap-1 text-sm">
           <ChevronLeft size={16} /> Back
         </button>
@@ -212,7 +212,7 @@ export default function CardDetailPage() {
   }, {});
 
   return (
-    <div className="max-w-lg lg:max-w-5xl mx-auto pb-10">
+    <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* Header */}
       <div className="bg-white border-b border-[#E3E3E3] flex items-center gap-3 px-4 py-3 sticky top-0 z-10">
         <button

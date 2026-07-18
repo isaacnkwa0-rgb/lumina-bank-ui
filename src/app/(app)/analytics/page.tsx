@@ -165,7 +165,7 @@ export default function AnalyticsPage() {
   const maxMerchant = Math.max(...merchants.map((m) => m.total), 1);
 
   return (
-    <div className="max-w-lg lg:max-w-5xl mx-auto pb-10">
+    <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* ── Header ── */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-16 text-white">
         <div className="flex items-center gap-2 mb-4">

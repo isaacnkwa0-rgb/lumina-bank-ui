@@ -103,7 +103,7 @@ export default function AccountDetailPage() {
   };
 
   return (
-    <div className="max-w-lg lg:max-w-5xl mx-auto">
+    <div className="max-w-lg mx-auto lg:max-w-none">
       {/* Header */}
       <div className="bg-white border-b border-[#E3E3E3]">
         <div className="flex items-center gap-3 px-4 py-3">

@@ -363,7 +363,7 @@ export default function GoalsPage() {
   const achieved    = goals.filter((g) => g.status === "ACHIEVED").length;
 
   return (
-    <div className="max-w-lg lg:max-w-5xl mx-auto pb-10">
+    <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* Header */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-16 text-white">
         <div className="flex items-center justify-between mb-4">

@@ -164,7 +164,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-lg lg:max-w-5xl mx-auto pb-8">
+    <div className="max-w-lg mx-auto lg:max-w-none pb-8">
       {/* ── Hero header ── */}
       <div className="bg-gradient-to-br from-[#DB0011] via-[#C4000F] to-[#8B000A] px-4 pt-8 pb-16">
         <div className="flex flex-col items-center gap-3">

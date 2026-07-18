@@ -27,7 +27,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <div className="flex flex-col min-h-screen bg-[#F8F8F8] lg:ml-60">
         {/* TopBar — mobile only (lg: hidden) */}
         <TopBar />
-        <main className="flex-1 pb-20 lg:pb-6">{children}</main>
+        <main className="flex-1 pb-20 lg:pb-8 lg:px-8">{children}</main>
         {/* BottomNav — mobile only */}
         <BottomNav />
       </div>

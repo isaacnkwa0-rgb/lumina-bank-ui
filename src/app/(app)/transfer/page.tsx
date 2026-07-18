@@ -263,7 +263,7 @@ function TransferPageInner() {
   }
 
   return (
-    <div className="max-w-lg lg:max-w-5xl mx-auto">
+    <div className="max-w-lg mx-auto lg:max-w-none">
       {/* Header */}
       <div className="bg-white border-b border-[#E3E3E3] px-4 py-4">
         <h1 className="text-lg font-semibold text-[#333333]">Transfer & Pay</h1>
@@ -986,7 +986,7 @@ function SuccessScreen({ result, onReset }: { result: Transfer; onReset: () => v
   const isPending = result.status === "PENDING";
 
   return (
-    <div className="max-w-lg lg:max-w-5xl mx-auto">
+    <div className="max-w-lg mx-auto lg:max-w-none">
       {/* Status banner */}
       <div
         className={`px-4 py-10 flex flex-col items-center text-center ${
