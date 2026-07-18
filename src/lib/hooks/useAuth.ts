@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getToken, setToken, removeToken, getUser, setUser, setRefreshToken, type AuthUser } from "../auth";
+import { getToken, setToken, removeToken, clearAccessToken, getUser, setUser, setRefreshToken, type AuthUser } from "../auth";
 import { authApi } from "../api";
 import { useRouter } from "next/navigation";
 
@@ -58,6 +58,15 @@ export function useAuth(): UseAuthReturn {
       if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
     };
   }, [token, resetInactivityTimer]);
+
+  // Clear the short-lived access token when the tab/browser is closed.
+  // The refresh token persists in localStorage so the next page load silently re-authenticates
+  // via the 401 interceptor — no visible logout unless the refresh token has also expired.
+  useEffect(() => {
+    if (!token) return;
+    window.addEventListener("beforeunload", clearAccessToken);
+    return () => window.removeEventListener("beforeunload", clearAccessToken);
+  }, [token]);
 
   const login = useCallback(async (email: string, password: string) => {
     const response = await authApi.login(email, password);

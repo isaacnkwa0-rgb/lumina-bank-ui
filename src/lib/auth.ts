@@ -29,6 +29,12 @@ export function removeToken(): void {
   localStorage.removeItem(USER_KEY);
 }
 
+// Removes only the short-lived access token (refresh token and user persist for seamless re-auth)
+export function clearAccessToken(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(TOKEN_KEY);
+}
+
 export function getRefreshToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(REFRESH_TOKEN_KEY);
