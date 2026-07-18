@@ -276,6 +276,27 @@ export const adminApi = {
     api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/disputes/${id}/resolve`, { resolution }),
   auditLogs: (params?: { page?: number; limit?: number; userId?: string; action?: string }) =>
     api.get<ApiResponse<AuditLog[]>>("/admin/audit-logs", { params }),
+  // Insurance
+  insuranceQuotes: (status?: string) =>
+    api.get<ApiResponse<AdminInsuranceQuote[]>>("/admin/insurance", { params: status ? { status } : undefined }),
+  processInsurance: (id: string, data: { status: string; premium?: number; notes?: string }) =>
+    api.patch<ApiResponse<AdminInsuranceQuote>>(`/admin/insurance/${id}/process`, data),
+  // Cards
+  adminCards: (params?: { status?: string; page?: number; limit?: number }) =>
+    api.get<ApiResponse<AdminCard[]>>("/admin/cards", { params }),
+  blockCard: (id: string) => api.patch<ApiResponse<AdminCard>>(`/admin/cards/${id}/block`),
+  unblockCard: (id: string) => api.patch<ApiResponse<AdminCard>>(`/admin/cards/${id}/unblock`),
+  // Transactions
+  allTransactions: (params?: { page?: number; limit?: number; status?: string; type?: string }) =>
+    api.get<ApiResponse<AdminTransaction[]>>("/admin/transactions", { params }),
+  // Rates
+  adminRates: () => api.get<ApiResponse<AdminExchangeRate[]>>("/admin/rates"),
+  refreshRates: () => api.post<ApiResponse<AdminExchangeRate[]>>("/admin/rates/refresh"),
+  // Investments
+  adminInvestments: () => api.get<ApiResponse<AdminPortfolio[]>>("/admin/investments"),
+  // Goals
+  adminGoals: (status?: string) =>
+    api.get<ApiResponse<AdminGoal[]>>("/admin/goals", { params: status ? { status } : undefined }),
 };
 
 export const disputesApi = {
@@ -642,4 +663,83 @@ export interface AuditLog {
   ipAddress?: string | null;
   createdAt: string;
   user?: { id: string; firstName: string; lastName: string; email: string } | null;
+}
+
+export interface AdminInsuranceQuote extends InsuranceQuote {
+  user: { id: string; firstName: string; lastName: string; email: string };
+}
+
+export interface AdminCard {
+  id: string;
+  userId: string;
+  type: string;
+  tier: string;
+  maskedPan: string;
+  expiryMonth: number;
+  expiryYear: number;
+  cardholderName: string;
+  currency: string;
+  status: string;
+  createdAt: string;
+  user: { id: string; firstName: string; lastName: string; email: string };
+  account: { accountNumber: string; type: string; currency: string };
+}
+
+export interface AdminTransaction {
+  id: string;
+  reference: string;
+  type: string;
+  category: string;
+  amount: string;
+  currency: string;
+  description: string;
+  status: string;
+  createdAt: string;
+  account: {
+    id: string;
+    accountNumber: string;
+    user: { id: string; firstName: string; lastName: string; email: string };
+  };
+}
+
+export interface AdminExchangeRate {
+  id: string;
+  baseCurrency: string;
+  quoteCurrency: string;
+  rate: string;
+  fetchedAt: string;
+}
+
+export interface AdminInvestment {
+  id: string;
+  ticker: string;
+  name: string;
+  assetType: string;
+  quantity: string;
+  avgCostBasis: string;
+  currentPrice: string;
+  createdAt: string;
+}
+
+export interface AdminPortfolio {
+  id: string;
+  userId: string;
+  name: string;
+  currency: string;
+  createdAt: string;
+  user: { id: string; firstName: string; lastName: string; email: string };
+  investments: AdminInvestment[];
+}
+
+export interface AdminGoal {
+  id: string;
+  userId: string;
+  name: string;
+  targetAmount: string;
+  currentAmount: string;
+  targetDate?: string | null;
+  status: string;
+  emoji?: string | null;
+  createdAt: string;
+  user: { id: string; firstName: string; lastName: string; email: string };
 }
