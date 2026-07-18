@@ -51,7 +51,7 @@ export default function CardsPage() {
   const frozenCount = cards.filter((c) => c.status === "FROZEN").length;
 
   return (
-    <div className="max-w-lg mx-auto pb-8">
+    <div className="max-w-lg lg:max-w-5xl mx-auto pb-8">
       {/* Header */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white">
         <div className="flex items-center gap-2 mb-4">

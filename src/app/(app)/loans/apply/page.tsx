@@ -134,7 +134,7 @@ export default function LoanApplyPage() {
 
   if (success) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-12 flex flex-col items-center text-center">
+      <div className="max-w-lg lg:max-w-5xl mx-auto px-4 py-12 flex flex-col items-center text-center">
         <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
           <CheckCircle2 size={40} className="text-green-500" />
         </div>
@@ -171,7 +171,7 @@ export default function LoanApplyPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto pb-10">
+    <div className="max-w-lg lg:max-w-5xl mx-auto pb-10">
       {/* Header */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-5 pb-10 text-white">
         <button

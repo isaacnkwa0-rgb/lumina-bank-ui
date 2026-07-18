@@ -132,7 +132,7 @@ export default function TopUpPage() {
   const primaryCurrency = accounts[0]?.currency ?? "GBP";
 
   return (
-    <div className="max-w-lg mx-auto pb-10">
+    <div className="max-w-lg lg:max-w-5xl mx-auto pb-10">
       {/* Header */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white">
         <div className="flex items-center gap-2 mb-4">

@@ -68,7 +68,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-lg lg:max-w-5xl mx-auto">
       {/* Hero balance card */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-5 py-6">
         {loading ? (

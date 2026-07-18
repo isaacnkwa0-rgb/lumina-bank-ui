@@ -813,7 +813,7 @@ function PaymentModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative w-full max-w-lg mx-auto bg-white rounded-t-3xl shadow-xl max-h-[90vh] flex flex-col">
+      <div className="relative w-full max-w-lg lg:max-w-5xl mx-auto bg-white rounded-t-3xl shadow-xl max-h-[90vh] flex flex-col">
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
           <div className="h-1 w-10 rounded-full bg-[#E0E0E0]" />
@@ -1081,7 +1081,7 @@ export default function PayPage() {
 
   if (success && selectedBiller) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-12 flex flex-col items-center text-center">
+      <div className="max-w-lg lg:max-w-5xl mx-auto px-4 py-12 flex flex-col items-center text-center">
         <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
           <CheckCircle2 size={40} className="text-green-500" />
         </div>
@@ -1108,7 +1108,7 @@ export default function PayPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto pb-10">
+    <div className="max-w-lg lg:max-w-5xl mx-auto pb-10">
       {/* Header */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-5 pb-10 text-white">
         {selectedCategory ? (

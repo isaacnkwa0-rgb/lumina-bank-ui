@@ -430,7 +430,7 @@ export default function CryptoPage() {
   });
 
   return (
-    <div className="max-w-lg mx-auto pb-10">
+    <div className="max-w-lg lg:max-w-5xl mx-auto pb-10">
       {/* ── Dark header ── */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white">
         <div className="flex items-center justify-between mb-1">
