@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getToken } from "@/lib/auth";
 import { TopBar } from "@/components/layout/TopBar";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { Sidebar } from "@/components/layout/Sidebar";
 import { MoreSheetProvider } from "@/lib/more-sheet-context";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -20,9 +21,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <MoreSheetProvider>
-      <div className="flex flex-col min-h-screen bg-[#F8F8F8]">
+      {/* Desktop sidebar */}
+      <Sidebar />
+
+      <div className="flex flex-col min-h-screen bg-[#F8F8F8] lg:ml-60">
+        {/* TopBar — mobile only (lg: hidden) */}
         <TopBar />
-        <main className="flex-1 pb-20">{children}</main>
+        <main className="flex-1 pb-20 lg:pb-6">{children}</main>
+        {/* BottomNav — mobile only */}
         <BottomNav />
       </div>
     </MoreSheetProvider>

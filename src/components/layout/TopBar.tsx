@@ -22,7 +22,7 @@ export function TopBar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white border-b border-[#E3E3E3] h-14 flex items-center px-4">
+      <header className="lg:hidden sticky top-0 z-40 bg-white border-b border-[#E3E3E3] h-14 flex items-center px-4">
         {/* Hamburger */}
         <button
           onClick={() => setMenuOpen(true)}

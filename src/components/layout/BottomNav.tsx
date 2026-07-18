@@ -52,7 +52,7 @@ export function BottomNav() {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#E3E3E3] h-16 safe-area-bottom">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#E3E3E3] h-16 safe-area-bottom">
         <div className="flex h-full">
           {mainNav.map(({ href, label, icon: Icon }) => {
             const active = isActive(href);
