@@ -2,8 +2,8 @@
 
 import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { getToken } from "@/lib/auth";
-import { ShieldCheck, ArrowLeft } from "lucide-react";
+import { getToken, removeToken } from "@/lib/auth";
+import { ShieldCheck, ArrowLeft, LogOut } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -15,6 +15,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       router.replace("/");
     }
   }, [router]);
+
+  function logout() {
+    removeToken();
+    router.replace("/");
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F0F2F5]">
@@ -34,6 +39,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <span className="ml-auto text-[10px] font-bold uppercase tracking-widest text-white/30">
           Internal
         </span>
+        <button
+          onClick={logout}
+          className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-medium px-3 h-8 rounded-sm transition-colors"
+          aria-label="Log off"
+        >
+          <LogOut size={13} />
+          <span>Log off</span>
+        </button>
       </header>
 
       <main className="flex-1 lg:px-8 lg:py-6">{children}</main>

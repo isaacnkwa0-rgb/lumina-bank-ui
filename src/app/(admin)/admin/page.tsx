@@ -370,7 +370,7 @@ function UsersTab() {
     setLoading(true);
     try {
       const r = await adminApi.users({ search: query || undefined, limit: 30 });
-      setUsers(r.data.data);
+      setUsers(r.data.data.users);
     } catch {}
     finally { setLoading(false); }
   }, [query]);

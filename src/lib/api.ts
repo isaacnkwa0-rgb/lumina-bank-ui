@@ -247,7 +247,7 @@ export const adminApi = {
     totalTransfers: number;
   }>>("/admin/stats"),
   users: (params?: { page?: number; limit?: number; search?: string; status?: string }) =>
-    api.get<ApiResponse<AdminUser[]>>("/admin/users", { params }),
+    api.get<ApiResponse<{ users: AdminUser[]; meta: unknown }>>("/admin/users", { params }),
   getUser: (id: string) =>
     api.get<ApiResponse<AdminUserDetail>>(`/admin/users/${id}`),
   suspendUser: (id: string) =>
