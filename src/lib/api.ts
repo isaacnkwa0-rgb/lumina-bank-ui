@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig, type AxiosError } from "axios";
-import { getToken, removeToken } from "./auth";
+import { getToken, setToken, removeToken, getRefreshToken, setRefreshToken } from "./auth";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
@@ -23,16 +23,64 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor — handle 401
+// Response interceptor — silent token refresh on 401
+let isRefreshing = false;
+let failedQueue: Array<{ resolve: (v: string) => void; reject: (e: unknown) => void }> = [];
+
+function processQueue(error: unknown, token: string | null = null) {
+  failedQueue.forEach(({ resolve, reject }) => (error ? reject(error) : resolve(token!)));
+  failedQueue = [];
+}
+
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      removeToken();
-      if (typeof window !== "undefined") {
-        window.location.href = "/login";
+  async (error: AxiosError) => {
+    const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const isRefreshEndpoint = original?.url?.includes("/auth/refresh");
+
+    if (error.response?.status === 401 && !original?._retry && !isRefreshEndpoint) {
+      if (isRefreshing) {
+        return new Promise<string>((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then((token) => {
+          original.headers.Authorization = `Bearer ${token}`;
+          return api(original);
+        });
+      }
+
+      original._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = getRefreshToken();
+      if (!refreshToken) {
+        removeToken();
+        if (typeof window !== "undefined") window.location.href = "/login?reason=session_expired";
+        return Promise.reject(error);
+      }
+
+      try {
+        const { data } = await axios.post<{ data: { accessToken: string; refreshToken: string } }>(
+          `${BASE_URL}/auth/refresh`,
+          { refreshToken }
+        );
+        const newAccess = data.data.accessToken;
+        const newRefresh = data.data.refreshToken;
+        setToken(newAccess);
+        setRefreshToken(newRefresh);
+        api.defaults.headers.common.Authorization = `Bearer ${newAccess}`;
+        processQueue(null, newAccess);
+        original.headers.Authorization = `Bearer ${newAccess}`;
+        return api(original);
+      } catch (refreshError) {
+        processQueue(refreshError);
+        removeToken();
+        if (typeof window !== "undefined") window.location.href = "/login?reason=session_expired";
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
+
     return Promise.reject(error);
   }
 );

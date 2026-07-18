@@ -411,6 +411,8 @@ function OwnAccountsForm({
 
 type VerifyState = "idle" | "loading" | "found" | "not-found";
 
+const CONFIRM_THRESHOLD = 500;
+
 function DomesticForm({
   accounts,
   beneficiaries,
@@ -432,6 +434,8 @@ function DomesticForm({
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null);
   const [verifyState, setVerifyState] = useState<VerifyState>("idle");
   const [verifiedName, setVerifiedName] = useState("");
+  const [pendingData, setPendingData] = useState<DomesticFormValues | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
@@ -495,18 +499,42 @@ function DomesticForm({
 
   async function onSubmit(data: DomesticFormValues) {
     onError("");
+    if (Number(data.amount) >= CONFIRM_THRESHOLD) {
+      setPendingData(data);
+      return;
+    }
+    await executeTransfer(data);
+  }
+
+  async function executeTransfer(data: DomesticFormValues) {
+    setIsConfirming(true);
     try {
       const res = await transfersApi.domestic({ ...data, amount: Number(data.amount) });
+      setPendingData(null);
       onSuccess(res.data.data);
     } catch (err: unknown) {
+      setPendingData(null);
       onError(
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
           "Transfer failed."
       );
+    } finally {
+      setIsConfirming(false);
     }
   }
 
   return (
+    <>
+    {pendingData && (
+      <ConfirmModal
+        amount={Number(pendingData.amount)}
+        currency="GBP"
+        recipient={pendingData.toAccountName}
+        onConfirm={() => executeTransfer(pendingData)}
+        onCancel={() => setPendingData(null)}
+        isLoading={isConfirming}
+      />
+    )}
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
       <div>
         <p className="text-xs font-semibold text-[#767676] uppercase tracking-wide mb-2 px-0.5">
@@ -724,6 +752,7 @@ function DomesticForm({
         Send payment
       </Button>
     </form>
+    </>
   );
 }
 
@@ -746,6 +775,9 @@ function InternationalForm({
   onSuccess: (r: Transfer) => void;
   onError: (e: string) => void;
 }) {
+  const [pendingData, setPendingData] = useState<InternationalFormValues | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
+
   const {
     register, handleSubmit, watch,
     formState: { errors, isSubmitting },
@@ -775,18 +807,42 @@ function InternationalForm({
 
   async function onSubmit(data: InternationalFormValues) {
     onError("");
+    if (Number(data.amount) >= CONFIRM_THRESHOLD) {
+      setPendingData(data);
+      return;
+    }
+    await executeTransfer(data);
+  }
+
+  async function executeTransfer(data: InternationalFormValues) {
+    setIsConfirming(true);
     try {
       const res = await transfersApi.international({ ...data, amount: Number(data.amount) });
+      setPendingData(null);
       onSuccess(res.data.data);
     } catch (err: unknown) {
+      setPendingData(null);
       onError(
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
           "Transfer failed."
       );
+    } finally {
+      setIsConfirming(false);
     }
   }
 
   return (
+    <>
+    {pendingData && (
+      <ConfirmModal
+        amount={Number(pendingData.amount)}
+        currency="GBP"
+        recipient={pendingData.toAccountName}
+        onConfirm={() => executeTransfer(pendingData)}
+        onCancel={() => setPendingData(null)}
+        isLoading={isConfirming}
+      />
+    )}
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
       <div>
         <p className="text-xs font-semibold text-[#767676] uppercase tracking-wide mb-2 px-0.5">
@@ -920,6 +976,7 @@ function InternationalForm({
         {fxQuote ? "Confirm transfer" : "Send transfer"}
       </Button>
     </form>
+    </>
   );
 }
 
@@ -1009,6 +1066,73 @@ function SuccessScreen({ result, onReset }: { result: Transfer; onReset: () => v
         <Button variant="secondary" fullWidth onClick={onReset}>
           Make another transfer
         </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Confirm Modal ────────────────────────────────────────────────────────────
+
+function ConfirmModal({
+  amount,
+  currency,
+  recipient,
+  onConfirm,
+  onCancel,
+  isLoading,
+}: {
+  amount: number;
+  currency: string;
+  recipient: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isLoading: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-8">
+      <div className="w-full max-w-sm bg-white rounded-sm shadow-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-[#E3E3E3]">
+          <p className="text-sm font-bold text-[#333333]">Confirm transfer</p>
+          <p className="text-xs text-[#767676] mt-0.5">Please review before sending</p>
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          <div className="flex justify-between">
+            <span className="text-sm text-[#767676]">Amount</span>
+            <span className="text-sm font-bold text-[#333333]">
+              {formatCurrency(amount, currency)}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-sm text-[#767676]">To</span>
+            <span className="text-sm font-semibold text-[#333333] max-w-[60%] text-right truncate">
+              {recipient}
+            </span>
+          </div>
+          <div className="bg-amber-50 border border-amber-200 rounded-sm px-3 py-2">
+            <p className="text-xs text-amber-700">
+              This transfer cannot be undone once confirmed. Ensure all details are correct.
+            </p>
+          </div>
+        </div>
+        <div className="px-5 pb-5 flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isLoading}
+            className="flex-1 py-2.5 border border-[#E3E3E3] rounded-sm text-sm font-semibold text-[#767676] hover:border-[#BBBBBB] transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isLoading}
+            className="flex-1 py-2.5 bg-[#DB0011] rounded-sm text-sm font-bold text-white hover:bg-[#B0000E] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isLoading && <Loader2 size={14} className="animate-spin" />}
+            {isLoading ? "Sending…" : "Confirm & send"}
+          </button>
+        </div>
       </div>
     </div>
   );
