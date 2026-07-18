@@ -10,7 +10,7 @@ import {
   RefreshCw, Send, Globe,
 } from "lucide-react";
 import {
-  accountsApi, transfersApi, beneficiariesApi,
+  accountsApi, transfersApi, beneficiariesApi, authApi,
   type Account, type Beneficiary, type Transfer, type FxQuote,
 } from "@/lib/api";
 import { Loader2, BadgeCheck, AlertCircle } from "lucide-react";
@@ -1073,6 +1073,8 @@ function SuccessScreen({ result, onReset }: { result: Transfer; onReset: () => v
 
 // ── Confirm Modal ────────────────────────────────────────────────────────────
 
+const REAUTH_THRESHOLD = 500;
+
 function ConfirmModal({
   amount,
   currency,
@@ -1088,9 +1090,27 @@ function ConfirmModal({
   onCancel: () => void;
   isLoading: boolean;
 }) {
+  const requiresReauth = amount >= REAUTH_THRESHOLD;
+  const [password, setPassword] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [verified, setVerified] = useState(!requiresReauth);
+
+  async function handleVerify() {
+    if (!password) return;
+    setAuthError(""); setVerifying(true);
+    try {
+      await authApi.verifyPassword(password);
+      setVerified(true);
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setAuthError(msg || "Incorrect password.");
+    } finally { setVerifying(false); }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-8">
-      <div className="w-full max-w-sm bg-white rounded-sm shadow-xl overflow-hidden">
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-[#E3E3E3]">
           <p className="text-sm font-bold text-[#333333]">Confirm transfer</p>
           <p className="text-xs text-[#767676] mt-0.5">Please review before sending</p>
@@ -1098,36 +1118,68 @@ function ConfirmModal({
         <div className="px-5 py-4 space-y-3">
           <div className="flex justify-between">
             <span className="text-sm text-[#767676]">Amount</span>
-            <span className="text-sm font-bold text-[#333333]">
-              {formatCurrency(amount, currency)}
-            </span>
+            <span className="text-sm font-bold text-[#333333]">{formatCurrency(amount, currency)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-sm text-[#767676]">To</span>
-            <span className="text-sm font-semibold text-[#333333] max-w-[60%] text-right truncate">
-              {recipient}
-            </span>
+            <span className="text-sm font-semibold text-[#333333] max-w-[60%] text-right truncate">{recipient}</span>
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-sm px-3 py-2">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
             <p className="text-xs text-amber-700">
               This transfer cannot be undone once confirmed. Ensure all details are correct.
             </p>
           </div>
+
+          {/* Password re-auth for large transfers */}
+          {requiresReauth && !verified && (
+            <div className="space-y-2 pt-1">
+              <p className="text-xs font-bold text-[#555] uppercase tracking-wide">
+                Transfers of {formatCurrency(REAUTH_THRESHOLD)}+ require your password
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setAuthError(""); }}
+                  onKeyDown={(e) => e.key === "Enter" && handleVerify()}
+                  placeholder="Enter your password"
+                  className="flex-1 px-3 py-2 border-2 border-[#E3E3E3] rounded-xl text-sm focus:outline-none focus:border-[#DB0011]"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={handleVerify}
+                  disabled={verifying || !password}
+                  className="px-3 py-2 bg-[#DB0011] text-white text-xs font-bold rounded-xl disabled:opacity-50 hover:bg-[#b8000e] transition-colors"
+                >
+                  {verifying ? <Loader2 size={13} className="animate-spin" /> : "Verify"}
+                </button>
+              </div>
+              {authError && <p className="text-xs text-[#DB0011]">{authError}</p>}
+            </div>
+          )}
+
+          {requiresReauth && verified && (
+            <div className="flex items-center gap-2 text-xs text-green-700 font-semibold">
+              <CheckCircle2 size={14} className="text-green-600" />
+              Identity confirmed
+            </div>
+          )}
         </div>
         <div className="px-5 pb-5 flex gap-3">
           <button
             type="button"
             onClick={onCancel}
             disabled={isLoading}
-            className="flex-1 py-2.5 border border-[#E3E3E3] rounded-sm text-sm font-semibold text-[#767676] hover:border-[#BBBBBB] transition-colors disabled:opacity-50"
+            className="flex-1 py-2.5 border border-[#E3E3E3] rounded-xl text-sm font-semibold text-[#767676] hover:border-[#BBBBBB] transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            disabled={isLoading}
-            className="flex-1 py-2.5 bg-[#DB0011] rounded-sm text-sm font-bold text-white hover:bg-[#B0000E] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            disabled={isLoading || !verified}
+            className="flex-1 py-2.5 bg-[#DB0011] rounded-xl text-sm font-bold text-white hover:bg-[#B0000E] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isLoading && <Loader2 size={14} className="animate-spin" />}
             {isLoading ? "Sending…" : "Confirm & send"}
