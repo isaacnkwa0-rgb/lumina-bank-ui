@@ -35,6 +35,16 @@ function processQueue(error: unknown, token: string | null = null) {
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
+    // Normalize backend error shape: { error: { message } } → { message }
+    // so every catch block's err.response.data.message works without changes
+    const body = error.response?.data as Record<string, unknown> | undefined;
+    if (body && typeof body.error === "object" && body.error !== null) {
+      const inner = body.error as Record<string, unknown>;
+      if (typeof inner.message === "string" && typeof body.message !== "string") {
+        body.message = inner.message;
+      }
+    }
+
     const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     const isRefreshEndpoint = original?.url?.includes("/auth/refresh");
 
