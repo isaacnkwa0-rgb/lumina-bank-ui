@@ -554,7 +554,7 @@ export default function AdminPage() {
   const [error, setError] = useState("");
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-lg mx-auto lg:max-w-none">
       {/* Header with stats */}
       <div className="bg-gradient-to-r from-[#1a1a2e] to-[#16213e] text-white">
         <div className="px-4 py-4 flex items-center gap-2">
