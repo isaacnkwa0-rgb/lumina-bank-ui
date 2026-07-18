@@ -270,9 +270,22 @@ export const standingOrdersApi = {
 
 export const investmentsApi = {
   portfolio: () => api.get<ApiResponse<Portfolio>>("/investments/portfolio"),
+  holdings: () => api.get<ApiResponse<Holding[]>>("/investments/holdings"),
   watchlist: () => api.get<ApiResponse<WatchlistItem[]>>("/investments/watchlist"),
+  addToWatchlist: (data: { ticker: string; assetName: string; assetType: string }) =>
+    api.post<ApiResponse<WatchlistItem>>("/investments/watchlist", data),
+  removeFromWatchlist: (ticker: string) =>
+    api.delete<ApiResponse<{ message: string }>>(`/investments/watchlist/${ticker}`),
   quote: (ticker: string) =>
     api.get<ApiResponse<MarketQuote>>("/investments/market/quote", { params: { ticker } }),
+  search: (q: string) =>
+    api.get<ApiResponse<SearchResult[]>>("/investments/market/search", { params: { q } }),
+  performance: (period?: "1W" | "1M" | "3M" | "6M" | "1Y") =>
+    api.get<ApiResponse<PerformancePoint[]>>("/investments/performance", { params: { period } }),
+  buy: (data: { ticker: string; assetType: string; assetName: string; quantity?: number; amount?: number }) =>
+    api.post<ApiResponse<{ ticker: string; quantity: number; price: number; total: number }>>("/investments/buy", data),
+  sell: (data: { ticker: string; quantity: number }) =>
+    api.post<ApiResponse<{ ticker: string; quantity: number; price: number; proceeds: number }>>("/investments/sell", data),
 };
 
 export const goalsApi = {
@@ -556,6 +569,22 @@ export interface MarketQuote {
   price: number;
   change: number;
   changePercent: number;
+  high: number;
+  low: number;
+  volume: number;
+  marketCap: number;
+}
+
+export interface SearchResult {
+  ticker: string;
+  name: string;
+  assetType: string;
+  price: number;
+}
+
+export interface PerformancePoint {
+  date: string;
+  value: number;
 }
 
 export interface Goal {
