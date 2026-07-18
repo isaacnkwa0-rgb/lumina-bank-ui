@@ -15,12 +15,31 @@ export default function VerifyEmailPage() {
   const [done, setDone] = useState(false);
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
 
+  async function verify(fullCode: string) {
+    if (fullCode.length < 6 || loading) return;
+    setError("");
+    setLoading(true);
+    try {
+      await authApi.verifyEmail(fullCode);
+      setDone(true);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(msg || "Invalid or expired code. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function handleChange(idx: number, val: string) {
     if (!/^\d*$/.test(val)) return;
     const next = [...code];
     next[idx] = val.slice(-1);
     setCode(next);
-    if (val && idx < 5) inputs.current[idx + 1]?.focus();
+    if (val && idx < 5) {
+      inputs.current[idx + 1]?.focus();
+    } else if (val && idx === 5) {
+      verify(next.join(""));
+    }
   }
 
   function handleKeyDown(idx: number, e: React.KeyboardEvent<HTMLInputElement>) {
@@ -34,24 +53,13 @@ export default function VerifyEmailPage() {
     if (pasted.length === 6) {
       setCode(pasted.split(""));
       inputs.current[5]?.focus();
+      verify(pasted);
     }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const fullCode = code.join("");
-    if (fullCode.length < 6) { setError("Enter the full 6-digit code."); return; }
-    setError("");
-    setLoading(true);
-    try {
-      await authApi.verifyEmail(fullCode);
-      setDone(true);
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || "Invalid or expired code. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    verify(code.join(""));
   }
 
   async function handleResend() {
