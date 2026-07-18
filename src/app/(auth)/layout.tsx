@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
@@ -8,12 +9,12 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
       {/* Header */}
       <header className="bg-white border-b border-[#E3E3E3] py-4 px-6 flex items-center justify-center">
-        <div className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <DiamondLogo />
           <span className="font-semibold text-[#333333] text-lg tracking-tight">
             Lumina Bank
           </span>
-        </div>
+        </Link>
       </header>
 
       {/* Content */}

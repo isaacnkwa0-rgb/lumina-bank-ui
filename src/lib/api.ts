@@ -138,6 +138,8 @@ export const authApi = {
 export const accountsApi = {
   list: () => api.get<ApiResponse<Account[]>>("/accounts"),
   get: (id: string) => api.get<ApiResponse<Account>>(`/accounts/${id}`),
+  create: (data: { type: string; currency?: string }) =>
+    api.post<ApiResponse<Account>>("/accounts", data),
 };
 
 export const transactionsApi = {
@@ -204,7 +206,7 @@ export const cardsApi = {
 export const loansApi = {
   list: () => api.get<ApiResponse<Loan[]>>("/loans"),
   eligibility: () => api.get<ApiResponse<LoanEligibility>>("/loans/eligibility"),
-  apply: (data: { type: string; amount: number; termMonths: number }) =>
+  apply: (data: { type: string; amount: number; termMonths: number; accountId?: string }) =>
     api.post<ApiResponse<Loan>>("/loans/apply", data),
 };
 

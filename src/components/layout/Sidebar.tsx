@@ -76,13 +76,13 @@ export function Sidebar() {
   return (
     <aside className="hidden lg:flex flex-col fixed top-0 left-0 h-screen w-60 bg-white border-r border-[#E3E3E3] z-30">
       {/* Logo */}
-      <div className="bg-[#DB0011] px-4 py-4 flex items-center gap-2.5 flex-shrink-0">
+      <Link href="/dashboard" className="bg-[#DB0011] px-4 py-4 flex items-center gap-2.5 flex-shrink-0 hover:bg-[#c4000f] transition-colors">
         <DiamondLogo />
         <div>
           <p className="text-white font-bold text-sm leading-tight">Lumina Bank</p>
           <p className="text-white/60 text-[10px] leading-tight">Secure Banking</p>
         </div>
-      </div>
+      </Link>
 
       {/* User pill */}
       {user && (

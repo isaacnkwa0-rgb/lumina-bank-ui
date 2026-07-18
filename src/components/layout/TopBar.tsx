@@ -33,12 +33,12 @@ export function TopBar() {
         </button>
 
         {/* Logo + Name */}
-        <div className="flex-1 flex items-center justify-center gap-2">
+        <Link href="/dashboard" className="flex-1 flex items-center justify-center gap-2 hover:opacity-80 transition-opacity">
           <DiamondLogo />
           <span className="font-semibold text-[#333333] text-base tracking-tight">
             Lumina Bank
           </span>
-        </div>
+        </Link>
 
         {/* Right actions */}
         <div className="flex items-center gap-2">
@@ -85,10 +85,10 @@ export function TopBar() {
           {/* Panel */}
           <div className="absolute top-0 left-0 bottom-0 w-72 bg-white flex flex-col shadow-xl">
             <div className="bg-[#DB0011] px-4 py-5 flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                 <DiamondLogo white />
                 <span className="text-white font-semibold text-base">Lumina Bank</span>
-              </div>
+              </Link>
               <button
                 onClick={() => setMenuOpen(false)}
                 className="text-white/80 hover:text-white"

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { loansApi } from "@/lib/api";
+import { loansApi, accountsApi, type Account } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import {
   ArrowLeft, User, Briefcase, Car, GraduationCap,
-  CheckCircle2, ChevronRight, Banknote, Percent, Calendar,
+  CheckCircle2, ChevronRight, Banknote, Percent, Calendar, CreditCard,
 } from "lucide-react";
 
 // ── Loan type config ───────────────────────────────────────────────────────────
@@ -89,6 +89,17 @@ export default function LoanApplyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+
+  useEffect(() => {
+    accountsApi.list().then((res) => {
+      const active = res.data.data.filter((a) => a.status === "ACTIVE");
+      setAccounts(active);
+      const def = active.find((a) => a.isDefault) ?? active[0];
+      if (def) setSelectedAccountId(def.id);
+    }).catch(() => {});
+  }, []);
 
   const parsedAmount = parseFloat(amount.replace(/,/g, "")) || 0;
   const monthly = useMemo(
@@ -122,7 +133,7 @@ export default function LoanApplyPage() {
 
     setSubmitting(true);
     try {
-      await loansApi.apply({ type: selectedType.type, amount: parsedAmount, termMonths });
+      await loansApi.apply({ type: selectedType.type, amount: parsedAmount, termMonths, accountId: selectedAccountId || undefined });
       setSuccess(true);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -287,12 +298,50 @@ export default function LoanApplyPage() {
           </div>
         )}
 
-        {/* Step 3 — summary */}
+        {/* Step 3 — disbursement account */}
+        {selectedType && accounts.length > 0 && (
+          <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-5">
+            <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest mb-3">
+              3. Disbursement account
+            </p>
+            <p className="text-xs text-[#767676] mb-3">Approved funds will be credited to this account.</p>
+            <div className="space-y-2">
+              {accounts.map((acc) => {
+                const selected = selectedAccountId === acc.id;
+                return (
+                  <button
+                    key={acc.id}
+                    type="button"
+                    onClick={() => setSelectedAccountId(acc.id)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${
+                      selected ? "border-[#DB0011] bg-red-50" : "border-[#E8E8E8] hover:border-[#D0D0D0]"
+                    }`}
+                  >
+                    <CreditCard size={16} className={selected ? "text-[#DB0011]" : "text-[#AAAAAA]"} />
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold ${selected ? "text-[#DB0011]" : "text-[#333]"}`}>
+                        {acc.type.replace("_", " ")}
+                      </p>
+                      <p className="text-xs text-[#AAAAAA] truncate">
+                        •••• {acc.accountNumber.slice(-4)} · {formatCurrency(Number(acc.balance), acc.currency)}
+                      </p>
+                    </div>
+                    {acc.isDefault && (
+                      <span className="text-[10px] font-bold text-white bg-[#DB0011] px-1.5 py-0.5 rounded">Default</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Step 4 — summary */}
         {selectedType && parsedAmount > 0 && (
           <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-[#F5F5F5]">
               <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest mb-3">
-                3. Your quote
+                4. Your quote
               </p>
               <div className="flex items-end justify-between">
                 <div>
