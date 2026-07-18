@@ -5,7 +5,7 @@ import {
   adminApi,
   type AdminTransfer, type AdminUser, type AdminLoan, type AdminDispute,
   type AdminInsuranceQuote, type AdminCard, type AdminTransaction,
-  type AdminExchangeRate, type AdminPortfolio, type AdminGoal,
+  type AdminExchangeRate, type AdminPortfolio, type AdminGoal, type AdminAccount,
 } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
@@ -680,12 +680,168 @@ function GoalsTab() {
 
 // ── Users ─────────────────────────────────────────────────────────────────────
 
+const TIERS = ["STANDARD", "PREMIUM", "PRIVATE", "BUSINESS"] as const;
+
+function UserRow({ u, onUpdate, onDelete }: {
+  u: AdminUser;
+  onUpdate: (id: string, patch: Partial<AdminUser>) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [actionId, setActionId] = useState("");
+  const [expanded, setExpanded] = useState(false);
+  const [accounts, setAccounts] = useState<AdminAccount[]>([]);
+  const [acctLoading, setAcctLoading] = useState(false);
+
+  async function act(fn: () => Promise<void>) {
+    setActionId("x");
+    try { await fn(); } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
+  async function loadAccounts() {
+    if (accounts.length > 0) { setExpanded((p) => !p); return; }
+    setExpanded(true);
+    setAcctLoading(true);
+    try {
+      const r = await adminApi.getUserAccounts(u.id);
+      setAccounts(r.data.data);
+    } catch {} finally { setAcctLoading(false); }
+  }
+
+  return (
+    <div className="bg-white px-4 py-4">
+      {/* Header row */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-[#333]">{u.firstName} {u.lastName}</p>
+          <p className="text-xs text-[#767676] truncate">{u.email}</p>
+          {u.phone && <p className="text-xs text-[#AAAAAA]">{u.phone}</p>}
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            <Pill status={u.status} />
+            <Pill status={u.kycStatus} />
+            <span className="text-[10px] bg-[#1a1a2e] text-white px-2 py-0.5 rounded-full uppercase font-bold">{u.tier}</span>
+          </div>
+        </div>
+        <div className="text-right flex-shrink-0 ml-3">
+          <p className="text-[10px] text-[#AAAAAA]">{u._count.accounts} account{u._count.accounts !== 1 ? "s" : ""}</p>
+          <p className="text-[10px] text-[#AAAAAA] mt-0.5">{formatDate(u.createdAt)}</p>
+          <button onClick={loadAccounts} className="text-[10px] text-[#DB0011] font-semibold mt-1">
+            {expanded ? "Hide accounts ▲" : "View accounts ▼"}
+          </button>
+        </div>
+      </div>
+
+      {/* Status actions */}
+      <div className="mb-2">
+        <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-1.5">Account Status</p>
+        <div className="flex flex-wrap gap-1.5">
+          {u.status === "ACTIVE" ? (
+            <Btn color="red" label="Suspend" loading={actionId === "x"} onClick={() => act(async () => { await adminApi.suspendUser(u.id); onUpdate(u.id, { status: "SUSPENDED" }); })} />
+          ) : (
+            <Btn color="green" label="Activate" loading={actionId === "x"} onClick={() => act(async () => { await adminApi.activateUser(u.id); onUpdate(u.id, { status: "ACTIVE" }); })} />
+          )}
+          <Btn color="amber" label="Reset Lockout" loading={actionId === "x"} onClick={() => act(async () => { await adminApi.resetLockout(u.id); alert("Lockout cleared"); })} />
+          <Btn color="blue" label="Verify Email" loading={actionId === "x"} onClick={() => act(async () => { await adminApi.verifyUserEmail(u.id); alert("Email marked as verified"); })} />
+          <Btn color="red-outline" label="Delete User" loading={actionId === "x"} onClick={() => {
+            if (!confirm(`Permanently delete ${u.firstName} ${u.lastName}? This cannot be undone.`)) return;
+            act(async () => { await adminApi.deleteUser(u.id); onDelete(u.id); });
+          }} />
+        </div>
+      </div>
+
+      {/* KYC actions */}
+      {u.kycStatus === "PENDING" && (
+        <div className="mb-2">
+          <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-1.5">KYC</p>
+          <div className="flex flex-wrap gap-1.5">
+            <Btn color="green" label="Verify KYC" loading={actionId === "x"} onClick={() => act(async () => { await adminApi.approveKyc(u.id); onUpdate(u.id, { kycStatus: "VERIFIED" }); })} />
+            <Btn color="red" label="Reject KYC" loading={actionId === "x"} onClick={async () => {
+              const reason = prompt("Reason for KYC rejection:");
+              if (!reason?.trim()) return;
+              await act(async () => { await adminApi.rejectKyc(u.id, reason.trim()); onUpdate(u.id, { kycStatus: "REJECTED" }); });
+            }} />
+          </div>
+        </div>
+      )}
+
+      {/* Tier management */}
+      <div>
+        <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-1.5">Tier</p>
+        <div className="flex flex-wrap gap-1.5">
+          {TIERS.filter((t) => t !== u.tier).map((tier) => (
+            <Btn key={tier} color="navy" label={`→ ${tier.charAt(0) + tier.slice(1).toLowerCase()}`} loading={actionId === "x"}
+              onClick={() => act(async () => { await adminApi.changeUserTier(u.id, tier); onUpdate(u.id, { tier }); })} />
+          ))}
+        </div>
+      </div>
+
+      {/* Accounts panel */}
+      {expanded && (
+        <div className="mt-3 border-t border-[#F0F0F0] pt-3">
+          <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-2">Bank Accounts</p>
+          {acctLoading ? <p className="text-xs text-[#AAAAAA]">Loading…</p> : accounts.length === 0 ? (
+            <p className="text-xs text-[#AAAAAA]">No accounts</p>
+          ) : (
+            <div className="space-y-2">
+              {accounts.map((a) => (
+                <div key={a.id} className="bg-[#F8F8F8] rounded-xl px-3 py-2.5 flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-semibold text-[#333]">{a.type} · {a.accountNumber}</p>
+                      <Pill status={a.status} />
+                    </div>
+                    <p className="text-[10px] text-[#AAAAAA]">{formatCurrency(Number(a.balance), a.currency)}</p>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {a.status === "ACTIVE" && (
+                      <Btn color="amber" label="Freeze" loading={false}
+                        onClick={() => act(async () => { await adminApi.freezeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "FROZEN", isFrozen: true } : ac)); })} />
+                    )}
+                    {a.status === "FROZEN" && (
+                      <Btn color="green" label="Unfreeze" loading={false}
+                        onClick={() => act(async () => { await adminApi.unfreezeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "ACTIVE", isFrozen: false } : ac)); })} />
+                    )}
+                    {a.status !== "CLOSED" && (
+                      <Btn color="red-outline" label="Close" loading={false}
+                        onClick={() => {
+                          if (!confirm(`Close account ${a.accountNumber}? Balance must be £0.`)) return;
+                          act(async () => { await adminApi.closeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "CLOSED" } : ac)); });
+                        }} />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type BtnColor = "green" | "red" | "amber" | "blue" | "navy" | "red-outline";
+function Btn({ label, color, onClick, loading }: { label: string; color: BtnColor; onClick: () => void; loading: boolean }) {
+  const cls: Record<BtnColor, string> = {
+    green: "bg-green-600 text-white hover:bg-green-700",
+    red: "bg-[#DB0011] text-white hover:bg-[#b8000e]",
+    amber: "bg-amber-500 text-white hover:bg-amber-600",
+    blue: "bg-blue-600 text-white hover:bg-blue-700",
+    navy: "bg-[#1a1a2e] text-white hover:bg-[#2a2a4e]",
+    "red-outline": "border-2 border-[#DB0011] text-[#DB0011] hover:bg-red-50",
+  };
+  return (
+    <button onClick={onClick} disabled={loading}
+      className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 ${cls[color]}`}>
+      {label}
+    </button>
+  );
+}
+
 function UsersTab() {
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionId, setActionId] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -697,44 +853,12 @@ function UsersTab() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function suspend(id: string) {
-    if (!confirm("Suspend this user?")) return;
-    setActionId(id);
-    try {
-      await adminApi.suspendUser(id);
-      setUsers((p) => p.map((u) => u.id === id ? { ...u, status: "SUSPENDED" } : u));
-    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
-    finally { setActionId(""); }
+  function updateUser(id: string, patch: Partial<AdminUser>) {
+    setUsers((p) => p.map((u) => u.id === id ? { ...u, ...patch } : u));
   }
 
-  async function activate(id: string) {
-    setActionId(id);
-    try {
-      await adminApi.activateUser(id);
-      setUsers((p) => p.map((u) => u.id === id ? { ...u, status: "ACTIVE" } : u));
-    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
-    finally { setActionId(""); }
-  }
-
-  async function approveKyc(userId: string) {
-    if (!confirm("Approve KYC?")) return;
-    setActionId(userId);
-    try {
-      await adminApi.approveKyc(userId);
-      setUsers((p) => p.map((u) => u.id === userId ? { ...u, kycStatus: "VERIFIED" } : u));
-    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
-    finally { setActionId(""); }
-  }
-
-  async function rejectKyc(userId: string) {
-    const reason = prompt("Reason for KYC rejection:");
-    if (!reason?.trim()) return;
-    setActionId(userId);
-    try {
-      await adminApi.rejectKyc(userId, reason.trim());
-      setUsers((p) => p.map((u) => u.id === userId ? { ...u, kycStatus: "REJECTED" } : u));
-    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
-    finally { setActionId(""); }
+  function removeUser(id: string) {
+    setUsers((p) => p.filter((u) => u.id !== id));
   }
 
   return (
@@ -750,41 +874,7 @@ function UsersTab() {
       {loading ? <LoadingRows /> : users.length === 0 ? <Empty icon={Users} label="No users found" /> : (
         <div className="divide-y divide-[#F0F0F0]">
           {users.map((u) => (
-            <div key={u.id} className="bg-white px-4 py-4">
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[#333]">{u.firstName} {u.lastName}</p>
-                  <p className="text-xs text-[#767676] truncate">{u.email}</p>
-                  {u.phone && <p className="text-xs text-[#AAAAAA]">{u.phone}</p>}
-                  <div className="flex flex-wrap gap-1.5 mt-1.5">
-                    <Pill status={u.status} />
-                    <Pill status={u.kycStatus} />
-                    <span className="text-[10px] text-[#AAAAAA] bg-[#F0F0F0] px-2 py-0.5 rounded-full uppercase font-bold">{u.tier}</span>
-                  </div>
-                </div>
-                <div className="text-right flex-shrink-0 ml-3">
-                  <p className="text-[10px] text-[#AAAAAA]">{u._count.accounts} acct{u._count.accounts !== 1 ? "s" : ""}</p>
-                  <p className="text-[10px] text-[#AAAAAA] mt-0.5">{formatDate(u.createdAt)}</p>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {u.status === "ACTIVE" ? (
-                  <button onClick={() => suspend(u.id)} disabled={actionId === u.id}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg border-2 border-[#DB0011] text-[#DB0011] hover:bg-red-50 disabled:opacity-50 transition-colors">Suspend</button>
-                ) : (
-                  <button onClick={() => activate(u.id)} disabled={actionId === u.id}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg border-2 border-green-600 text-green-700 hover:bg-green-50 disabled:opacity-50 transition-colors">Activate</button>
-                )}
-                {u.kycStatus === "PENDING" && (
-                  <>
-                    <button onClick={() => approveKyc(u.id)} disabled={actionId === u.id}
-                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors">Verify KYC</button>
-                    <button onClick={() => rejectKyc(u.id)} disabled={actionId === u.id}
-                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#DB0011] text-white hover:bg-[#b8000e] disabled:opacity-50 transition-colors">Reject KYC</button>
-                  </>
-                )}
-              </div>
-            </div>
+            <UserRow key={u.id} u={u} onUpdate={updateUser} onDelete={removeUser} />
           ))}
         </div>
       )}

@@ -254,6 +254,22 @@ export const adminApi = {
     api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/users/${id}/suspend`),
   activateUser: (id: string) =>
     api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/users/${id}/activate`),
+  deleteUser: (id: string) =>
+    api.delete<ApiResponse<{ id: string; deleted: boolean }>>(`/admin/users/${id}`),
+  changeUserTier: (id: string, tier: string) =>
+    api.patch<ApiResponse<{ id: string; tier: string }>>(`/admin/users/${id}/tier`, { tier }),
+  resetLockout: (id: string) =>
+    api.patch<ApiResponse<{ id: string; unlocked: boolean }>>(`/admin/users/${id}/reset-lockout`),
+  verifyUserEmail: (id: string) =>
+    api.patch<ApiResponse<{ id: string; isEmailVerified: boolean }>>(`/admin/users/${id}/verify-email`),
+  getUserAccounts: (userId: string) =>
+    api.get<ApiResponse<AdminAccount[]>>(`/admin/users/${userId}/accounts`),
+  freezeAccount: (accountId: string) =>
+    api.patch<ApiResponse<AdminAccount>>(`/admin/accounts/${accountId}/freeze`),
+  unfreezeAccount: (accountId: string) =>
+    api.patch<ApiResponse<AdminAccount>>(`/admin/accounts/${accountId}/unfreeze`),
+  closeAccount: (accountId: string) =>
+    api.patch<ApiResponse<AdminAccount>>(`/admin/accounts/${accountId}/close`),
   approveKyc: (userId: string) =>
     api.patch<ApiResponse<{ userId: string; kycStatus: string }>>(`/admin/kyc/${userId}/verify`),
   rejectKyc: (userId: string, reason: string) =>
@@ -663,6 +679,17 @@ export interface AuditLog {
   ipAddress?: string | null;
   createdAt: string;
   user?: { id: string; firstName: string; lastName: string; email: string } | null;
+}
+
+export interface AdminAccount {
+  id: string;
+  accountNumber: string;
+  type: string;
+  status: string;
+  currency: string;
+  balance: string;
+  availableBalance: string;
+  isFrozen: boolean;
 }
 
 export interface AdminInsuranceQuote extends InsuranceQuote {
