@@ -114,8 +114,21 @@ export const authApi = {
     email: string;
     phone: string;
     password: string;
+    confirmPassword?: string;
     gender?: string;
-  }) => api.post<ApiResponse<{ token: string; user: unknown }>>("/auth/register", data),
+    dateOfBirth?: string;
+    nationality?: string;
+    countryOfResidence?: string;
+    taxResidency?: string;
+    accountType?: string;
+    ssn?: string;
+  }) => api.post<ApiResponse<{ accessToken: string; refreshToken: string; user: unknown }>>("/auth/register", data),
+  sendPhoneOtp: () =>
+    api.post<ApiResponse<{ message: string }>>("/auth/send-phone-otp", {}),
+  verifyPhoneOtp: (code: string) =>
+    api.post<ApiResponse<{ message: string }>>("/auth/verify-phone-otp", { code }),
+  onboardingStatus: () =>
+    api.get<ApiResponse<{ onboardingStep: number; kycStatus: string }>>("/auth/onboarding-status"),
   me: () => api.get<ApiResponse<unknown>>("/auth/me"),
   verifyEmail: (code: string) =>
     api.post<ApiResponse<{ message: string }>>("/auth/verify-email", { code }),
@@ -248,6 +261,20 @@ export const usersApi = {
     annualIncome?: number;
     preferredCurrency?: string;
     preferredLanguage?: string;
+    // Onboarding fields
+    onboardingStep?: number;
+    termsAcceptedAt?: string;
+    marketingConsent?: boolean;
+    electronicStatementsConsent?: boolean;
+    dataProcessingConsent?: boolean;
+    employmentStatus?: string;
+    industry?: string;
+    sourceOfFunds?: string[];
+    annualIncomeRange?: string;
+    expectedMonthlyVolume?: string;
+    countryOfResidence?: string;
+    taxResidency?: string;
+    accountType?: string;
   }) => api.patch<ApiResponse<User>>("/users/profile", data),
   getDevices: () => api.get<ApiResponse<Device[]>>("/users/devices"),
   removeDevice: (id: string) => api.delete<ApiResponse<null>>(`/users/devices/${id}`),
