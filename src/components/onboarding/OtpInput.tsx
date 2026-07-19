@@ -11,7 +11,7 @@ interface OtpInputProps {
 }
 
 function OtpInput({ value, onChange, disabled, error }: OtpInputProps) {
-  const digits = value.padEnd(6, "").slice(0, 6).split("");
+  const digits = Array.from({ length: 6 }, (_, i) => value[i] ?? "");
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
 
   function handleChange(idx: number, raw: string) {
