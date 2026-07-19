@@ -520,7 +520,7 @@ function Stage3({
       if (isNaN(dob.getTime()) || age < 18) errs.dateOfBirth = "You must be at least 18 years old";
     }
     if (isUS && !state.ssn.trim()) errs.ssn = t("onboarding.personal.ssnRequired");
-    if (isUS && state.ssn && !/^\d{3}-\d{2}-\d{4}$/.test(state.ssn)) errs.ssn = "Format must be XXX-XX-XXXX";
+    if (isUS && state.ssn && !/^\d{3}-\d{3}-\d{3}$/.test(state.ssn)) errs.ssn = "Format must be XXX-XXX-XXX";
     if (Object.keys(errs).length) { dispatch({ type: "ERRORS", errors: errs }); return false; }
     return true;
   }
@@ -612,7 +612,7 @@ function Stage3({
         <div>
           <Input
             label={t("onboarding.personal.ssn")}
-            placeholder="XXX-XX-XXXX"
+            placeholder="XXX-XXX-XXX"
             value={state.ssn}
             onChange={(e) => dispatch({ type: "SET", field: "ssn", value: e.target.value })}
             error={state.errors.ssn}
