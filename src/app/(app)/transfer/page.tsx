@@ -17,6 +17,7 @@ import { Loader2, BadgeCheck, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useLanguage } from "@/lib/i18n";
 
 type Tab = "own" | "domestic" | "international";
 
@@ -161,10 +162,11 @@ function BigAmountInput({
   registerProps: UseFormRegisterReturn;
   error?: string;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="bg-white border border-[#E3E3E3] rounded-sm px-5 py-5">
       <p className="text-xs font-semibold text-[#767676] uppercase tracking-wide text-center mb-4">
-        Amount
+        {t("transfer.amount")}
       </p>
       <div
         className={`flex items-baseline justify-center gap-1.5 pb-3 border-b-2 mx-6 ${
@@ -231,6 +233,7 @@ export default function TransferPage() {
 }
 
 function TransferPageInner() {
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const prefillAccNumber = searchParams.get("accNumber") ?? "";
   const prefillBankCode  = searchParams.get("bankCode")  ?? "";
@@ -251,9 +254,9 @@ function TransferPageInner() {
   }, []);
 
   const tabs: { key: Tab; label: string; icon: ReactNode }[] = [
-    { key: "own", label: "Own accounts", icon: <ArrowDownUp size={13} /> },
-    { key: "domestic", label: "UK transfer", icon: <Send size={13} /> },
-    { key: "international", label: "International", icon: <Globe size={13} /> },
+    { key: "own",           label: t("transfer.own"),           icon: <ArrowDownUp size={13} /> },
+    { key: "domestic",      label: t("transfer.uk"),            icon: <Send size={13} /> },
+    { key: "international", label: t("transfer.international"), icon: <Globe size={13} /> },
   ];
 
   if (result) {
@@ -266,8 +269,8 @@ function TransferPageInner() {
     <div className="max-w-lg mx-auto lg:max-w-none">
       {/* Header */}
       <div className="bg-white border-b border-[#E3E3E3] px-4 py-4">
-        <h1 className="text-lg font-semibold text-[#333333]">Transfer & Pay</h1>
-        <p className="text-xs text-[#767676] mt-0.5">Send money quickly and securely</p>
+        <h1 className="text-lg font-semibold text-[#333333]">{t("transfer.title")}</h1>
+        <p className="text-xs text-[#767676] mt-0.5">{t("transfer.subtitle")}</p>
       </div>
 
       {/* Tab bar */}
@@ -337,6 +340,7 @@ function OwnAccountsForm({
   onSuccess: (r: Transfer) => void;
   onError: (e: string) => void;
 }) {
+  const { t } = useLanguage();
   const {
     register, handleSubmit, watch,
     formState: { errors, isSubmitting },
@@ -362,14 +366,14 @@ function OwnAccountsForm({
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
       <div>
         <p className="text-xs font-semibold text-[#767676] uppercase tracking-wide mb-2 px-0.5">
-          From
+          {t("transfer.from")}
         </p>
         <AccountCardPicker
           accounts={accounts}
           selectedId={fromAccountId}
           registerProps={register("fromAccountId")}
           error={errors.fromAccountId?.message}
-          placeholder="Choose source account"
+          placeholder={t("transfer.chooseSource")}
         />
       </div>
 
@@ -377,14 +381,14 @@ function OwnAccountsForm({
 
       <div>
         <p className="text-xs font-semibold text-[#767676] uppercase tracking-wide mb-2 px-0.5">
-          To
+          {t("transfer.to")}
         </p>
         <AccountCardPicker
           accounts={accounts}
           selectedId={toAccountId}
           registerProps={register("toAccountId")}
           error={errors.toAccountId?.message}
-          placeholder="Choose destination account"
+          placeholder={t("transfer.chooseDest")}
         />
       </div>
 
@@ -392,16 +396,16 @@ function OwnAccountsForm({
 
       <div className="bg-white border border-[#E3E3E3] rounded-sm px-4 py-3.5">
         <Input
-          label="Reference"
+          label={t("transfer.reference")}
           type="text"
-          placeholder="e.g. Moving money to savings"
+          placeholder={t("transfer.referencePlaceholder")}
           error={errors.description?.message}
           {...register("description")}
         />
       </div>
 
       <Button type="submit" fullWidth size="lg" isLoading={isSubmitting}>
-        Transfer now
+        {t("transfer.transferNow")}
       </Button>
     </form>
   );
@@ -430,6 +434,7 @@ function DomesticForm({
   onSuccess: (r: Transfer) => void;
   onError: (e: string) => void;
 }) {
+  const { t } = useLanguage();
   const [useManual, setUseManual] = useState(beneficiaries.length === 0 || !!prefillAccNumber);
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null);
   const [verifyState, setVerifyState] = useState<VerifyState>("idle");
@@ -538,21 +543,21 @@ function DomesticForm({
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
       <div>
         <p className="text-xs font-semibold text-[#767676] uppercase tracking-wide mb-2 px-0.5">
-          From
+          {t("transfer.from")}
         </p>
         <AccountCardPicker
           accounts={accounts}
           selectedId={fromAccountId}
           registerProps={register("fromAccountId")}
           error={errors.fromAccountId?.message}
-          placeholder="Choose source account"
+          placeholder={t("transfer.chooseSource")}
         />
       </div>
 
       <TransferArrow />
 
       {/* Recipient section */}
-      <SectionCard title="Send to">
+      <SectionCard title={t("transfer.sendTo")}>
         {beneficiaries.length > 0 && (
           <div>
             <div className="flex border border-[#E3E3E3] rounded-sm overflow-hidden mb-4">
@@ -565,7 +570,7 @@ function DomesticForm({
                     : "bg-white text-[#767676] hover:text-[#333333]"
                 }`}
               >
-                Saved payees
+                {t("transfer.savedPayees")}
               </button>
               <button
                 type="button"
@@ -576,7 +581,7 @@ function DomesticForm({
                     : "bg-white text-[#767676] hover:text-[#333333]"
                 }`}
               >
-                New payee
+                {t("transfer.newPayee")}
               </button>
             </div>
 
@@ -638,7 +643,7 @@ function DomesticForm({
               error={errors.toBankCode?.message}
               {...register("toBankCode")}
             >
-              <option value="">Select bank</option>
+              <option value="">{t("transfer.selectBank")}</option>
               {UK_BANKS.map((b) => (
                 <option key={b.code} value={b.code}>
                   {b.name}
@@ -649,13 +654,13 @@ function DomesticForm({
             {/* Account name — auto-populated via verify API */}
             <div>
               <label className="block text-sm font-medium text-[#333333] mb-1">
-                Account name
+                {t("transfer.accountName")}
               </label>
 
               {verifyState === "loading" && (
                 <div className="flex items-center gap-2 py-2.5 border-b-2 border-[#E3E3E3] text-sm text-[#767676]">
                   <Loader2 size={14} className="animate-spin flex-shrink-0" />
-                  Verifying account…
+                  {t("transfer.verifying")}
                 </div>
               )}
 
@@ -665,24 +670,10 @@ function DomesticForm({
                     <BadgeCheck size={15} className="text-green-600 flex-shrink-0" />
                     <span className="text-sm font-semibold text-[#333333] flex-1">{verifiedName}</span>
                     <span className="text-[10px] font-semibold text-green-600 uppercase tracking-wide bg-green-50 px-1.5 py-0.5 rounded-sm">
-                      Verified
+                      {t("transfer.verified")}
                     </span>
                   </div>
                   <input type="hidden" {...register("toAccountName")} />
-                  <p className="text-xs text-[#767676]">
-                    Name doesn&apos;t match?{" "}
-                    <button
-                      type="button"
-                      className="text-[#DB0011] underline"
-                      onClick={() => {
-                        setVerifyState("idle");
-                        setVerifiedName("");
-                        setValue("toAccountName", "");
-                      }}
-                    >
-                      Enter manually
-                    </button>
-                  </p>
                 </div>
               )}
 
@@ -690,11 +681,11 @@ function DomesticForm({
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 py-2 text-sm text-amber-600">
                     <AlertCircle size={14} className="flex-shrink-0" />
-                    Account not found — enter name manually
+                    {t("transfer.notFound")}
                   </div>
                   <Input
                     type="text"
-                    placeholder="Full name or company"
+                    placeholder={t("transfer.fullName")}
                     error={errors.toAccountName?.message}
                     {...register("toAccountName")}
                   />
@@ -704,7 +695,7 @@ function DomesticForm({
               {verifyState === "idle" && (
                 <Input
                   type="text"
-                  placeholder={toBankCode === "LMN" ? "Enter account number to auto-verify" : "Enter recipient's full name"}
+                  placeholder={toBankCode === "LMN" ? "Enter account number to auto-verify" : t("transfer.enterName")}
                   error={errors.toAccountName?.message}
                   {...register("toAccountName")}
                 />
@@ -717,7 +708,7 @@ function DomesticForm({
                 {...register("saveBeneficiary")}
                 className="h-4 w-4 rounded border-[#E3E3E3] text-[#DB0011] accent-[#DB0011]"
               />
-              <span className="text-xs text-[#767676]">Save as a payee for future payments</span>
+              <span className="text-xs text-[#767676]">{t("transfer.savePayee")}</span>
             </label>
           </div>
         )}
@@ -735,7 +726,7 @@ function DomesticForm({
 
       <div className="bg-white border border-[#E3E3E3] rounded-sm px-4 py-3.5">
         <Input
-          label="Payment reference"
+          label={t("transfer.reference")}
           type="text"
           placeholder="e.g. Rent July"
           error={errors.description?.message}
@@ -743,13 +734,10 @@ function DomesticForm({
         />
       </div>
 
-      <FeeNotice>
-        A <strong>£1.50</strong> fee applies to external UK transfers.
-        Lumina-to-Lumina transfers are instant and <strong>free</strong>.
-      </FeeNotice>
+      <FeeNotice>{t("transfer.ukFee")}</FeeNotice>
 
       <Button type="submit" fullWidth size="lg" isLoading={isSubmitting}>
-        Send payment
+        {t("transfer.send")}
       </Button>
     </form>
     </>
@@ -775,6 +763,7 @@ function InternationalForm({
   onSuccess: (r: Transfer) => void;
   onError: (e: string) => void;
 }) {
+  const { t } = useLanguage();
   const [pendingData, setPendingData] = useState<InternationalFormValues | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
 
@@ -846,31 +835,31 @@ function InternationalForm({
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
       <div>
         <p className="text-xs font-semibold text-[#767676] uppercase tracking-wide mb-2 px-0.5">
-          From
+          {t("transfer.from")}
         </p>
         <AccountCardPicker
           accounts={accounts}
           selectedId={fromAccountId}
           registerProps={register("fromAccountId")}
           error={errors.fromAccountId?.message}
-          placeholder="Choose source account"
+          placeholder={t("transfer.chooseSource")}
         />
       </div>
 
       <TransferArrow />
 
-      <SectionCard title="Recipient details">
+      <SectionCard title={t("transfer.recipientDetails")}>
         <Input
           label="Recipient name"
           type="text"
-          placeholder="Full name or company"
+          placeholder={t("transfer.fullName")}
           error={errors.toAccountName?.message}
           {...register("toAccountName")}
         />
         <Input
-          label="Bank name"
+          label={t("transfer.bankName")}
           type="text"
-          placeholder="e.g. BNP Paribas"
+          placeholder={t("transfer.bankNamePlaceholder")}
           error={errors.toBankName?.message}
           {...register("toBankName")}
         />
@@ -882,29 +871,29 @@ function InternationalForm({
           {...register("toIban")}
         />
         <Input
-          label="SWIFT / BIC"
+          label={t("transfer.swift")}
           type="text"
-          placeholder="e.g. BNPAFRPPXXX"
+          placeholder={t("transfer.swiftPlaceholder")}
           error={errors.swiftCode?.message}
           {...register("swiftCode")}
         />
         <div className="grid grid-cols-2 gap-3">
           <SelectField
-            label="Country"
+            label={t("transfer.country")}
             error={errors.toCountry?.message}
             {...register("toCountry")}
           >
-            <option value="">Country</option>
+            <option value="">{t("transfer.country")}</option>
             {COUNTRIES.map((c) => (
               <option key={c.code} value={c.code}>{c.name}</option>
             ))}
           </SelectField>
           <SelectField
-            label="Currency"
+            label={t("transfer.currency")}
             error={errors.toCurrency?.message}
             {...register("toCurrency")}
           >
-            <option value="">Currency</option>
+            <option value="">{t("transfer.currency")}</option>
             {CURRENCIES.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
@@ -923,7 +912,7 @@ function InternationalForm({
           className="w-full flex items-center justify-center gap-2 py-2.5 border border-[#DB0011] rounded-sm text-sm font-medium text-[#DB0011] hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           <RefreshCw size={14} className={loadingQuote ? "animate-spin" : ""} />
-          {loadingQuote ? "Getting rate…" : fxQuote ? "Refresh rate" : "Get exchange rate"}
+          {loadingQuote ? t("transfer.gettingRate") : fxQuote ? t("transfer.refreshRate") : t("transfer.getRate")}
         </button>
       )}
 
@@ -932,23 +921,19 @@ function InternationalForm({
         <div className="bg-white border border-[#E3E3E3] rounded-sm overflow-hidden">
           <div className="px-4 py-2.5 bg-[#F8F8F8] border-b border-[#E3E3E3]">
             <p className="text-xs font-semibold text-[#767676] uppercase tracking-wide">
-              Exchange rate breakdown
+              {t("transfer.rateBreakdown")}
             </p>
           </div>
           <div className="px-4 py-3 space-y-2.5">
             {[
-              ["Rate", `1 GBP = ${fxQuote.rate.toFixed(4)} ${fxQuote.toCurrency}`],
-              ["You send", formatCurrency(Number(amount), "GBP")],
-              ["Recipient gets", `${fxQuote.convertedAmount.toFixed(2)} ${fxQuote.toCurrency}`],
-              ["Fees", formatCurrency(fxQuote.fee, "GBP")],
-            ].map(([label, value]) => (
-              <div key={label} className="flex justify-between items-center">
+              { id: "rate",           label: "Rate",                         value: `1 GBP = ${fxQuote.rate.toFixed(4)} ${fxQuote.toCurrency}` },
+              { id: "you-send",       label: "You send",                     value: formatCurrency(Number(amount), "GBP") },
+              { id: "recipient-gets", label: t("transfer.recipientGets"),    value: `${fxQuote.convertedAmount.toFixed(2)} ${fxQuote.toCurrency}` },
+              { id: "fees",           label: "Fees",                         value: formatCurrency(fxQuote.fee, "GBP") },
+            ].map(({ id, label, value }) => (
+              <div key={id} className="flex justify-between items-center">
                 <span className="text-xs text-[#767676]">{label}</span>
-                <span
-                  className={`text-sm font-semibold ${
-                    label === "Recipient gets" ? "text-green-600" : "text-[#333333]"
-                  }`}
-                >
+                <span className={`text-sm font-semibold ${id === "recipient-gets" ? "text-green-600" : "text-[#333333]"}`}>
                   {value}
                 </span>
               </div>
@@ -959,7 +944,7 @@ function InternationalForm({
 
       <div className="bg-white border border-[#E3E3E3] rounded-sm px-4 py-3.5">
         <Input
-          label="Payment reference"
+          label={t("transfer.reference")}
           type="text"
           placeholder="Optional — e.g. Invoice #1234"
           error={errors.description?.message}
@@ -967,13 +952,10 @@ function InternationalForm({
         />
       </div>
 
-      <FeeNotice>
-        International transfers include a <strong>£5.00</strong> fee plus an FX conversion charge.
-        Processing typically takes <strong>3–5 business days</strong>.
-      </FeeNotice>
+      <FeeNotice>{t("transfer.intlFee")}</FeeNotice>
 
       <Button type="submit" fullWidth size="lg" isLoading={isSubmitting}>
-        {fxQuote ? "Confirm transfer" : "Send transfer"}
+        {fxQuote ? t("transfer.confirm") : t("transfer.sendTransfer")}
       </Button>
     </form>
     </>
@@ -983,6 +965,7 @@ function InternationalForm({
 // ── Success Screen ───────────────────────────────────────────────────────────
 
 function SuccessScreen({ result, onReset }: { result: Transfer; onReset: () => void }) {
+  const { t } = useLanguage();
   const isPending = result.status === "PENDING";
 
   return (
@@ -1005,12 +988,12 @@ function SuccessScreen({ result, onReset }: { result: Transfer; onReset: () => v
           )}
         </div>
         <h2 className="text-xl font-bold text-[#333333] mb-1">
-          {isPending ? "Transfer submitted" : "Transfer complete"}
+          {isPending ? t("transfer.submitted") : t("transfer.complete")}
         </h2>
         <p className="text-sm text-[#767676] max-w-xs">
           {isPending
-            ? `Your transfer of ${formatCurrency(Number(result.amount), result.currency)} is pending review. You'll be notified once it's approved.`
-            : `${formatCurrency(Number(result.amount), result.currency)} has been transferred successfully.`}
+            ? t("transfer.submittedDesc")
+            : `${formatCurrency(Number(result.amount), result.currency)} ${t("transfer.completedDesc")}`}
         </p>
       </div>
 
@@ -1018,29 +1001,29 @@ function SuccessScreen({ result, onReset }: { result: Transfer; onReset: () => v
       <div className="bg-white border-b border-[#E3E3E3]">
         <div className="px-4 py-2.5 bg-[#F8F8F8] border-b border-[#E3E3E3]">
           <p className="text-xs font-semibold text-[#767676] uppercase tracking-wide">
-            Transfer receipt
+            {t("transfer.receiptLabel")}
           </p>
         </div>
         {[
-          ["Reference", result.id.slice(0, 8).toUpperCase()],
-          ["Amount", formatCurrency(Number(result.amount), result.currency)],
-          ["Type", result.type.charAt(0) + result.type.slice(1).toLowerCase()],
-          ["Status", result.status],
+          { id: "ref",    label: t("transfer.referenceLabel"), value: result.id.slice(0, 8).toUpperCase() },
+          { id: "amount", label: t("transfer.amount"),         value: formatCurrency(Number(result.amount), result.currency) },
+          { id: "type",   label: t("transfer.type"),           value: result.type.charAt(0) + result.type.slice(1).toLowerCase() },
+          { id: "status", label: t("transfer.status"),         value: result.status },
           ...(result.transferFee && Number(result.transferFee) > 0
-            ? [["Transfer fee", formatCurrency(Number(result.transferFee), result.currency)]]
+            ? [{ id: "fee", label: t("transfer.fee"), value: formatCurrency(Number(result.transferFee), result.currency) }]
             : []),
           ...(result.fxRate
-            ? [["FX rate", `1 GBP = ${Number(result.fxRate).toFixed(4)} ${result.currency}`]]
+            ? [{ id: "fx", label: t("transfer.fxRate"), value: `1 GBP = ${Number(result.fxRate).toFixed(4)} ${result.currency}` }]
             : []),
-        ].map(([label, value]) => (
+        ].map(({ id, label, value }) => (
           <div
-            key={label}
+            key={id}
             className="flex justify-between items-center px-4 py-3.5 border-b border-[#E3E3E3] last:border-0"
           >
             <span className="text-sm text-[#767676]">{label}</span>
             <span
               className={`text-sm font-semibold ${
-                label === "Status"
+                id === "status"
                   ? isPending
                     ? "text-amber-500"
                     : "text-green-600"
@@ -1055,16 +1038,13 @@ function SuccessScreen({ result, onReset }: { result: Transfer; onReset: () => v
 
       {isPending && (
         <div className="mx-4 mt-4 bg-amber-50 border border-amber-200 rounded-sm p-3.5">
-          <p className="text-xs text-amber-700 leading-relaxed">
-            Your funds have been debited and held securely while the transfer is reviewed. This
-            typically takes 1–5 business days depending on the transfer type and destination.
-          </p>
+          <p className="text-xs text-amber-700 leading-relaxed">{t("transfer.fundsHeld")}</p>
         </div>
       )}
 
       <div className="p-4">
         <Button variant="secondary" fullWidth onClick={onReset}>
-          Make another transfer
+          {t("transfer.makeAnother")}
         </Button>
       </div>
     </div>
@@ -1090,6 +1070,7 @@ function ConfirmModal({
   onCancel: () => void;
   isLoading: boolean;
 }) {
+  const { t } = useLanguage();
   const requiresReauth = amount >= REAUTH_THRESHOLD;
   const [password, setPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
@@ -1112,29 +1093,24 @@ function ConfirmModal({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-8">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-[#E3E3E3]">
-          <p className="text-sm font-bold text-[#333333]">Confirm transfer</p>
-          <p className="text-xs text-[#767676] mt-0.5">Please review before sending</p>
+          <p className="text-sm font-bold text-[#333333]">{t("transfer.confirmTitle")}</p>
+          <p className="text-xs text-[#767676] mt-0.5">{t("transfer.confirmDesc")}</p>
         </div>
         <div className="px-5 py-4 space-y-3">
           <div className="flex justify-between">
-            <span className="text-sm text-[#767676]">Amount</span>
+            <span className="text-sm text-[#767676]">{t("transfer.amount")}</span>
             <span className="text-sm font-bold text-[#333333]">{formatCurrency(amount, currency)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-sm text-[#767676]">To</span>
+            <span className="text-sm text-[#767676]">{t("transfer.to")}</span>
             <span className="text-sm font-semibold text-[#333333] max-w-[60%] text-right truncate">{recipient}</span>
-          </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-            <p className="text-xs text-amber-700">
-              This transfer cannot be undone once confirmed. Ensure all details are correct.
-            </p>
           </div>
 
           {/* Password re-auth for large transfers */}
           {requiresReauth && !verified && (
             <div className="space-y-2 pt-1">
               <p className="text-xs font-bold text-[#555] uppercase tracking-wide">
-                Transfers of {formatCurrency(REAUTH_THRESHOLD)}+ require your password
+                {t("transfer.passwordRequired")}
               </p>
               <div className="flex gap-2">
                 <input
@@ -1142,7 +1118,7 @@ function ConfirmModal({
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setAuthError(""); }}
                   onKeyDown={(e) => e.key === "Enter" && handleVerify()}
-                  placeholder="Enter your password"
+                  placeholder={t("transfer.password")}
                   className="flex-1 px-3 py-2 border-2 border-[#E3E3E3] rounded-xl text-sm focus:outline-none focus:border-[#DB0011]"
                   autoFocus
                 />
@@ -1152,7 +1128,7 @@ function ConfirmModal({
                   disabled={verifying || !password}
                   className="px-3 py-2 bg-[#DB0011] text-white text-xs font-bold rounded-xl disabled:opacity-50 hover:bg-[#b8000e] transition-colors"
                 >
-                  {verifying ? <Loader2 size={13} className="animate-spin" /> : "Verify"}
+                  {verifying ? <Loader2 size={13} className="animate-spin" /> : t("transfer.verifyBtn")}
                 </button>
               </div>
               {authError && <p className="text-xs text-[#DB0011]">{authError}</p>}
@@ -1162,7 +1138,7 @@ function ConfirmModal({
           {requiresReauth && verified && (
             <div className="flex items-center gap-2 text-xs text-green-700 font-semibold">
               <CheckCircle2 size={14} className="text-green-600" />
-              Identity confirmed
+              {t("transfer.identityConfirmed")}
             </div>
           )}
         </div>
@@ -1173,7 +1149,7 @@ function ConfirmModal({
             disabled={isLoading}
             className="flex-1 py-2.5 border border-[#E3E3E3] rounded-xl text-sm font-semibold text-[#767676] hover:border-[#BBBBBB] transition-colors disabled:opacity-50"
           >
-            Cancel
+            {t("transfer.cancelBtn")}
           </button>
           <button
             type="button"
@@ -1182,7 +1158,7 @@ function ConfirmModal({
             className="flex-1 py-2.5 bg-[#DB0011] rounded-xl text-sm font-bold text-white hover:bg-[#B0000E] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isLoading && <Loader2 size={14} className="animate-spin" />}
-            {isLoading ? "Sending…" : "Confirm & send"}
+            {isLoading ? t("transfer.sending") : t("transfer.confirmSend")}
           </button>
         </div>
       </div>

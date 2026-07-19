@@ -11,41 +11,42 @@ import {
 } from "lucide-react";
 import { transactionsApi, type Transaction } from "@/lib/api";
 import { formatCurrency, formatDate, formatTime } from "@/lib/utils";
+import { useLanguage, type TranslationKey } from "@/lib/i18n";
 
-const categoryConfig: Record<string, { icon: React.ElementType; color: string; bg: string; label: string }> = {
-  SHOPPING:      { icon: ShoppingBag,    color: "text-purple-600",  bg: "bg-purple-100",  label: "Shopping"      },
-  FOOD:          { icon: Utensils,       color: "text-orange-600",  bg: "bg-orange-100",  label: "Food & Drink"  },
-  COFFEE:        { icon: Coffee,         color: "text-amber-700",   bg: "bg-amber-100",   label: "Coffee"        },
-  TRANSPORT:     { icon: Car,            color: "text-blue-600",    bg: "bg-blue-100",    label: "Transport"     },
-  HOUSING:       { icon: Home,           color: "text-teal-600",    bg: "bg-teal-100",    label: "Housing"       },
-  UTILITIES:     { icon: Zap,            color: "text-yellow-600",  bg: "bg-yellow-100",  label: "Utilities"     },
-  HEALTH:        { icon: Heart,          color: "text-rose-500",    bg: "bg-rose-100",    label: "Health"        },
-  TRAVEL:        { icon: Plane,          color: "text-sky-600",     bg: "bg-sky-100",     label: "Travel"        },
-  ENTERTAINMENT: { icon: Gamepad2,       color: "text-indigo-600",  bg: "bg-indigo-100",  label: "Entertainment" },
-  CARD_PAYMENT:  { icon: CreditCard,     color: "text-violet-600",  bg: "bg-violet-100",  label: "Card Payment"  },
-  TRANSFER:      { icon: ArrowLeftRight, color: "text-blue-600",    bg: "bg-blue-100",    label: "Transfer"      },
-  PAYMENT:       { icon: CreditCard,     color: "text-violet-600",  bg: "bg-violet-100",  label: "Payment"       },
-  SALARY:        { icon: Banknote,       color: "text-green-600",   bg: "bg-green-100",   label: "Salary"        },
-  INCOME:        { icon: Banknote,       color: "text-green-600",   bg: "bg-green-100",   label: "Income"        },
-  DEPOSIT:       { icon: ArrowDownLeft,  color: "text-green-600",   bg: "bg-green-100",   label: "Deposit"       },
-  WITHDRAWAL:    { icon: ArrowUpRight,   color: "text-rose-600",    bg: "bg-rose-100",    label: "Withdrawal"    },
-  REFUND:        { icon: RotateCcw,      color: "text-teal-600",    bg: "bg-teal-100",    label: "Refund"        },
-  FX:            { icon: Globe,          color: "text-blue-600",    bg: "bg-blue-100",    label: "FX Transfer"   },
-  FEE:           { icon: Minus,          color: "text-[#767676]",   bg: "bg-[#F0F0F0]",  label: "Fee"           },
-  INTEREST:      { icon: TrendingUp,     color: "text-emerald-600", bg: "bg-emerald-100", label: "Interest"      },
-  INVESTMENT:    { icon: BarChart2,      color: "text-sky-600",     bg: "bg-sky-100",     label: "Investment"    },
-  OTHER:         { icon: MoreHorizontal, color: "text-[#767676]",   bg: "bg-[#F0F0F0]",  label: "Other"         },
+const categoryConfig: Record<string, { icon: React.ElementType; color: string; bg: string; labelKey: TranslationKey; labelEn: string }> = {
+  SHOPPING:      { icon: ShoppingBag,    color: "text-purple-600",  bg: "bg-purple-100",  labelKey: "tx.catShopping",      labelEn: "Shopping"       },
+  FOOD:          { icon: Utensils,       color: "text-orange-600",  bg: "bg-orange-100",  labelKey: "tx.catFood",          labelEn: "Food & Drink"   },
+  COFFEE:        { icon: Coffee,         color: "text-amber-700",   bg: "bg-amber-100",   labelKey: "tx.catCoffee",        labelEn: "Coffee"         },
+  TRANSPORT:     { icon: Car,            color: "text-blue-600",    bg: "bg-blue-100",    labelKey: "tx.catTransport",     labelEn: "Transport"      },
+  HOUSING:       { icon: Home,           color: "text-teal-600",    bg: "bg-teal-100",    labelKey: "tx.catHousing",       labelEn: "Housing"        },
+  UTILITIES:     { icon: Zap,            color: "text-yellow-600",  bg: "bg-yellow-100",  labelKey: "tx.catUtilities",     labelEn: "Utilities"      },
+  HEALTH:        { icon: Heart,          color: "text-rose-500",    bg: "bg-rose-100",    labelKey: "tx.catHealth",        labelEn: "Health"         },
+  TRAVEL:        { icon: Plane,          color: "text-sky-600",     bg: "bg-sky-100",     labelKey: "tx.catTravel",        labelEn: "Travel"         },
+  ENTERTAINMENT: { icon: Gamepad2,       color: "text-indigo-600",  bg: "bg-indigo-100",  labelKey: "tx.catEntertainment", labelEn: "Entertainment"  },
+  CARD_PAYMENT:  { icon: CreditCard,     color: "text-violet-600",  bg: "bg-violet-100",  labelKey: "tx.catCardPayment",   labelEn: "Card Payment"   },
+  TRANSFER:      { icon: ArrowLeftRight, color: "text-blue-600",    bg: "bg-blue-100",    labelKey: "tx.catTransfer",      labelEn: "Transfer"       },
+  PAYMENT:       { icon: CreditCard,     color: "text-violet-600",  bg: "bg-violet-100",  labelKey: "tx.catPayment",       labelEn: "Payment"        },
+  SALARY:        { icon: Banknote,       color: "text-green-600",   bg: "bg-green-100",   labelKey: "tx.catSalary",        labelEn: "Salary"         },
+  INCOME:        { icon: Banknote,       color: "text-green-600",   bg: "bg-green-100",   labelKey: "tx.catIncome",        labelEn: "Income"         },
+  DEPOSIT:       { icon: ArrowDownLeft,  color: "text-green-600",   bg: "bg-green-100",   labelKey: "tx.catDeposit",       labelEn: "Deposit"        },
+  WITHDRAWAL:    { icon: ArrowUpRight,   color: "text-rose-600",    bg: "bg-rose-100",    labelKey: "tx.catWithdrawal",    labelEn: "Withdrawal"     },
+  REFUND:        { icon: RotateCcw,      color: "text-teal-600",    bg: "bg-teal-100",    labelKey: "tx.catRefund",        labelEn: "Refund"         },
+  FX:            { icon: Globe,          color: "text-blue-600",    bg: "bg-blue-100",    labelKey: "tx.catFx",            labelEn: "FX Transfer"    },
+  FEE:           { icon: Minus,          color: "text-[#767676]",   bg: "bg-[#F0F0F0]",  labelKey: "tx.catFee",           labelEn: "Fee"            },
+  INTEREST:      { icon: TrendingUp,     color: "text-emerald-600", bg: "bg-emerald-100", labelKey: "tx.catInterest",      labelEn: "Interest"       },
+  INVESTMENT:    { icon: BarChart2,      color: "text-sky-600",     bg: "bg-sky-100",     labelKey: "tx.catInvestment",    labelEn: "Investment"     },
+  OTHER:         { icon: MoreHorizontal, color: "text-[#767676]",   bg: "bg-[#F0F0F0]",  labelKey: "tx.catOther",         labelEn: "Other"          },
 };
 
 function getCategoryConfig(category: string) {
   return categoryConfig[category?.toUpperCase()] ?? categoryConfig["OTHER"];
 }
 
-const statusConfig: Record<string, { icon: React.ElementType; color: string; bg: string; label: string }> = {
-  COMPLETED: { icon: CheckCircle2, color: "text-green-600",  bg: "bg-green-100",  label: "Completed"  },
-  PENDING:   { icon: Clock,        color: "text-amber-600",  bg: "bg-amber-100",  label: "Pending"    },
-  FAILED:    { icon: XCircle,      color: "text-red-600",    bg: "bg-red-100",    label: "Failed"     },
-  REVERSED:  { icon: RotateCcw,    color: "text-blue-600",   bg: "bg-blue-100",   label: "Reversed"   },
+const statusConfig: Record<string, { icon: React.ElementType; color: string; bg: string; labelKey: TranslationKey }> = {
+  COMPLETED: { icon: CheckCircle2, color: "text-green-600", bg: "bg-green-100", labelKey: "tx.statusCompleted" },
+  PENDING:   { icon: Clock,        color: "text-amber-600", bg: "bg-amber-100", labelKey: "tx.statusPending"   },
+  FAILED:    { icon: XCircle,      color: "text-red-600",   bg: "bg-red-100",   labelKey: "tx.statusFailed"    },
+  REVERSED:  { icon: RotateCcw,    color: "text-blue-600",  bg: "bg-blue-100",  labelKey: "tx.statusReversed"  },
 };
 
 function getStatusConfig(status: string) {
@@ -101,6 +102,7 @@ function SectionCard({ title, children }: { title: string; children: React.React
 export default function TransactionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useLanguage();
   const [tx, setTx] = useState<Transaction | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -109,7 +111,7 @@ export default function TransactionDetailPage() {
     transactionsApi
       .get(id)
       .then((res) => setTx(res.data.data))
-      .catch(() => setError("Transaction not found."))
+      .catch(() => setError(t("tx.notFound")))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -143,9 +145,9 @@ export default function TransactionDetailPage() {
     return (
       <div className="max-w-lg mx-auto lg:max-w-none px-4 pt-20 text-center">
         <XCircle size={40} className="text-[#E3E3E3] mx-auto mb-3" />
-        <p className="text-sm font-semibold text-[#333]">{error || "Transaction not found"}</p>
+        <p className="text-sm font-semibold text-[#333]">{error || t("tx.notFound")}</p>
         <button onClick={() => router.back()} className="mt-4 text-sm text-[#DB0011] font-semibold">
-          Go back
+          {t("tx.goBack")}
         </button>
       </div>
     );
@@ -204,7 +206,7 @@ export default function TransactionDetailPage() {
           {/* Status pill */}
           <div className={`mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full ${status.bg}`}>
             <StatusIcon size={12} className={status.color} />
-            <span className={`text-xs font-bold ${status.color}`}>{status.label}</span>
+            <span className={`text-xs font-bold ${status.color}`}>{t(status.labelKey)}</span>
           </div>
         </div>
       </div>
@@ -212,45 +214,45 @@ export default function TransactionDetailPage() {
       {/* Cards */}
       <div className="-mt-6 pt-0 space-y-0">
         {/* Transaction info */}
-        <SectionCard title="Transaction details">
-          <DetailRow label="Reference" value={tx.reference} mono copyable />
-          <DetailRow label="Date" value={formatDate(tx.createdAt)} />
-          <DetailRow label="Time" value={formatTime(tx.createdAt)} />
+        <SectionCard title={t("tx.txDetails")}>
+          <DetailRow label={t("tx.reference")} value={tx.reference} mono copyable />
+          <DetailRow label={t("tx.date")} value={formatDate(tx.createdAt)} />
+          <DetailRow label={t("tx.time")} value={formatTime(tx.createdAt)} />
           {tx.valueDate && tx.valueDate !== tx.createdAt && (
-            <DetailRow label="Value date" value={formatDate(tx.valueDate)} />
+            <DetailRow label={t("tx.valueDate")} value={formatDate(tx.valueDate)} />
           )}
-          <DetailRow label="Category" value={cat.label} />
-          {tx.merchantCategory && tx.merchantCategory !== cat.label && (
-            <DetailRow label="Merchant category" value={tx.merchantCategory} />
+          <DetailRow label={t("tx.categoryLabel")} value={t(cat.labelKey)} />
+          {tx.merchantCategory && tx.merchantCategory !== cat.labelEn && (
+            <DetailRow label={t("tx.merchantCategoryLabel")} value={tx.merchantCategory} />
           )}
-          <DetailRow label="Type" value={isDebit ? "Debit" : "Credit"} />
+          <DetailRow label={t("tx.typeLabel")} value={isDebit ? t("tx.debit") : t("tx.credit")} />
         </SectionCard>
 
         {/* Merchant / counterparty */}
         {(hasMerchant || hasCounterparty) && (
-          <SectionCard title={hasCounterparty ? "Counterparty" : "Merchant"}>
-            {tx.merchantName && <DetailRow label="Merchant" value={tx.merchantName} />}
-            {tx.counterpartyName && <DetailRow label="Name" value={tx.counterpartyName} />}
+          <SectionCard title={hasCounterparty ? t("tx.counterparty") : t("tx.merchantSection")}>
+            {tx.merchantName && <DetailRow label={t("tx.merchantLabel")} value={tx.merchantName} />}
+            {tx.counterpartyName && <DetailRow label={t("tx.nameLabel")} value={tx.counterpartyName} />}
             {tx.counterpartyAccountNumber && (
-              <DetailRow label="Account" value={tx.counterpartyAccountNumber} mono copyable />
+              <DetailRow label={t("tx.accountLabel")} value={tx.counterpartyAccountNumber} mono copyable />
             )}
-            {tx.counterpartyBank && <DetailRow label="Bank" value={tx.counterpartyBank} />}
+            {tx.counterpartyBank && <DetailRow label={t("tx.bankLabel")} value={tx.counterpartyBank} />}
           </SectionCard>
         )}
 
         {/* Description */}
-        <SectionCard title="Description">
+        <SectionCard title={t("tx.descSection")}>
           <div className="py-3">
             <p className="text-sm text-[#333] leading-relaxed">{tx.description}</p>
           </div>
         </SectionCard>
 
         {/* Balance impact */}
-        <SectionCard title="Account impact">
-          <DetailRow label="Balance before" value={formatCurrency(balanceBefore, tx.currency)} />
-          <DetailRow label="Balance after" value={formatCurrency(balanceAfter, tx.currency)} />
+        <SectionCard title={t("tx.accountImpact")}>
+          <DetailRow label={t("tx.balanceBefore")} value={formatCurrency(balanceBefore, tx.currency)} />
+          <DetailRow label={t("tx.balanceAfter")} value={formatCurrency(balanceAfter, tx.currency)} />
           <div className="flex items-center justify-between py-3.5">
-            <p className="text-xs text-[#AAAAAA] font-medium">Change</p>
+            <p className="text-xs text-[#AAAAAA] font-medium">{t("tx.change")}</p>
             <p className={`text-sm font-bold ${isDebit ? "text-[#DB0011]" : "text-green-600"}`}>
               {isDebit ? "−" : "+"}{formatCurrency(amount, tx.currency)}
             </p>
@@ -260,7 +262,7 @@ export default function TransactionDetailPage() {
         {/* Failure reason */}
         {tx.failureReason && (
           <div className="mx-4 mb-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3.5">
-            <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-1">Failure reason</p>
+            <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-1">{t("tx.failureReason")}</p>
             <p className="text-sm text-red-700">{tx.failureReason}</p>
           </div>
         )}
@@ -271,23 +273,23 @@ export default function TransactionDetailPage() {
             onClick={() => router.push(`/disputes/new?txId=${tx.id}&txRef=${encodeURIComponent(tx.reference)}&txDesc=${encodeURIComponent(tx.description)}`)}
             className="w-full flex items-center justify-between px-4 py-4 border-b border-[#F5F5F5] hover:bg-[#FAFAFA] transition-colors active:bg-[#F0F0F0]"
           >
-            <span className="text-sm font-medium text-[#333]">Report an issue</span>
+            <span className="text-sm font-medium text-[#333]">{t("tx.reportIssue")}</span>
             <ChevronRight size={16} className="text-[#CCCCCC]" />
           </button>
           <button
             onClick={() => {
               const text = [
-                `Reference: ${tx.reference}`,
-                `Amount: ${isDebit ? "-" : "+"}${formatCurrency(amount, tx.currency)}`,
-                `Date: ${formatDate(tx.createdAt)} ${formatTime(tx.createdAt)}`,
-                `Status: ${status.label}`,
-                `Description: ${tx.description}`,
+                `${t("tx.reference")}: ${tx.reference}`,
+                `${t("transfer.amount")}: ${isDebit ? "-" : "+"}${formatCurrency(amount, tx.currency)}`,
+                `${t("tx.date")}: ${formatDate(tx.createdAt)} ${formatTime(tx.createdAt)}`,
+                `${t("transfer.status")}: ${t(status.labelKey)}`,
+                `${t("tx.descSection")}: ${tx.description}`,
               ].join("\n");
               navigator.clipboard.writeText(text);
             }}
             className="w-full flex items-center justify-between px-4 py-4 hover:bg-[#FAFAFA] transition-colors active:bg-[#F0F0F0]"
           >
-            <span className="text-sm font-medium text-[#333]">Copy receipt</span>
+            <span className="text-sm font-medium text-[#333]">{t("tx.copyReceipt")}</span>
             <Copy size={16} className="text-[#CCCCCC]" />
           </button>
         </div>

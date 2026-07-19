@@ -5,18 +5,23 @@ import { useParams, useRouter } from "next/navigation";
 import { loansApi, type Loan, type AmortizationEntry } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
+import { useLanguage, type TranslationKey } from "@/lib/i18n";
 import {
   ArrowLeft, Home, Calendar, Percent, Banknote, CheckCircle2,
   Clock, AlertCircle, Star, ChevronDown, ChevronUp, TrendingDown,
   Landmark, X,
 } from "lucide-react";
 
+const MORTGAGE_STATUS_KEYS: Record<string, TranslationKey> = {
+  ACTIVE: "loans.statusActive", PAID_OFF: "loans.paidOff", DEFAULTED: "loans.defaulted",
+};
+
 function statusConfig(status: string) {
   switch (status.toUpperCase()) {
-    case "ACTIVE":    return { color: "text-green-600",  bg: "bg-green-50",  border: "border-green-200",  icon: CheckCircle2, label: "Active"    };
-    case "PAID_OFF":  return { color: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-200",   icon: Star,         label: "Paid off"  };
-    case "DEFAULTED": return { color: "text-[#DB0011]",  bg: "bg-red-50",    border: "border-red-200",    icon: AlertCircle,  label: "Defaulted" };
-    default:          return { color: "text-amber-600",  bg: "bg-amber-50",  border: "border-amber-200",  icon: Clock,        label: status      };
+    case "ACTIVE":    return { color: "text-green-600",  bg: "bg-green-50",  border: "border-green-200",  icon: CheckCircle2 };
+    case "PAID_OFF":  return { color: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-200",   icon: Star         };
+    case "DEFAULTED": return { color: "text-[#DB0011]",  bg: "bg-red-50",    border: "border-red-200",    icon: AlertCircle  };
+    default:          return { color: "text-amber-600",  bg: "bg-amber-50",  border: "border-amber-200",  icon: Clock        };
   }
 }
 
@@ -33,6 +38,7 @@ function RepayModal({
   onClose: () => void;
   onSuccess: (remaining: number) => void;
 }) {
+  const { t } = useLanguage();
   const monthly = Number(loan.monthlyPayment);
   const outstanding = Number(loan.outstandingBalance);
   const [amount, setAmount] = useState(monthly.toFixed(2));
@@ -60,8 +66,8 @@ function RepayModal({
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <p className="text-base font-bold text-[#333]">Make a payment</p>
-            <p className="text-xs text-[#767676] mt-0.5">Outstanding: {formatCurrency(outstanding)}</p>
+            <p className="text-base font-bold text-[#333]">{t("mortgage.makePayment")}</p>
+            <p className="text-xs text-[#767676] mt-0.5">{t("mortgage.outstanding")}: {formatCurrency(outstanding)}</p>
           </div>
           <button onClick={onClose} className="h-8 w-8 rounded-full bg-[#F5F5F5] flex items-center justify-center">
             <X size={15} className="text-[#777]" />
@@ -127,6 +133,7 @@ function RepayModal({
 export default function MortgageDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useLanguage();
   const [loan, setLoan] = useState<Loan | null>(null);
   const [schedule, setSchedule] = useState<AmortizationEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -202,13 +209,13 @@ export default function MortgageDetailPage() {
             <Home size={20} className="text-white" />
           </div>
           <div className="flex-1">
-            <p className="text-xs font-semibold text-white/50 uppercase tracking-widest">Mortgage</p>
+            <p className="text-xs font-semibold text-white/50 uppercase tracking-widest">{t("mortgage.title")}</p>
             <p className="text-3xl font-bold leading-tight">{formatCurrency(outstanding)}</p>
-            <p className="text-white/40 text-xs mt-0.5">Outstanding balance</p>
+            <p className="text-white/40 text-xs mt-0.5">{t("mortgage.outstandingBalance")}</p>
           </div>
           <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs font-semibold flex-shrink-0 ${sc.bg} ${sc.border} ${sc.color}`}>
             <StatusIcon size={11} />
-            {sc.label}
+            {MORTGAGE_STATUS_KEYS[loan.status.toUpperCase()] ? t(MORTGAGE_STATUS_KEYS[loan.status.toUpperCase()]) : loan.status}
           </div>
         </div>
         {/* Progress */}
@@ -231,10 +238,10 @@ export default function MortgageDetailPage() {
         <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm overflow-hidden">
           <div className="grid grid-cols-4 divide-x divide-[#F0F0F0]">
             {[
-              { icon: Percent,   label: "Rate",        value: `${rate.toFixed(1)}%`                        },
-              { icon: Banknote,  label: "Monthly",     value: formatCurrency(Number(loan.monthlyPayment))  },
-              { icon: Calendar,  label: "Term",        value: `${Math.round(loan.termMonths / 12)}yr`      },
-              { icon: TrendingDown, label: "Payments", value: `${paidPayments}/${loan.termMonths}`         },
+              { icon: Percent,      label: t("mortgage.rate"),     value: `${rate.toFixed(1)}%`                        },
+              { icon: Banknote,     label: t("mortgage.monthly"),  value: formatCurrency(Number(loan.monthlyPayment))  },
+              { icon: Calendar,     label: t("mortgage.term"),     value: `${Math.round(loan.termMonths / 12)}yr`      },
+              { icon: TrendingDown, label: t("mortgage.payments"), value: `${paidPayments}/${loan.termMonths}`         },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} className="flex flex-col items-center py-4 px-1">
                 <Icon size={13} className="text-[#BBBBBB] mb-1" />
@@ -264,12 +271,12 @@ export default function MortgageDetailPage() {
                   <Calendar size={16} className="text-[#DB0011]" />
                 </div>
                 <div>
-                  <p className="text-[11px] text-[#AAAAAA] uppercase tracking-wide font-semibold">Next payment</p>
+                  <p className="text-[11px] text-[#AAAAAA] uppercase tracking-wide font-semibold">{t("mortgage.nextPayment")}</p>
                   <p className="text-sm font-bold text-[#333]">{formatDate(loan.nextPaymentDate)}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-[11px] text-[#AAAAAA]">Amount due</p>
+                <p className="text-[11px] text-[#AAAAAA]">{t("mortgage.amountDue")}</p>
                 <p className="text-lg font-bold text-[#DB0011]">{formatCurrency(Number(loan.nextPaymentAmount ?? loan.monthlyPayment))}</p>
               </div>
             </div>
@@ -277,7 +284,7 @@ export default function MortgageDetailPage() {
               onClick={() => setShowRepay(true)}
               className="mt-3 w-full h-11 rounded-xl bg-[#DB0011] text-white text-sm font-bold hover:bg-[#b8000e] transition-colors"
             >
-              Make a payment
+              {t("mortgage.makePayment")}
             </button>
           </div>
         )}
@@ -287,8 +294,8 @@ export default function MortgageDetailPage() {
           <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-4 flex items-start gap-3">
             <Clock size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-amber-700">Application under review</p>
-              <p className="text-xs text-amber-600 mt-0.5">A mortgage advisor will be in touch within 2 business days.</p>
+              <p className="text-sm font-semibold text-amber-700">{t("mortgage.underReview")}</p>
+              <p className="text-xs text-amber-600 mt-0.5">{t("mortgage.reviewDesc")}</p>
             </div>
           </div>
         )}
@@ -297,7 +304,7 @@ export default function MortgageDetailPage() {
         {loan.payments && loan.payments.length > 0 && (
           <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm overflow-hidden">
             <div className="px-4 py-3.5 border-b border-[#F5F5F5]">
-              <p className="text-sm font-bold text-[#333]">Payment history</p>
+              <p className="text-sm font-bold text-[#333]">{t("mortgage.paymentHistory")}</p>
             </div>
             <div>
               {loan.payments.map((p, i) => (
@@ -344,7 +351,7 @@ export default function MortgageDetailPage() {
                   <Landmark size={15} className="text-[#767676]" />
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-bold text-[#333]">Amortization schedule</p>
+                  <p className="text-sm font-bold text-[#333]">{t("mortgage.amortization")}</p>
                   <p className="text-xs text-[#AAAAAA]">{schedule.length} payments · {Math.round(loan.termMonths / 12)} year term</p>
                 </div>
               </div>
@@ -389,15 +396,15 @@ export default function MortgageDetailPage() {
 
         {/* Mortgage details summary */}
         <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-4 space-y-3">
-          <p className="text-sm font-bold text-[#333]">Loan summary</p>
+          <p className="text-sm font-bold text-[#333]">{t("mortgage.loanSummary")}</p>
           {[
-            { label: "Original amount",    value: formatCurrency(principal)                      },
-            { label: "Outstanding",        value: formatCurrency(outstanding)                    },
-            { label: "Amount repaid",      value: formatCurrency(paid)                           },
-            { label: "Interest rate",      value: `${rate.toFixed(2)}% p.a.`                    },
-            { label: "Monthly payment",    value: formatCurrency(Number(loan.monthlyPayment))    },
-            { label: "Term",               value: `${loan.termMonths} months (${Math.round(loan.termMonths / 12)} years)` },
-            ...(loan.disbursedAt ? [{ label: "Disbursed", value: formatDate(loan.disbursedAt) }] : []),
+            { label: t("mortgage.originalAmount"),    value: formatCurrency(principal)                      },
+            { label: t("mortgage.outstanding"),       value: formatCurrency(outstanding)                    },
+            { label: t("mortgage.amountRepaid"),      value: formatCurrency(paid)                           },
+            { label: t("mortgage.interestRate"),      value: `${rate.toFixed(2)}%`                          },
+            { label: t("mortgage.monthly"),           value: formatCurrency(Number(loan.monthlyPayment))    },
+            { label: t("mortgage.term"),              value: `${loan.termMonths} ${t("loans.months")} (${Math.round(loan.termMonths / 12)} ${t("loans.years")})` },
+            ...(loan.disbursedAt ? [{ label: t("mortgage.disbursed"), value: formatDate(loan.disbursedAt) }] : []),
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between text-sm">
               <span className="text-[#767676]">{label}</span>

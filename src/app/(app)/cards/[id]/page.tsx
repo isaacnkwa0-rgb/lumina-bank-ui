@@ -26,10 +26,12 @@ import { SkeletonList } from "@/components/ui/LoadingSpinner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TransactionItem } from "@/components/transactions/TransactionItem";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { useLanguage, type TranslationKey } from "@/lib/i18n";
 
 export default function CardDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { t } = useLanguage();
   const id = params.id as string;
 
   const [card, setCard] = useState<Card | null>(null);
@@ -44,7 +46,6 @@ export default function CardDetailPage() {
   const [txPage, setTxPage] = useState(1);
   const [txHasMore, setTxHasMore] = useState(true);
 
-  // Limit editing state
   const [editingLimits, setEditingLimits] = useState(false);
   const [limitDraft, setLimitDraft] = useState<CardLimits>({ daily: 0, monthly: 0, perTransaction: 0 });
   const [limitsLoading, setLimitsLoading] = useState(false);
@@ -56,7 +57,7 @@ export default function CardDetailPage() {
         setCard(res.data.data);
         setLimitDraft(res.data.data.spendingLimits);
       })
-      .catch(() => setError("Could not load card."))
+      .catch(() => setError(t("cards.cardNotFound")))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -90,7 +91,7 @@ export default function CardDetailPage() {
       const res = await fn(card.id);
       setCard(res.data.data);
     } catch {
-      setActionError("Action failed. Please try again.");
+      setActionError(t("cards.actionFailed"));
     } finally {
       setActionLoading("");
     }
@@ -104,7 +105,7 @@ export default function CardDetailPage() {
       const res = await cardsApi.reportLost(card.id);
       setCard(res.data.data);
     } catch {
-      setActionError("Could not report card. Please try again.");
+      setActionError(t("cards.actionFailed"));
     } finally {
       setActionLoading("");
     }
@@ -118,7 +119,7 @@ export default function CardDetailPage() {
       const res = await cardsApi.replace(card.id);
       router.replace(`/cards/${res.data.data.id}`);
     } catch {
-      setActionError("Could not replace card. Please try again.");
+      setActionError(t("cards.actionFailed"));
     } finally {
       setActionLoading("");
     }
@@ -142,7 +143,7 @@ export default function CardDetailPage() {
       setCard(res.data.data);
       setEditingLimits(false);
     } catch {
-      setActionError("Could not update limits. Please try again.");
+      setActionError(t("cards.actionFailed"));
     } finally {
       setLimitsLoading(false);
     }
@@ -178,7 +179,7 @@ export default function CardDetailPage() {
           <ChevronLeft size={16} /> Back
         </button>
         <div className="bg-red-50 border-l-4 border-[#DB0011] p-4 rounded-sm">
-          <p className="text-sm text-[#DB0011]">{error || "Card not found."}</p>
+          <p className="text-sm text-[#DB0011]">{error || t("cards.cardNotFound")}</p>
         </div>
       </div>
     );
@@ -187,23 +188,22 @@ export default function CardDetailPage() {
   const isFrozen = card.status === "FROZEN";
   const isBlocked = card.status === "BLOCKED";
 
-  const statusConfig: Record<string, { label: string; variant: "success" | "info" | "danger" | "warning" | "default" }> = {
-    ACTIVE: { label: "Active", variant: "success" },
-    FROZEN: { label: "Frozen", variant: "info" },
-    BLOCKED: { label: "Blocked", variant: "danger" },
-    CANCELLED: { label: "Cancelled", variant: "default" },
+  const statusConfig: Record<string, { labelKey: TranslationKey; variant: "success" | "info" | "danger" | "warning" | "default" }> = {
+    ACTIVE:    { labelKey: "cards.statusActive",    variant: "success" },
+    FROZEN:    { labelKey: "cards.statusFrozen",    variant: "info"    },
+    BLOCKED:   { labelKey: "cards.statusBlocked",   variant: "danger"  },
+    CANCELLED: { labelKey: "cards.statusCancelled", variant: "default" },
   };
 
-  const status = statusConfig[card.status] ?? { label: card.status, variant: "default" as const };
+  const status = statusConfig[card.status] ?? { labelKey: "cards.statusActive" as TranslationKey, variant: "default" as const };
 
-  const controls: { key: keyof CardControls; label: string; icon: React.ReactNode }[] = [
-    { key: "online", label: "Online payments", icon: <Wifi size={16} /> },
-    { key: "contactless", label: "Contactless", icon: <span className="text-sm">📱</span> },
-    { key: "international", label: "International", icon: <span className="text-sm">🌍</span> },
-    { key: "atm", label: "ATM withdrawals", icon: <span className="text-sm">🏧</span> },
+  const controls: { key: keyof CardControls; labelKey: TranslationKey; icon: React.ReactNode }[] = [
+    { key: "online",        labelKey: "cards.online",       icon: <Wifi size={16} /> },
+    { key: "contactless",   labelKey: "cards.contactless",  icon: <span className="text-sm">📱</span> },
+    { key: "international", labelKey: "cards.international", icon: <span className="text-sm">🌍</span> },
+    { key: "atm",           labelKey: "cards.atm",          icon: <span className="text-sm">🏧</span> },
   ];
 
-  // Group transactions by date
   const grouped = transactions.reduce<Record<string, Transaction[]>>((acc, tx) => {
     const key = formatDate(tx.createdAt);
     if (!acc[key]) acc[key] = [];
@@ -221,9 +221,9 @@ export default function CardDetailPage() {
         >
           <ChevronLeft size={24} />
         </button>
-        <h1 className="text-base font-semibold text-[#333333]">Card details</h1>
+        <h1 className="text-base font-semibold text-[#333333]">{t("cards.cardDetails")}</h1>
         <div className="ml-auto">
-          <Badge variant={status.variant}>{status.label}</Badge>
+          <Badge variant={status.variant}>{t(status.labelKey)}</Badge>
         </div>
       </div>
 
@@ -245,7 +245,7 @@ export default function CardDetailPage() {
             <div className="flex flex-col items-end gap-0.5">
               <span className="text-white font-bold text-lg leading-none">VISA</span>
               <span className="text-white/60 text-[9px] uppercase tracking-wide">
-                {card.isVirtual ? "Virtual" : card.type === "CREDIT" ? "Credit" : "Debit"} · {card.tier}
+                {card.isVirtual ? t("cards.virtual") : card.type === "CREDIT" ? "Credit" : "Debit"} · {card.tier}
               </span>
             </div>
           </div>
@@ -258,11 +258,11 @@ export default function CardDetailPage() {
             </p>
             <div className="flex justify-between items-end">
               <div>
-                <p className="text-white/50 text-[10px] uppercase">Card holder</p>
+                <p className="text-white/50 text-[10px] uppercase">{t("cards.cardHolder")}</p>
                 <p className="text-white text-sm font-medium">{card.cardholderName}</p>
               </div>
               <div className="text-right">
-                <p className="text-white/50 text-[10px] uppercase">Expires</p>
+                <p className="text-white/50 text-[10px] uppercase">{t("cards.expires")}</p>
                 <p className="text-white text-sm font-medium">
                   {String(card.expiryMonth).padStart(2, "0")}/{card.expiryYear}
                 </p>
@@ -312,13 +312,13 @@ export default function CardDetailPage() {
             ) : (
               <SnowflakeIcon size={20} strokeWidth={2} />
             )}
-            {isFrozen ? "Unfreeze" : "Freeze"}
+            {isFrozen ? t("cards.unfreeze") : t("cards.freeze")}
           </button>
           <ActionButton
             onClick={handleReportLost}
             loading={actionLoading === "report"}
             icon={<AlertTriangle size={18} />}
-            label="Report lost"
+            label={t("cards.reportLost")}
             color="text-[#DB0011]"
             disabled={isBlocked}
           />
@@ -326,7 +326,7 @@ export default function CardDetailPage() {
             onClick={handleReplace}
             loading={actionLoading === "replace"}
             icon={<RefreshCw size={18} />}
-            label="Replace"
+            label={t("cards.replace")}
             color="text-[#333333]"
           />
         </div>
@@ -336,10 +336,8 @@ export default function CardDetailPage() {
         <div className="mx-4 mt-3 bg-red-50 border-l-4 border-[#DB0011] p-4 rounded-sm flex gap-2">
           <AlertCircle size={16} className="text-[#DB0011] flex-shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <p className="text-sm font-medium text-[#DB0011]">Card blocked</p>
-            <p className="text-xs text-[#DB0011]/80">
-              This card has been reported as lost or stolen. Contact support or replace the card.
-            </p>
+            <p className="text-sm font-medium text-[#DB0011]">{t("cards.cardBlocked")}</p>
+            <p className="text-xs text-[#DB0011]/80">{t("cards.blockedDesc")}</p>
           </div>
         </div>
       )}
@@ -348,14 +346,14 @@ export default function CardDetailPage() {
       <section className="mx-4 mt-4 bg-white border border-[#E3E3E3] rounded-sm">
         <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-[#E3E3E3]">
           <p className="text-xs font-medium text-[#767676] uppercase tracking-wide">
-            Spending limits
+            {t("cards.spendingLimits")}
           </p>
           {!isBlocked && !editingLimits && (
             <button
               onClick={() => { setLimitDraft(card.spendingLimits); setEditingLimits(true); }}
               className="flex items-center gap-1 text-xs text-[#DB0011] font-medium"
             >
-              <Edit2 size={12} /> Edit
+              <Edit2 size={12} /> {t("cards.edit")}
             </button>
           )}
           {editingLimits && (
@@ -373,7 +371,7 @@ export default function CardDetailPage() {
                 disabled={limitsLoading}
               >
                 {limitsLoading ? (
-                  <span className="text-xs">Saving…</span>
+                  <span className="text-xs">{t("cards.saving")}</span>
                 ) : (
                   <Check size={16} />
                 )}
@@ -384,14 +382,14 @@ export default function CardDetailPage() {
 
         <div className="p-4 grid grid-cols-3 gap-3">
           {(["daily", "monthly", "perTransaction"] as const).map((key) => {
-            const labels: Record<string, string> = {
-              daily: "Daily",
-              monthly: "Monthly",
-              perTransaction: "Per txn",
+            const labelKeys: Record<string, TranslationKey> = {
+              daily: "cards.daily",
+              monthly: "cards.monthly",
+              perTransaction: "cards.perTxn",
             };
             return (
               <div key={key} className="text-center bg-[#F8F8F8] rounded-sm p-3">
-                <p className="text-[10px] text-[#767676] mb-1">{labels[key]}</p>
+                <p className="text-[10px] text-[#767676] mb-1">{t(labelKeys[key])}</p>
                 {editingLimits ? (
                   <input
                     type="number"
@@ -417,15 +415,15 @@ export default function CardDetailPage() {
       <section className="mx-4 mt-4 bg-white border border-[#E3E3E3] rounded-sm">
         <div className="px-4 pt-4 pb-3 border-b border-[#E3E3E3]">
           <p className="text-xs font-medium text-[#767676] uppercase tracking-wide">
-            Card controls
+            {t("cards.controls")}
           </p>
         </div>
         <div className="divide-y divide-[#F0F0F0]">
-          {controls.map(({ key, label, icon }) => (
+          {controls.map(({ key, labelKey, icon }) => (
             <div key={key} className="flex items-center justify-between px-4 py-3.5">
               <div className="flex items-center gap-2.5 text-sm text-[#333333]">
                 <span className="text-[#767676]">{icon}</span>
-                {label}
+                {t(labelKey)}
               </div>
               <Toggle
                 checked={card.controls[key]}
@@ -441,7 +439,7 @@ export default function CardDetailPage() {
       <section className="mx-4 mt-4 bg-white border border-[#E3E3E3] rounded-sm">
         <div className="px-4 pt-4 pb-3 border-b border-[#E3E3E3]">
           <p className="text-xs font-medium text-[#767676] uppercase tracking-wide">
-            Card transactions
+            {t("cards.cardTransactions")}
           </p>
         </div>
 
@@ -449,8 +447,8 @@ export default function CardDetailPage() {
           <SkeletonList count={5} />
         ) : transactions.length === 0 ? (
           <EmptyState
-            title="No transactions"
-            description="Card payments will appear here."
+            title={t("transactions.noTransactions")}
+            description={t("cards.noTxDesc")}
           />
         ) : (
           <>
@@ -474,7 +472,7 @@ export default function CardDetailPage() {
                   onClick={loadMore}
                   isLoading={txLoading}
                 >
-                  Load more
+                  {t("cards.loadMore")}
                 </Button>
               </div>
             )}

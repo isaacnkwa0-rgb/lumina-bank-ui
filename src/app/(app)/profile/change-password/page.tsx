@@ -4,9 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, ArrowLeft, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { authApi } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
 
 export default function ChangePasswordPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [current, setCurrent]         = useState("");
   const [next, setNext]               = useState("");
   const [confirm, setConfirm]         = useState("");
@@ -17,10 +19,10 @@ export default function ChangePasswordPage() {
   const [success, setSuccess]         = useState(false);
 
   const rules = [
-    { label: "At least 8 characters", ok: next.length >= 8 },
-    { label: "Contains a number",     ok: /\d/.test(next) },
-    { label: "Contains a letter",     ok: /[a-zA-Z]/.test(next) },
-    { label: "Passwords match",       ok: next.length > 0 && next === confirm },
+    { label: t("changePassword.min8"),    ok: next.length >= 8 },
+    { label: t("changePassword.hasNumber"), ok: /\d/.test(next) },
+    { label: t("changePassword.hasLetter"), ok: /[a-zA-Z]/.test(next) },
+    { label: t("changePassword.match"),   ok: next.length > 0 && next === confirm },
   ];
   const allOk = rules.every((r) => r.ok);
 
@@ -47,15 +49,15 @@ export default function ChangePasswordPage() {
           onClick={() => router.back()}
           className="flex items-center gap-1.5 text-white/70 hover:text-white text-sm mb-5 transition-colors"
         >
-          <ArrowLeft size={16} /> Back
+          <ArrowLeft size={16} /> {t("changePassword.back")}
         </button>
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center">
             <Lock size={22} className="text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Change password</h1>
-            <p className="text-white/60 text-xs mt-0.5">Keep your account secure</p>
+            <h1 className="text-xl font-bold">{t("changePassword.title")}</h1>
+            <p className="text-white/60 text-xs mt-0.5">{t("changePassword.subtitle")}</p>
           </div>
         </div>
       </div>
@@ -66,22 +68,22 @@ export default function ChangePasswordPage() {
             <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
               <CheckCircle2 size={32} className="text-green-500" />
             </div>
-            <p className="text-lg font-bold text-[#333]">Password changed</p>
-            <p className="text-sm text-[#767676] mt-1">You&apos;ve been signed out of all devices. Redirecting…</p>
+            <p className="text-lg font-bold text-[#333]">{t("changePassword.success")}</p>
+            <p className="text-sm text-[#767676] mt-1">{t("changePassword.successDesc")}</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-5 space-y-4">
             {/* Current password */}
             <div>
               <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">
-                Current password
+                {t("changePassword.current")}
               </label>
               <div className="relative">
                 <input
                   type={showCurrent ? "text" : "password"}
                   value={current}
                   onChange={(e) => setCurrent(e.target.value)}
-                  placeholder="Enter your current password"
+                  placeholder={t("changePassword.current")}
                   className="w-full px-4 py-3 pr-10 border-2 border-[#E3E3E3] rounded-xl text-sm focus:outline-none focus:border-[#DB0011]"
                   autoComplete="current-password"
                 />
@@ -98,14 +100,14 @@ export default function ChangePasswordPage() {
             {/* New password */}
             <div>
               <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">
-                New password
+                {t("changePassword.new")}
               </label>
               <div className="relative">
                 <input
                   type={showNext ? "text" : "password"}
                   value={next}
                   onChange={(e) => setNext(e.target.value)}
-                  placeholder="At least 8 characters"
+                  placeholder={t("changePassword.min8")}
                   className="w-full px-4 py-3 pr-10 border-2 border-[#E3E3E3] rounded-xl text-sm focus:outline-none focus:border-[#DB0011]"
                   autoComplete="new-password"
                 />
@@ -122,13 +124,13 @@ export default function ChangePasswordPage() {
             {/* Confirm password */}
             <div>
               <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">
-                Confirm new password
+                {t("changePassword.confirm")}
               </label>
               <input
                 type="password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                placeholder="Repeat new password"
+                placeholder={t("changePassword.confirm")}
                 className="w-full px-4 py-3 border-2 border-[#E3E3E3] rounded-xl text-sm focus:outline-none focus:border-[#DB0011]"
                 autoComplete="new-password"
               />
@@ -163,11 +165,11 @@ export default function ChangePasswordPage() {
               disabled={submitting || !allOk || !current}
               className="w-full py-3.5 rounded-xl bg-[#DB0011] text-white font-bold text-sm hover:bg-[#b0000d] transition-colors disabled:opacity-50"
             >
-              {submitting ? "Changing password…" : "Change password"}
+              {submitting ? t("changePassword.changing") : t("changePassword.title")}
             </button>
 
             <p className="text-xs text-[#AAAAAA] text-center">
-              Changing your password will sign you out of all devices.
+              {t("changePassword.warning")}
             </p>
           </form>
         )}

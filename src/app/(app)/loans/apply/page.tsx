@@ -8,13 +8,14 @@ import {
   ArrowLeft, User, Briefcase, Car, GraduationCap,
   CheckCircle2, ChevronRight, Banknote, Percent, Calendar, CreditCard,
 } from "lucide-react";
+import { useLanguage, type TranslationKey } from "@/lib/i18n";
 
 // ── Loan type config ───────────────────────────────────────────────────────────
 
 const LOAN_TYPES = [
   {
     type: "PERSONAL",
-    label: "Personal",
+    labelKey: "loans.personal" as TranslationKey,
     icon: User,
     emoji: "👤",
     rate: 12,
@@ -24,11 +25,11 @@ const LOAN_TYPES = [
     color: "text-blue-600",
     bg: "bg-blue-50",
     border: "border-blue-200",
-    description: "For everyday needs — home improvements, holidays, bills.",
+    descKey: "loans.personalDesc" as TranslationKey,
   },
   {
     type: "BUSINESS",
-    label: "Business",
+    labelKey: "loans.businessLoan" as TranslationKey,
     icon: Briefcase,
     emoji: "💼",
     rate: 10,
@@ -38,11 +39,11 @@ const LOAN_TYPES = [
     color: "text-purple-600",
     bg: "bg-purple-50",
     border: "border-purple-200",
-    description: "Grow your business with flexible funding.",
+    descKey: "loans.businessLoanDesc" as TranslationKey,
   },
   {
     type: "AUTO",
-    label: "Auto",
+    labelKey: "loans.auto" as TranslationKey,
     icon: Car,
     emoji: "🚗",
     rate: 8,
@@ -52,11 +53,11 @@ const LOAN_TYPES = [
     color: "text-green-600",
     bg: "bg-green-50",
     border: "border-green-200",
-    description: "Finance your next car with competitive rates.",
+    descKey: "loans.autoDesc" as TranslationKey,
   },
   {
     type: "STUDENT",
-    label: "Student",
+    labelKey: "loans.student" as TranslationKey,
     icon: GraduationCap,
     emoji: "🎓",
     rate: 5.5,
@@ -66,7 +67,7 @@ const LOAN_TYPES = [
     color: "text-amber-600",
     bg: "bg-amber-50",
     border: "border-amber-200",
-    description: "Low-rate funding for tuition, books and living costs.",
+    descKey: "loans.studentDesc" as TranslationKey,
   },
 ] as const;
 
@@ -83,6 +84,7 @@ function calcMonthly(principal: number, annualRate: number, termMonths: number):
 
 export default function LoanApplyPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [selectedType, setSelectedType] = useState<typeof LOAN_TYPES[number] | null>(null);
   const [amount, setAmount] = useState("");
   const [termMonths, setTermMonths] = useState(24);
@@ -110,7 +112,7 @@ export default function LoanApplyPage() {
   const totalInterest = totalRepayable - parsedAmount;
 
   const availableTerms = TERM_OPTIONS.filter(
-    (t) => !selectedType || t <= selectedType.maxTerm
+    (term) => !selectedType || term <= selectedType.maxTerm
   );
 
   function handleAmountInput(val: string) {
@@ -149,21 +151,20 @@ export default function LoanApplyPage() {
         <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
           <CheckCircle2 size={40} className="text-green-500" />
         </div>
-        <h2 className="text-2xl font-bold text-[#333] mb-2">Application submitted!</h2>
+        <h2 className="text-2xl font-bold text-[#333] mb-2">{t("loans.appSubmitted")}</h2>
         <p className="text-[#767676] text-sm mb-2">
-          Your {selectedType?.label.toLowerCase()} loan application for{" "}
-          <span className="font-semibold text-[#333]">{formatCurrency(parsedAmount)}</span> has been received.
+          {t("loans.appSubmittedDesc")}
         </p>
         <p className="text-[#767676] text-sm mb-8">
           You&apos;ll receive a decision shortly. Your loan will appear in the Loans section once approved.
         </p>
         <div className="w-full bg-[#F8F8F8] rounded-2xl p-4 mb-6 text-left space-y-2">
           {[
-            { label: "Loan type", value: selectedType?.label },
-            { label: "Amount", value: formatCurrency(parsedAmount) },
-            { label: "Term", value: `${termMonths} months` },
-            { label: "Monthly payment", value: formatCurrency(monthly) },
-            { label: "APR", value: `${selectedType?.rate}%` },
+            { label: t("loans.loanType"),        value: selectedType ? t(selectedType.labelKey) : "" },
+            { label: "Amount",                    value: formatCurrency(parsedAmount)               },
+            { label: t("loans.term"),             value: `${termMonths} ${t("loans.months")}`       },
+            { label: t("loans.monthlyPayment"),   value: formatCurrency(monthly)                    },
+            { label: t("loans.apr"),              value: `${selectedType?.rate}%`                   },
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between text-sm">
               <span className="text-[#767676]">{label}</span>
@@ -192,15 +193,15 @@ export default function LoanApplyPage() {
           <ArrowLeft size={16} />
           Back
         </button>
-        <h1 className="text-2xl font-bold mb-1">Apply for a loan</h1>
-        <p className="text-white/60 text-sm">Instant decision · No early repayment fees</p>
+        <h1 className="text-2xl font-bold mb-1">{t("loans.applyTitle")}</h1>
+        <p className="text-white/60 text-sm">{t("loans.applySubtitle")}</p>
       </div>
 
       <div className="px-4 -mt-6 space-y-4">
         {/* Step 1 — type selector */}
         <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-5">
           <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest mb-3">
-            1. Choose loan type
+            1. {t("loans.chooseType")}
           </p>
           <div className="grid grid-cols-2 gap-3">
             {LOAN_TYPES.map((lt) => {
@@ -228,9 +229,9 @@ export default function LoanApplyPage() {
                     <Icon size={16} className={selected ? lt.color : "text-[#AAAAAA]"} />
                   </div>
                   <p className={`text-sm font-bold mb-0.5 ${selected ? lt.color : "text-[#333]"}`}>
-                    {lt.label}
+                    {t(lt.labelKey)}
                   </p>
-                  <p className="text-[10px] text-[#AAAAAA] leading-tight">{lt.description}</p>
+                  <p className="text-[10px] text-[#AAAAAA] leading-tight">{t(lt.descKey)}</p>
                   {selected && (
                     <span className={`mt-2 text-[10px] font-bold ${lt.color}`}>
                       from {lt.rate}% APR
@@ -246,13 +247,13 @@ export default function LoanApplyPage() {
         {selectedType && (
           <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-5 space-y-5">
             <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest">
-              2. Loan details
+              2. {t("loans.loanDetails")}
             </p>
 
             {/* Amount */}
             <div>
               <label className="block text-xs font-semibold text-[#555] mb-1.5">
-                How much do you need?
+                {t("loans.howMuch")}
               </label>
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767676] font-semibold text-sm">
@@ -270,27 +271,27 @@ export default function LoanApplyPage() {
                 />
               </div>
               <p className="text-[11px] text-[#AAAAAA] mt-1">
-                Up to {formatCurrency(selectedType.maxAmount)}
+                {t("loans.upTo")} {formatCurrency(selectedType.maxAmount)}
               </p>
             </div>
 
             {/* Term */}
             <div>
               <label className="block text-xs font-semibold text-[#555] mb-1.5">
-                Over how long?
+                {t("loans.howLong")}
               </label>
               <div className="grid grid-cols-4 gap-2">
-                {availableTerms.map((t) => (
+                {availableTerms.map((term) => (
                   <button
-                    key={t}
-                    onClick={() => setTermMonths(t)}
+                    key={term}
+                    onClick={() => setTermMonths(term)}
                     className={`py-2.5 rounded-xl text-xs font-bold border-2 transition-all ${
-                      termMonths === t
+                      termMonths === term
                         ? "border-[#DB0011] bg-red-50 text-[#DB0011]"
                         : "border-[#E8E8E8] text-[#555] hover:border-[#CCCCCC]"
                     }`}
                   >
-                    {t >= 12 ? `${t / 12}yr${t > 12 ? "s" : ""}` : `${t}mo`}
+                    {term >= 12 ? `${term / 12}${t("loans.years").slice(0, 2)}${term > 12 ? "s" : ""}` : `${term}${t("loans.months").slice(0, 2)}`}
                   </button>
                 ))}
               </div>
@@ -302,9 +303,9 @@ export default function LoanApplyPage() {
         {selectedType && accounts.length > 0 && (
           <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-5">
             <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest mb-3">
-              3. Disbursement account
+              3. {t("loans.disbursement")}
             </p>
-            <p className="text-xs text-[#767676] mb-3">Approved funds will be credited to this account.</p>
+            <p className="text-xs text-[#767676] mb-3">{t("loans.disbursementDesc")}</p>
             <div className="space-y-2">
               {accounts.map((acc) => {
                 const selected = selectedAccountId === acc.id;
@@ -341,21 +342,21 @@ export default function LoanApplyPage() {
           <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-[#F5F5F5]">
               <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest mb-3">
-                4. Your quote
+                4. {t("loans.yourQuote")}
               </p>
               <div className="flex items-end justify-between">
                 <div>
-                  <p className="text-[11px] text-[#AAAAAA] uppercase tracking-wide">Monthly payment</p>
+                  <p className="text-[11px] text-[#AAAAAA] uppercase tracking-wide">{t("loans.monthlyPayment")}</p>
                   <p className="text-4xl font-bold text-[#DB0011]">{formatCurrency(monthly)}</p>
                 </div>
-                <p className="text-xs text-[#AAAAAA] pb-1">per month</p>
+                <p className="text-xs text-[#AAAAAA] pb-1">{t("loans.perMonth")}</p>
               </div>
             </div>
             <div className="grid grid-cols-3 divide-x divide-[#F0F0F0]">
               {[
-                { icon: Banknote,  label: "Loan amount",     value: formatCurrency(parsedAmount)  },
-                { icon: Percent,   label: "APR",             value: `${selectedType.rate}%`       },
-                { icon: Calendar,  label: "Total repayable", value: formatCurrency(totalRepayable) },
+                { icon: Banknote,  label: t("loans.howMuch").split("?")[0],  value: formatCurrency(parsedAmount)   },
+                { icon: Percent,   label: t("loans.apr"),                    value: `${selectedType.rate}%`        },
+                { icon: Calendar,  label: t("loans.totalRepayable"),         value: formatCurrency(totalRepayable) },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex flex-col items-center py-4 px-2">
                   <Icon size={13} className="text-[#BBBBBB] mb-1" />
@@ -366,8 +367,8 @@ export default function LoanApplyPage() {
             </div>
             <div className="px-5 py-3 bg-[#FAFAFA] border-t border-[#F5F5F5]">
               <p className="text-[11px] text-[#AAAAAA] text-center">
-                Total interest: <span className="font-semibold text-[#555]">{formatCurrency(totalInterest)}</span>
-                {" · "}Representative {selectedType.rate}% APR
+                {t("loans.totalInterest")} <span className="font-semibold text-[#555]">{formatCurrency(totalInterest)}</span>
+                {" · "}{t("loans.repApr")} {selectedType.rate}%
               </p>
             </div>
           </div>
@@ -388,7 +389,7 @@ export default function LoanApplyPage() {
           >
             {submitting ? "Submitting application…" : (
               <>
-                Apply for {selectedType.label} loan
+                {t("loans.applyTitle")} — {t(selectedType.labelKey)}
                 <ChevronRight size={16} />
               </>
             )}
@@ -396,7 +397,7 @@ export default function LoanApplyPage() {
         )}
 
         <p className="text-[11px] text-[#AAAAAA] text-center pb-2">
-          Credit is subject to status and affordability checks. Lumina Bank is authorised and regulated by the FCA.
+          {t("loans.creditNote")}
         </p>
       </div>
     </div>

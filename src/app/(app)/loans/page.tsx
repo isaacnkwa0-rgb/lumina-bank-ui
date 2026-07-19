@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { loansApi, type Loan, type LoanEligibility, type AmortizationEntry } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
+import { useLanguage, type TranslationKey } from "@/lib/i18n";
 import {
   Calendar, ChevronDown, ChevronUp, CheckCircle2,
   Clock, AlertCircle, Banknote, Percent, CreditCard,
@@ -13,21 +14,28 @@ import {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
+const LOAN_STATUS_KEYS: Record<string, TranslationKey> = {
+  ACTIVE: "loans.statusActive", PAID_OFF: "loans.paidOff", DEFAULTED: "loans.defaulted",
+};
+const PAYMENT_STATUS_KEYS: Record<string, TranslationKey> = {
+  PAID: "loans.paid", MISSED: "loans.missed", SCHEDULED: "loans.upcoming",
+};
+
 function statusConfig(status: string) {
   switch (status.toUpperCase()) {
-    case "ACTIVE":    return { color: "text-green-600",  bg: "bg-green-50",  border: "border-green-200",  icon: CheckCircle2, label: "Active"    };
-    case "PAID_OFF":  return { color: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-200",   icon: Star,         label: "Paid off"  };
-    case "DEFAULTED": return { color: "text-[#DB0011]",  bg: "bg-red-50",    border: "border-red-200",    icon: AlertCircle,  label: "Defaulted" };
-    default:          return { color: "text-amber-600",  bg: "bg-amber-50",  border: "border-amber-200",  icon: Clock,        label: status      };
+    case "ACTIVE":    return { color: "text-green-600",  bg: "bg-green-50",  border: "border-green-200",  icon: CheckCircle2 };
+    case "PAID_OFF":  return { color: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-200",   icon: Star         };
+    case "DEFAULTED": return { color: "text-[#DB0011]",  bg: "bg-red-50",    border: "border-red-200",    icon: AlertCircle  };
+    default:          return { color: "text-amber-600",  bg: "bg-amber-50",  border: "border-amber-200",  icon: Clock        };
   }
 }
 
 function paymentStatusConfig(status: string) {
   switch (status.toUpperCase()) {
-    case "PAID":      return { color: "text-green-600", label: "Paid"      };
-    case "MISSED":    return { color: "text-[#DB0011]", label: "Missed"    };
-    case "SCHEDULED": return { color: "text-amber-600", label: "Upcoming"  };
-    default:          return { color: "text-[#999]",    label: status       };
+    case "PAID":      return { color: "text-green-600" };
+    case "MISSED":    return { color: "text-[#DB0011]" };
+    case "SCHEDULED": return { color: "text-amber-600" };
+    default:          return { color: "text-[#999]"    };
   }
 }
 
@@ -42,6 +50,7 @@ const LOAN_TYPE_ICONS: Record<string, string> = {
 // ── Loan card ──────────────────────────────────────────────────────────────────
 
 function RepayModal({ loan, onClose, onSuccess }: { loan: Loan; onClose: () => void; onSuccess: () => void }) {
+  const { t } = useLanguage();
   const [amount, setAmount] = useState(String(Number(loan.monthlyPayment).toFixed(2)));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -67,7 +76,7 @@ function RepayModal({ loan, onClose, onSuccess }: { loan: Loan; onClose: () => v
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-white w-full max-w-lg rounded-t-3xl px-5 pt-5 pb-8 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-bold text-[#333]">Make a payment</h3>
+          <h3 className="text-base font-bold text-[#333]">{t("loans.makePayment")}</h3>
           <button onClick={onClose} className="p-1 text-[#999] hover:text-[#333]"><X size={18} /></button>
         </div>
         {done ? (
@@ -79,7 +88,7 @@ function RepayModal({ loan, onClose, onSuccess }: { loan: Loan; onClose: () => v
         ) : (
           <form onSubmit={handleRepay} className="space-y-4">
             <div className="bg-[#F8F8F8] rounded-xl p-3 flex justify-between text-sm">
-              <span className="text-[#767676]">Outstanding balance</span>
+              <span className="text-[#767676]">{t("loans.outstandingBalance")}</span>
               <span className="font-bold text-[#333]">{formatCurrency(Number(loan.outstandingBalance))}</span>
             </div>
             <div>
@@ -90,7 +99,7 @@ function RepayModal({ loan, onClose, onSuccess }: { loan: Loan; onClose: () => v
                 {[Number(loan.monthlyPayment), Number(loan.outstandingBalance)].map((v) => (
                   <button key={v} type="button" onClick={() => setAmount(v.toFixed(2))}
                     className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-[#F5F5F5] text-[#555] hover:bg-[#EBEBEB] transition-colors">
-                    {v === Number(loan.monthlyPayment) ? "Monthly payment" : "Full settlement"} ({formatCurrency(v)})
+                    {v === Number(loan.monthlyPayment) ? t("loans.monthlyPayment") : t("loans.fullSettlement")} ({formatCurrency(v)})
                   </button>
                 ))}
               </div>
@@ -98,7 +107,7 @@ function RepayModal({ loan, onClose, onSuccess }: { loan: Loan; onClose: () => v
             {error && <p className="text-sm text-[#DB0011]">{error}</p>}
             <button type="submit" disabled={loading}
               className="w-full py-3.5 rounded-xl bg-[#DB0011] text-white font-bold text-sm hover:bg-[#b0000d] disabled:opacity-50 transition-colors">
-              {loading ? "Processing…" : `Pay ${formatCurrency(parseFloat(amount) || 0)}`}
+              {loading ? t("loans.processing") : `${t("loans.pay")} ${formatCurrency(parseFloat(amount) || 0)}`}
             </button>
           </form>
         )}
@@ -108,6 +117,7 @@ function RepayModal({ loan, onClose, onSuccess }: { loan: Loan; onClose: () => v
 }
 
 function LoanCard({ loan, onRefresh }: { loan: Loan; onRefresh: () => void }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [schedule, setSchedule] = useState<AmortizationEntry[]>([]);
@@ -149,12 +159,12 @@ function LoanCard({ loan, onRefresh }: { loan: Loan; onRefresh: () => void }) {
             <p className="text-3xl font-bold leading-none">
               {formatCurrency(outstanding)}
             </p>
-            <p className="text-white/40 text-xs mt-1">Outstanding balance</p>
+            <p className="text-white/40 text-xs mt-1">{t("loans.outstandingBalance")}</p>
           </div>
 
           <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs font-semibold ${sc.bg} ${sc.border} ${sc.color}`}>
             <StatusIcon size={11} />
-            {sc.label}
+            {LOAN_STATUS_KEYS[loan.status.toUpperCase()] ? t(LOAN_STATUS_KEYS[loan.status.toUpperCase()]) : loan.status}
           </div>
         </div>
 
@@ -176,9 +186,9 @@ function LoanCard({ loan, onRefresh }: { loan: Loan; onRefresh: () => void }) {
       {/* Stats grid */}
       <div className="grid grid-cols-3 divide-x divide-[#F0F0F0] border-b border-[#F0F0F0]">
         {[
-          { icon: Percent,     label: "APR",          value: `${rate.toFixed(1)}%`                         },
-          { icon: Banknote,    label: "Monthly",       value: formatCurrency(Number(loan.monthlyPayment))   },
-          { icon: Calendar,    label: "Term",          value: `${loan.termMonths}mo`                        },
+          { icon: Percent,     label: t("loans.apr"),     value: `${rate.toFixed(1)}%`                         },
+          { icon: Banknote,    label: t("loans.monthly"), value: formatCurrency(Number(loan.monthlyPayment))   },
+          { icon: Calendar,    label: t("loans.term"),    value: `${loan.termMonths}mo`                        },
         ].map(({ icon: Icon, label, value }) => (
           <div key={label} className="flex flex-col items-center py-3.5 px-2">
             <Icon size={13} className="text-[#BBBBBB] mb-1" />
@@ -195,12 +205,12 @@ function LoanCard({ loan, onRefresh }: { loan: Loan; onRefresh: () => void }) {
             <Calendar size={15} className="text-[#DB0011]" />
           </div>
           <div>
-            <p className="text-[11px] text-[#AAAAAA] uppercase tracking-wide font-semibold">Next payment</p>
+            <p className="text-[11px] text-[#AAAAAA] uppercase tracking-wide font-semibold">{t("loans.nextPayment")}</p>
             <p className="text-sm font-bold text-[#333]">{formatDate(loan.nextPaymentDate)}</p>
           </div>
         </div>
         <div className="text-right">
-          <p className="text-[11px] text-[#AAAAAA]">Amount due</p>
+          <p className="text-[11px] text-[#AAAAAA]">{t("loans.amountDue")}</p>
           <p className="text-base font-bold text-[#DB0011]">{formatCurrency(Number(loan.nextPaymentAmount))}</p>
         </div>
       </div>
@@ -210,7 +220,7 @@ function LoanCard({ loan, onRefresh }: { loan: Loan; onRefresh: () => void }) {
         <div className="flex gap-2 px-5 pb-4 pt-1">
           <button onClick={() => setShowRepay(true)}
             className="flex-1 py-2.5 rounded-xl bg-[#DB0011] text-white font-bold text-xs hover:bg-[#b0000d] transition-colors">
-            Make a payment
+            {t("loans.makePayment")}
           </button>
           <button onClick={loadSchedule} disabled={schedLoading}
             className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border-2 border-[#E8E8E8] text-[#555] font-semibold text-xs hover:border-[#DB0011] hover:text-[#DB0011] transition-colors disabled:opacity-50">
@@ -254,7 +264,7 @@ function LoanCard({ loan, onRefresh }: { loan: Loan; onRefresh: () => void }) {
             onClick={() => setExpanded((v) => !v)}
             className="w-full flex items-center justify-between px-5 py-3.5 text-xs font-semibold text-[#555] hover:bg-[#FAFAFA] transition-colors border-t border-[#F5F5F5]"
           >
-            <span>Payment history ({loan.payments.length})</span>
+            <span>{t("loans.paymentHistory")} ({loan.payments.length})</span>
             {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
 
@@ -273,7 +283,7 @@ function LoanCard({ loan, onRefresh }: { loan: Loan; onRefresh: () => void }) {
                       <p className="text-xs text-[#555]">{formatDate(payment.paymentDate)}</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className={`text-[10px] font-semibold uppercase ${psc.color}`}>{psc.label}</span>
+                      <span className={`text-[10px] font-semibold uppercase ${psc.color}`}>{PAYMENT_STATUS_KEYS[payment.status.toUpperCase()] ? t(PAYMENT_STATUS_KEYS[payment.status.toUpperCase()]) : payment.status}</span>
                       <p className="text-xs font-bold text-[#333]">{formatCurrency(Number(payment.amount))}</p>
                     </div>
                   </div>
@@ -293,6 +303,7 @@ function LoanCard({ loan, onRefresh }: { loan: Loan; onRefresh: () => void }) {
 
 function ApplyCTA({ eligibility }: { eligibility: LoanEligibility | null }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const personalMax = eligibility?.eligibility?.PERSONAL ?? 0;
   const personalRate = eligibility?.annualRates?.PERSONAL;
   const hasEligibility = personalMax > 0;
@@ -302,14 +313,14 @@ function ApplyCTA({ eligibility }: { eligibility: LoanEligibility | null }) {
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-5 py-5 text-white">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-white/50 mb-1">Need a loan?</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-white/50 mb-1">{t("loans.needLoan")}</p>
             <p className="text-xl font-bold">
               {hasEligibility
                 ? `Up to ${formatCurrency(personalMax)}`
-                : "Apply for a loan"}
+                : t("loans.applyLoan")}
             </p>
             {hasEligibility && personalRate && (
-              <p className="text-white/60 text-xs mt-1">Personal from {personalRate}% APR</p>
+              <p className="text-white/60 text-xs mt-1">{t("loans.personalRate")}</p>
             )}
           </div>
           {hasEligibility && (
@@ -323,13 +334,12 @@ function ApplyCTA({ eligibility }: { eligibility: LoanEligibility | null }) {
       <div className="bg-white px-5 py-4">
         <div className="grid grid-cols-3 gap-3 mb-4">
           {[
-            { label: "Personal", value: "from 12% APR" },
-            { label: "Business", value: "from 10% APR" },
-            { label: "Decision", value: "Instant" },
-          ].map(({ label, value }) => (
-            <div key={label} className="bg-[#F8F8F8] rounded-xl p-2.5 text-center">
-              <p className="text-[10px] text-[#AAAAAA] uppercase tracking-wide">{label}</p>
-              <p className="text-xs font-bold text-[#333] mt-0.5">{value}</p>
+            t("loans.personalRate"),
+            t("loans.businessRate"),
+            t("loans.decisionInstant"),
+          ].map((text) => (
+            <div key={text} className="bg-[#F8F8F8] rounded-xl p-2.5 text-center">
+              <p className="text-xs font-bold text-[#333]">{text}</p>
             </div>
           ))}
         </div>
@@ -337,7 +347,7 @@ function ApplyCTA({ eligibility }: { eligibility: LoanEligibility | null }) {
           onClick={() => router.push("/loans/apply")}
           className="w-full py-3.5 rounded-xl bg-[#DB0011] text-white font-bold text-sm hover:bg-[#b0000d] transition-colors"
         >
-          Apply now — takes 2 minutes
+          {t("loans.applyNow")}
         </button>
       </div>
     </div>
@@ -347,6 +357,7 @@ function ApplyCTA({ eligibility }: { eligibility: LoanEligibility | null }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function LoansPage() {
+  const { t } = useLanguage();
   const [loans, setLoans]             = useState<Loan[]>([]);
   const [eligibility, setEligibility] = useState<LoanEligibility | null>(null);
   const [loading, setLoading]         = useState(true);
@@ -372,11 +383,11 @@ export default function LoansPage() {
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white">
         <div className="flex items-center gap-2 mb-4">
           <CreditCard size={18} className="text-white/80" />
-          <h1 className="text-lg font-bold">Loans</h1>
+          <h1 className="text-lg font-bold">{t("loans.title")}</h1>
         </div>
         {!loading && loans.length > 0 && (
           <div>
-            <p className="text-white/50 text-xs uppercase tracking-widest mb-1">Total outstanding</p>
+            <p className="text-white/50 text-xs uppercase tracking-widest mb-1">{t("loans.totalOutstanding")}</p>
             <p className="text-4xl font-bold">{formatCurrency(totalOutstanding)}</p>
             <p className="text-white/40 text-xs mt-1">
               {loans.length} active loan{loans.length !== 1 ? "s" : ""}
@@ -410,7 +421,7 @@ export default function LoansPage() {
           <div className="flex-1 bg-white rounded-2xl border border-[#E8E8E8] p-3.5 flex items-center gap-2.5">
             <TrendingDown size={16} className="text-[#DB0011]" />
             <div>
-              <p className="text-[10px] text-[#AAAAAA] uppercase tracking-wide">Total monthly</p>
+              <p className="text-[10px] text-[#AAAAAA] uppercase tracking-wide">{t("loans.totalMonthly")}</p>
               <p className="text-sm font-bold text-[#333]">
                 {formatCurrency(loans.reduce((s, l) => s + Number(l.monthlyPayment), 0))}
               </p>
@@ -419,7 +430,7 @@ export default function LoansPage() {
           <div className="flex-1 bg-white rounded-2xl border border-[#E8E8E8] p-3.5 flex items-center gap-2.5">
             <Percent size={16} className="text-amber-500" />
             <div>
-              <p className="text-[10px] text-[#AAAAAA] uppercase tracking-wide">Avg rate</p>
+              <p className="text-[10px] text-[#AAAAAA] uppercase tracking-wide">{t("loans.avgRate")}</p>
               <p className="text-sm font-bold text-[#333]">
                 {loans.length
                   ? `${(loans.reduce((s, l) => s + Number(l.interestRate), 0) / loans.length).toFixed(1)}%`

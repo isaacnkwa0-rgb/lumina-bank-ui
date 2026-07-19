@@ -4,18 +4,20 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, AlertCircle, CheckCircle2 } from "lucide-react";
 import { disputesApi } from "@/lib/api";
+import { useLanguage, type TranslationKey } from "@/lib/i18n";
 
-const SUBJECTS = [
-  "Unauthorised transaction",
-  "Incorrect amount charged",
-  "Transaction not received",
-  "Duplicate charge",
-  "Refund not received",
-  "Other issue",
+const SUBJECT_KEYS: { value: string; key: TranslationKey }[] = [
+  { value: "Unauthorised transaction",  key: "disputes.issueUnauthorised" },
+  { value: "Incorrect amount charged",  key: "disputes.issueIncorrect"    },
+  { value: "Transaction not received",  key: "disputes.issueNotReceived"  },
+  { value: "Duplicate charge",          key: "disputes.issueDuplicate"    },
+  { value: "Refund not received",       key: "disputes.issueRefund"       },
+  { value: "Other issue",               key: "disputes.issueOther"        },
 ];
 
 function NewDisputeForm() {
   const router = useRouter();
+  const { t } = useLanguage();
   const params = useSearchParams();
   const txId = params.get("txId") ?? undefined;
   const txRef = params.get("txRef") ?? "";
@@ -53,9 +55,9 @@ function NewDisputeForm() {
       <div className="max-w-lg mx-auto lg:max-w-none pb-10">
         <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white">
           <button onClick={() => router.back()} className="flex items-center gap-1 text-white/70 hover:text-white mb-4 text-sm">
-            <ChevronLeft size={16} /> Back
+            <ChevronLeft size={16} /> {t("disputes.back")}
           </button>
-          <h1 className="text-lg font-bold">Report an issue</h1>
+          <h1 className="text-lg font-bold">{t("disputes.reportTitle")}</h1>
         </div>
         <div className="px-4 -mt-6">
           <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-6 text-center">
@@ -64,15 +66,13 @@ function NewDisputeForm() {
                 <CheckCircle2 size={32} className="text-green-600" />
               </div>
             </div>
-            <h2 className="text-lg font-bold text-[#333] mb-2">Dispute submitted</h2>
-            <p className="text-sm text-[#767676] mb-6">
-              We&apos;ve received your dispute and will review it within 3–5 business days. You&apos;ll be notified of any updates.
-            </p>
+            <h2 className="text-lg font-bold text-[#333] mb-2">{t("disputes.successTitle")}</h2>
+            <p className="text-sm text-[#767676] mb-6">{t("disputes.successDesc")}</p>
             <button
               onClick={() => router.push("/transactions")}
               className="bg-[#DB0011] text-white text-sm font-semibold px-6 py-3 rounded-xl hover:bg-[#b8000e] transition-colors"
             >
-              Back to transactions
+              {t("disputes.backToTx")}
             </button>
           </div>
         </div>
@@ -84,40 +84,40 @@ function NewDisputeForm() {
     <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white">
         <button onClick={() => router.back()} className="flex items-center gap-1 text-white/70 hover:text-white mb-4 text-sm">
-          <ChevronLeft size={16} /> Back
+          <ChevronLeft size={16} /> {t("disputes.back")}
         </button>
         <div className="flex items-center gap-2 mb-1">
           <AlertCircle size={18} className="text-white/80" />
-          <h1 className="text-lg font-bold">Report an issue</h1>
+          <h1 className="text-lg font-bold">{t("disputes.reportTitle")}</h1>
         </div>
-        <p className="text-white/60 text-sm">Tell us what went wrong and we&apos;ll investigate.</p>
+        <p className="text-white/60 text-sm">{t("disputes.reportSubtitle")}</p>
       </div>
 
       <div className="px-4 -mt-6">
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-5 space-y-5">
           {txRef && (
             <div className="bg-[#F8F8F8] rounded-xl px-4 py-3 border border-[#E8E8E8]">
-              <p className="text-xs text-[#AAAAAA] mb-0.5">Relating to transaction</p>
+              <p className="text-xs text-[#AAAAAA] mb-0.5">{t("disputes.relatingTo")}</p>
               <p className="text-sm font-mono font-semibold text-[#333]">{txRef}</p>
               {txDesc && <p className="text-xs text-[#767676] mt-0.5 truncate">{txDesc}</p>}
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-2">Issue type</label>
+            <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-2">{t("disputes.issueType")}</label>
             <div className="space-y-2">
-              {SUBJECTS.map((s) => (
+              {SUBJECT_KEYS.map(({ value, key }) => (
                 <button
-                  key={s}
+                  key={value}
                   type="button"
-                  onClick={() => setSubject(s)}
+                  onClick={() => setSubject(value)}
                   className={`w-full text-left px-4 py-3 rounded-xl border-2 text-sm font-medium transition-colors ${
-                    subject === s
+                    subject === value
                       ? "border-[#DB0011] bg-red-50 text-[#DB0011]"
                       : "border-[#E8E8E8] text-[#333] hover:border-[#CCC]"
                   }`}
                 >
-                  {s}
+                  {t(key)}
                 </button>
               ))}
             </div>
@@ -125,7 +125,7 @@ function NewDisputeForm() {
 
           {subject === "Other issue" && (
             <div>
-              <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">Describe the issue</label>
+              <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{t("disputes.describeLabel")}</label>
               <input
                 type="text"
                 value={customSubject}
@@ -137,7 +137,7 @@ function NewDisputeForm() {
           )}
 
           <div>
-            <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">Details</label>
+            <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{t("disputes.detailsLabel")}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -159,7 +159,7 @@ function NewDisputeForm() {
             disabled={loading || !subject}
             className="w-full py-3.5 rounded-xl bg-[#DB0011] text-white text-sm font-bold hover:bg-[#b8000e] disabled:opacity-60 transition-colors"
           >
-            {loading ? "Submitting…" : "Submit dispute"}
+            {loading ? t("disputes.submitting") : t("disputes.submitBtn")}
           </button>
         </form>
       </div>

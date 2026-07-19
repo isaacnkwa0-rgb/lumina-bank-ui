@@ -183,7 +183,11 @@ export type TranslationKey =
   | "cards.international" | "cards.atm"
   | "cards.freeze" | "cards.unfreeze" | "cards.details"
   | "cards.blockedMessage" | "cards.couldNotLoad" | "cards.couldNotUpdate"
-  | "cards.statusActive" | "cards.statusFrozen" | "cards.statusBlocked"
+  | "cards.statusActive" | "cards.statusFrozen" | "cards.statusBlocked" | "cards.statusCancelled"
+  | "cards.cardDetails" | "cards.reportLost" | "cards.replace" | "cards.cardTransactions"
+  | "cards.cardBlocked" | "cards.blockedDesc" | "cards.edit" | "cards.saving"
+  | "cards.virtual" | "cards.cardHolder" | "cards.expires" | "cards.loadMore"
+  | "cards.cardNotFound" | "cards.actionFailed" | "cards.noTxDesc"
   // ── TRANSACTIONS PAGE ──
   | "transactions.title" | "transactions.loaded"
   | "transactions.credits" | "transactions.debits"
@@ -193,6 +197,20 @@ export type TranslationKey =
   | "transactions.noTransactions" | "transactions.noTransactionsDesc"
   | "transactions.loadMore" | "transactions.export" | "transactions.refresh"
   | "transactions.couldNotLoad"
+  // ── TRANSACTION DETAIL ──
+  | "tx.catShopping" | "tx.catFood" | "tx.catCoffee" | "tx.catTransport" | "tx.catHousing"
+  | "tx.catUtilities" | "tx.catHealth" | "tx.catTravel" | "tx.catEntertainment"
+  | "tx.catCardPayment" | "tx.catTransfer" | "tx.catPayment" | "tx.catSalary"
+  | "tx.catIncome" | "tx.catDeposit" | "tx.catWithdrawal" | "tx.catRefund"
+  | "tx.catFx" | "tx.catFee" | "tx.catInterest" | "tx.catInvestment" | "tx.catOther"
+  | "tx.statusCompleted" | "tx.statusPending" | "tx.statusFailed" | "tx.statusReversed"
+  | "tx.txDetails" | "tx.counterparty" | "tx.merchantSection" | "tx.descSection"
+  | "tx.accountImpact" | "tx.failureReason"
+  | "tx.reference" | "tx.date" | "tx.time" | "tx.valueDate" | "tx.categoryLabel"
+  | "tx.merchantCategoryLabel" | "tx.typeLabel" | "tx.merchantLabel" | "tx.nameLabel"
+  | "tx.accountLabel" | "tx.bankLabel" | "tx.balanceBefore" | "tx.balanceAfter"
+  | "tx.change" | "tx.debit" | "tx.credit"
+  | "tx.reportIssue" | "tx.copyReceipt" | "tx.notFound" | "tx.goBack"
   // ── NAVIGATION ──
   | "nav.home" | "nav.accounts" | "nav.transactions" | "nav.notifications"
   | "nav.transfer" | "nav.standingOrders" | "nav.directDebits" | "nav.beneficiaries"
@@ -328,7 +346,7 @@ export type TranslationKey =
   | "pay.from" | "pay.payAnother" | "pay.done" | "pay.noResults" | "pay.noProviders"
   | "pay.energy" | "pay.water" | "pay.internet" | "pay.mobile" | "pay.council"
   | "pay.tax" | "pay.streaming" | "pay.music" | "pay.shopping"
-  | "pay.transport" | "pay.education" | "pay.otherOptions" | "pay.bankTransfer"
+  | "pay.transport" | "pay.education" | "pay.insurance" | "pay.otherOptions" | "pay.bankTransfer"
   | "pay.bankTransferDesc" | "pay.internationalPay" | "pay.internationalPayDesc"
   | "pay.success" | "pay.successDesc"
   // ── PROFILE (ADDITIONAL) ──
@@ -704,6 +722,15 @@ const translations: TranslationMap = {
     "cards.statusActive": "Active",
     "cards.statusFrozen": "Frozen",
     "cards.statusBlocked": "Blocked",
+    "cards.statusCancelled": "Cancelled",
+    "cards.cardDetails": "Card details", "cards.reportLost": "Report lost", "cards.replace": "Replace",
+    "cards.cardTransactions": "Card transactions", "cards.cardBlocked": "Card blocked",
+    "cards.blockedDesc": "This card has been reported as lost or stolen. Contact support or replace the card.",
+    "cards.edit": "Edit", "cards.saving": "Saving…", "cards.virtual": "Virtual",
+    "cards.cardHolder": "Card holder", "cards.expires": "Expires",
+    "cards.loadMore": "Load more", "cards.cardNotFound": "Card not found.",
+    "cards.actionFailed": "Action failed. Please try again.",
+    "cards.noTxDesc": "Card payments will appear here.",
     // Transactions page
     "transactions.title": "Transactions",
     "transactions.loaded": "Loaded",
@@ -723,6 +750,27 @@ const translations: TranslationMap = {
     "transactions.export": "CSV",
     "transactions.refresh": "Refresh",
     "transactions.couldNotLoad": "Could not load transactions. Please try again.",
+    // Transaction detail
+    "tx.catShopping": "Shopping", "tx.catFood": "Food & Drink", "tx.catCoffee": "Coffee",
+    "tx.catTransport": "Transport", "tx.catHousing": "Housing", "tx.catUtilities": "Utilities",
+    "tx.catHealth": "Health", "tx.catTravel": "Travel", "tx.catEntertainment": "Entertainment",
+    "tx.catCardPayment": "Card Payment", "tx.catTransfer": "Transfer", "tx.catPayment": "Payment",
+    "tx.catSalary": "Salary", "tx.catIncome": "Income", "tx.catDeposit": "Deposit",
+    "tx.catWithdrawal": "Withdrawal", "tx.catRefund": "Refund", "tx.catFx": "FX Transfer",
+    "tx.catFee": "Fee", "tx.catInterest": "Interest", "tx.catInvestment": "Investment", "tx.catOther": "Other",
+    "tx.statusCompleted": "Completed", "tx.statusPending": "Pending",
+    "tx.statusFailed": "Failed", "tx.statusReversed": "Reversed",
+    "tx.txDetails": "Transaction details", "tx.counterparty": "Counterparty",
+    "tx.merchantSection": "Merchant", "tx.descSection": "Description",
+    "tx.accountImpact": "Account impact", "tx.failureReason": "Failure reason",
+    "tx.reference": "Reference", "tx.date": "Date", "tx.time": "Time", "tx.valueDate": "Value date",
+    "tx.categoryLabel": "Category", "tx.merchantCategoryLabel": "Merchant category",
+    "tx.typeLabel": "Type", "tx.merchantLabel": "Merchant", "tx.nameLabel": "Name",
+    "tx.accountLabel": "Account", "tx.bankLabel": "Bank",
+    "tx.balanceBefore": "Balance before", "tx.balanceAfter": "Balance after", "tx.change": "Change",
+    "tx.debit": "Debit", "tx.credit": "Credit",
+    "tx.reportIssue": "Report an issue", "tx.copyReceipt": "Copy receipt",
+    "tx.notFound": "Transaction not found", "tx.goBack": "Go back",
     // Navigation
     "nav.home": "Home", "nav.accounts": "Accounts", "nav.transactions": "Transactions",
     "nav.notifications": "Notifications", "nav.transfer": "Transfer",
@@ -944,7 +992,7 @@ const translations: TranslationMap = {
     "pay.energy": "Energy", "pay.water": "Water", "pay.internet": "Internet & TV",
     "pay.mobile": "Mobile", "pay.council": "Council Tax", "pay.tax": "Tax & Government",
     "pay.streaming": "Streaming", "pay.music": "Music", "pay.shopping": "Shopping",
-    "pay.transport": "Transport", "pay.education": "Education",
+    "pay.transport": "Transport", "pay.education": "Education", "pay.insurance": "Insurance",
     "pay.otherOptions": "Other payment options",
     "pay.bankTransfer": "Bank transfer", "pay.bankTransferDesc": "Send to any UK bank account",
     "pay.internationalPay": "International", "pay.internationalPayDesc": "Send money abroad via SWIFT",
@@ -1389,6 +1437,15 @@ const translations: TranslationMap = {
     "cards.statusActive": "Activa",
     "cards.statusFrozen": "Congelada",
     "cards.statusBlocked": "Bloqueada",
+    "cards.statusCancelled": "Cancelada",
+    "cards.cardDetails": "Detalles de tarjeta", "cards.reportLost": "Reportar pérdida", "cards.replace": "Reemplazar",
+    "cards.cardTransactions": "Transacciones de tarjeta", "cards.cardBlocked": "Tarjeta bloqueada",
+    "cards.blockedDesc": "Esta tarjeta ha sido reportada como perdida o robada. Contacta con soporte o reemplaza la tarjeta.",
+    "cards.edit": "Editar", "cards.saving": "Guardando…", "cards.virtual": "Virtual",
+    "cards.cardHolder": "Titular", "cards.expires": "Vence",
+    "cards.loadMore": "Cargar más", "cards.cardNotFound": "Tarjeta no encontrada.",
+    "cards.actionFailed": "Acción fallida. Por favor, inténtalo de nuevo.",
+    "cards.noTxDesc": "Los pagos con tarjeta aparecerán aquí.",
     // Transactions
     "transactions.title": "Transacciones",
     "transactions.loaded": "Cargadas",
@@ -1408,6 +1465,26 @@ const translations: TranslationMap = {
     "transactions.export": "CSV",
     "transactions.refresh": "Actualizar",
     "transactions.couldNotLoad": "No se pudieron cargar las transacciones. Por favor, inténtalo de nuevo.",
+    "tx.catShopping": "Compras", "tx.catFood": "Comida y bebida", "tx.catCoffee": "Café",
+    "tx.catTransport": "Transporte", "tx.catHousing": "Vivienda", "tx.catUtilities": "Servicios",
+    "tx.catHealth": "Salud", "tx.catTravel": "Viajes", "tx.catEntertainment": "Entretenimiento",
+    "tx.catCardPayment": "Pago con tarjeta", "tx.catTransfer": "Transferencia", "tx.catPayment": "Pago",
+    "tx.catSalary": "Salario", "tx.catIncome": "Ingresos", "tx.catDeposit": "Depósito",
+    "tx.catWithdrawal": "Retirada", "tx.catRefund": "Reembolso", "tx.catFx": "Transferencia FX",
+    "tx.catFee": "Comisión", "tx.catInterest": "Interés", "tx.catInvestment": "Inversión", "tx.catOther": "Otro",
+    "tx.statusCompleted": "Completada", "tx.statusPending": "Pendiente",
+    "tx.statusFailed": "Fallida", "tx.statusReversed": "Revertida",
+    "tx.txDetails": "Detalles de la transacción", "tx.counterparty": "Contraparte",
+    "tx.merchantSection": "Comercio", "tx.descSection": "Descripción",
+    "tx.accountImpact": "Impacto en cuenta", "tx.failureReason": "Motivo del fallo",
+    "tx.reference": "Referencia", "tx.date": "Fecha", "tx.time": "Hora", "tx.valueDate": "Fecha valor",
+    "tx.categoryLabel": "Categoría", "tx.merchantCategoryLabel": "Categoría comercial",
+    "tx.typeLabel": "Tipo", "tx.merchantLabel": "Comercio", "tx.nameLabel": "Nombre",
+    "tx.accountLabel": "Cuenta", "tx.bankLabel": "Banco",
+    "tx.balanceBefore": "Saldo anterior", "tx.balanceAfter": "Saldo posterior", "tx.change": "Cambio",
+    "tx.debit": "Débito", "tx.credit": "Crédito",
+    "tx.reportIssue": "Reportar un problema", "tx.copyReceipt": "Copiar recibo",
+    "tx.notFound": "Transacción no encontrada", "tx.goBack": "Volver",
     "nav.home": "Inicio", "nav.accounts": "Cuentas", "nav.transactions": "Transacciones",
     "nav.notifications": "Notificaciones", "nav.transfer": "Transferir",
     "nav.standingOrders": "Órdenes permanentes", "nav.directDebits": "Domiciliaciones",
@@ -1611,7 +1688,7 @@ const translations: TranslationMap = {
     "pay.energy": "Energía", "pay.water": "Agua", "pay.internet": "Internet y TV",
     "pay.mobile": "Móvil", "pay.council": "Impuesto municipal", "pay.tax": "Impuestos y gobierno",
     "pay.streaming": "Streaming", "pay.music": "Música", "pay.shopping": "Compras",
-    "pay.transport": "Transporte", "pay.education": "Educación",
+    "pay.transport": "Transporte", "pay.education": "Educación", "pay.insurance": "Seguros",
     "pay.otherOptions": "Otras opciones de pago",
     "pay.bankTransfer": "Transferencia bancaria", "pay.bankTransferDesc": "Envía a cualquier banco del Reino Unido",
     "pay.internationalPay": "Internacional", "pay.internationalPayDesc": "Envía dinero al extranjero vía SWIFT",
@@ -2048,6 +2125,15 @@ const translations: TranslationMap = {
     "cards.statusActive": "Active",
     "cards.statusFrozen": "Gelée",
     "cards.statusBlocked": "Bloquée",
+    "cards.statusCancelled": "Annulée",
+    "cards.cardDetails": "Détails de la carte", "cards.reportLost": "Signaler une perte", "cards.replace": "Remplacer",
+    "cards.cardTransactions": "Transactions de la carte", "cards.cardBlocked": "Carte bloquée",
+    "cards.blockedDesc": "Cette carte a été signalée comme perdue ou volée. Contactez le support ou remplacez la carte.",
+    "cards.edit": "Modifier", "cards.saving": "Enregistrement…", "cards.virtual": "Virtuelle",
+    "cards.cardHolder": "Titulaire", "cards.expires": "Expire",
+    "cards.loadMore": "Charger plus", "cards.cardNotFound": "Carte introuvable.",
+    "cards.actionFailed": "Action échouée. Veuillez réessayer.",
+    "cards.noTxDesc": "Les paiements par carte apparaîtront ici.",
     // Transactions
     "transactions.title": "Transactions",
     "transactions.loaded": "Chargées",
@@ -2067,6 +2153,26 @@ const translations: TranslationMap = {
     "transactions.export": "CSV",
     "transactions.refresh": "Actualiser",
     "transactions.couldNotLoad": "Impossible de charger les transactions. Veuillez réessayer.",
+    "tx.catShopping": "Shopping", "tx.catFood": "Alimentation", "tx.catCoffee": "Café",
+    "tx.catTransport": "Transport", "tx.catHousing": "Logement", "tx.catUtilities": "Charges",
+    "tx.catHealth": "Santé", "tx.catTravel": "Voyage", "tx.catEntertainment": "Divertissement",
+    "tx.catCardPayment": "Paiement par carte", "tx.catTransfer": "Virement", "tx.catPayment": "Paiement",
+    "tx.catSalary": "Salaire", "tx.catIncome": "Revenus", "tx.catDeposit": "Dépôt",
+    "tx.catWithdrawal": "Retrait", "tx.catRefund": "Remboursement", "tx.catFx": "Virement FX",
+    "tx.catFee": "Frais", "tx.catInterest": "Intérêts", "tx.catInvestment": "Investissement", "tx.catOther": "Autre",
+    "tx.statusCompleted": "Complétée", "tx.statusPending": "En attente",
+    "tx.statusFailed": "Échouée", "tx.statusReversed": "Annulée",
+    "tx.txDetails": "Détails de la transaction", "tx.counterparty": "Contrepartie",
+    "tx.merchantSection": "Commerçant", "tx.descSection": "Description",
+    "tx.accountImpact": "Impact sur le compte", "tx.failureReason": "Raison de l'échec",
+    "tx.reference": "Référence", "tx.date": "Date", "tx.time": "Heure", "tx.valueDate": "Date de valeur",
+    "tx.categoryLabel": "Catégorie", "tx.merchantCategoryLabel": "Catégorie commerçant",
+    "tx.typeLabel": "Type", "tx.merchantLabel": "Commerçant", "tx.nameLabel": "Nom",
+    "tx.accountLabel": "Compte", "tx.bankLabel": "Banque",
+    "tx.balanceBefore": "Solde avant", "tx.balanceAfter": "Solde après", "tx.change": "Variation",
+    "tx.debit": "Débit", "tx.credit": "Crédit",
+    "tx.reportIssue": "Signaler un problème", "tx.copyReceipt": "Copier le reçu",
+    "tx.notFound": "Transaction introuvable", "tx.goBack": "Retour",
     "nav.home": "Accueil", "nav.accounts": "Comptes", "nav.transactions": "Transactions",
     "nav.notifications": "Notifications", "nav.transfer": "Virement",
     "nav.standingOrders": "Ordres permanents", "nav.directDebits": "Prélèvements",
@@ -2270,7 +2376,7 @@ const translations: TranslationMap = {
     "pay.energy": "Énergie", "pay.water": "Eau", "pay.internet": "Internet et TV",
     "pay.mobile": "Mobile", "pay.council": "Taxe d'habitation", "pay.tax": "Impôts et gouvernement",
     "pay.streaming": "Streaming", "pay.music": "Musique", "pay.shopping": "Shopping",
-    "pay.transport": "Transport", "pay.education": "Éducation",
+    "pay.transport": "Transport", "pay.education": "Éducation", "pay.insurance": "Assurances",
     "pay.otherOptions": "Autres options de paiement",
     "pay.bankTransfer": "Virement bancaire", "pay.bankTransferDesc": "Envoyez vers n'importe quelle banque britannique",
     "pay.internationalPay": "International", "pay.internationalPayDesc": "Envoyez de l'argent à l'étranger via SWIFT",
@@ -2707,6 +2813,15 @@ const translations: TranslationMap = {
     "cards.statusActive": "Ativo",
     "cards.statusFrozen": "Congelado",
     "cards.statusBlocked": "Bloqueado",
+    "cards.statusCancelled": "Cancelado",
+    "cards.cardDetails": "Detalhes do cartão", "cards.reportLost": "Reportar perda", "cards.replace": "Substituir",
+    "cards.cardTransactions": "Transações do cartão", "cards.cardBlocked": "Cartão bloqueado",
+    "cards.blockedDesc": "Este cartão foi reportado como perdido ou roubado. Contacte o suporte ou substitua o cartão.",
+    "cards.edit": "Editar", "cards.saving": "A guardar…", "cards.virtual": "Virtual",
+    "cards.cardHolder": "Titular", "cards.expires": "Validade",
+    "cards.loadMore": "Carregar mais", "cards.cardNotFound": "Cartão não encontrado.",
+    "cards.actionFailed": "Ação falhada. Por favor, tente novamente.",
+    "cards.noTxDesc": "Os pagamentos com cartão aparecerão aqui.",
     // Transactions
     "transactions.title": "Transações",
     "transactions.loaded": "Carregadas",
@@ -2726,6 +2841,26 @@ const translations: TranslationMap = {
     "transactions.export": "CSV",
     "transactions.refresh": "Atualizar",
     "transactions.couldNotLoad": "Não foi possível carregar as transações. Por favor, tente novamente.",
+    "tx.catShopping": "Compras", "tx.catFood": "Alimentação", "tx.catCoffee": "Café",
+    "tx.catTransport": "Transportes", "tx.catHousing": "Habitação", "tx.catUtilities": "Serviços",
+    "tx.catHealth": "Saúde", "tx.catTravel": "Viagens", "tx.catEntertainment": "Entretenimento",
+    "tx.catCardPayment": "Pagamento com cartão", "tx.catTransfer": "Transferência", "tx.catPayment": "Pagamento",
+    "tx.catSalary": "Salário", "tx.catIncome": "Rendimento", "tx.catDeposit": "Depósito",
+    "tx.catWithdrawal": "Levantamento", "tx.catRefund": "Reembolso", "tx.catFx": "Transferência FX",
+    "tx.catFee": "Taxa", "tx.catInterest": "Juro", "tx.catInvestment": "Investimento", "tx.catOther": "Outro",
+    "tx.statusCompleted": "Concluída", "tx.statusPending": "Pendente",
+    "tx.statusFailed": "Falhada", "tx.statusReversed": "Revertida",
+    "tx.txDetails": "Detalhes da transação", "tx.counterparty": "Contraparte",
+    "tx.merchantSection": "Comerciante", "tx.descSection": "Descrição",
+    "tx.accountImpact": "Impacto na conta", "tx.failureReason": "Motivo do erro",
+    "tx.reference": "Referência", "tx.date": "Data", "tx.time": "Hora", "tx.valueDate": "Data valor",
+    "tx.categoryLabel": "Categoria", "tx.merchantCategoryLabel": "Categoria comercial",
+    "tx.typeLabel": "Tipo", "tx.merchantLabel": "Comerciante", "tx.nameLabel": "Nome",
+    "tx.accountLabel": "Conta", "tx.bankLabel": "Banco",
+    "tx.balanceBefore": "Saldo antes", "tx.balanceAfter": "Saldo depois", "tx.change": "Variação",
+    "tx.debit": "Débito", "tx.credit": "Crédito",
+    "tx.reportIssue": "Reportar um problema", "tx.copyReceipt": "Copiar recibo",
+    "tx.notFound": "Transação não encontrada", "tx.goBack": "Voltar",
     "nav.home": "Início", "nav.accounts": "Contas", "nav.transactions": "Transações",
     "nav.notifications": "Notificações", "nav.transfer": "Transferência",
     "nav.standingOrders": "Ordens permanentes", "nav.directDebits": "Débitos diretos",
@@ -2929,7 +3064,7 @@ const translations: TranslationMap = {
     "pay.energy": "Energia", "pay.water": "Água", "pay.internet": "Internet e TV",
     "pay.mobile": "Telemóvel", "pay.council": "Imposto municipal", "pay.tax": "Impostos e governo",
     "pay.streaming": "Streaming", "pay.music": "Música", "pay.shopping": "Compras",
-    "pay.transport": "Transportes", "pay.education": "Educação",
+    "pay.transport": "Transportes", "pay.education": "Educação", "pay.insurance": "Seguros",
     "pay.otherOptions": "Outras opções de pagamento",
     "pay.bankTransfer": "Transferência bancária", "pay.bankTransferDesc": "Envie para qualquer banco britânico",
     "pay.internationalPay": "Internacional", "pay.internationalPayDesc": "Envie dinheiro para o estrangeiro via SWIFT",
@@ -3366,6 +3501,15 @@ const translations: TranslationMap = {
     "cards.statusActive": "Aktiv",
     "cards.statusFrozen": "Gesperrt",
     "cards.statusBlocked": "Blockiert",
+    "cards.statusCancelled": "Storniert",
+    "cards.cardDetails": "Kartendetails", "cards.reportLost": "Als verloren melden", "cards.replace": "Ersetzen",
+    "cards.cardTransactions": "Kartentransaktionen", "cards.cardBlocked": "Karte gesperrt",
+    "cards.blockedDesc": "Diese Karte wurde als verloren oder gestohlen gemeldet. Kontaktieren Sie den Support oder ersetzen Sie die Karte.",
+    "cards.edit": "Bearbeiten", "cards.saving": "Speichern…", "cards.virtual": "Virtuell",
+    "cards.cardHolder": "Karteninhaber", "cards.expires": "Läuft ab",
+    "cards.loadMore": "Mehr laden", "cards.cardNotFound": "Karte nicht gefunden.",
+    "cards.actionFailed": "Aktion fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "cards.noTxDesc": "Kartenzahlungen erscheinen hier.",
     // Transactions
     "transactions.title": "Transaktionen",
     "transactions.loaded": "Geladen",
@@ -3385,6 +3529,26 @@ const translations: TranslationMap = {
     "transactions.export": "CSV",
     "transactions.refresh": "Aktualisieren",
     "transactions.couldNotLoad": "Transaktionen konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "tx.catShopping": "Einkaufen", "tx.catFood": "Essen & Trinken", "tx.catCoffee": "Kaffee",
+    "tx.catTransport": "Transport", "tx.catHousing": "Wohnen", "tx.catUtilities": "Nebenkosten",
+    "tx.catHealth": "Gesundheit", "tx.catTravel": "Reisen", "tx.catEntertainment": "Unterhaltung",
+    "tx.catCardPayment": "Kartenzahlung", "tx.catTransfer": "Überweisung", "tx.catPayment": "Zahlung",
+    "tx.catSalary": "Gehalt", "tx.catIncome": "Einkommen", "tx.catDeposit": "Einzahlung",
+    "tx.catWithdrawal": "Abhebung", "tx.catRefund": "Rückerstattung", "tx.catFx": "FX-Überweisung",
+    "tx.catFee": "Gebühr", "tx.catInterest": "Zinsen", "tx.catInvestment": "Investition", "tx.catOther": "Sonstiges",
+    "tx.statusCompleted": "Abgeschlossen", "tx.statusPending": "Ausstehend",
+    "tx.statusFailed": "Fehlgeschlagen", "tx.statusReversed": "Storniert",
+    "tx.txDetails": "Transaktionsdetails", "tx.counterparty": "Gegenpartei",
+    "tx.merchantSection": "Händler", "tx.descSection": "Beschreibung",
+    "tx.accountImpact": "Kontoauswirkung", "tx.failureReason": "Fehlergrund",
+    "tx.reference": "Referenz", "tx.date": "Datum", "tx.time": "Uhrzeit", "tx.valueDate": "Wertstellungsdatum",
+    "tx.categoryLabel": "Kategorie", "tx.merchantCategoryLabel": "Händlerkategorie",
+    "tx.typeLabel": "Typ", "tx.merchantLabel": "Händler", "tx.nameLabel": "Name",
+    "tx.accountLabel": "Konto", "tx.bankLabel": "Bank",
+    "tx.balanceBefore": "Saldo vorher", "tx.balanceAfter": "Saldo nachher", "tx.change": "Änderung",
+    "tx.debit": "Lastschrift", "tx.credit": "Gutschrift",
+    "tx.reportIssue": "Problem melden", "tx.copyReceipt": "Beleg kopieren",
+    "tx.notFound": "Transaktion nicht gefunden", "tx.goBack": "Zurück",
     "nav.home": "Startseite", "nav.accounts": "Konten", "nav.transactions": "Transaktionen",
     "nav.notifications": "Benachrichtigungen", "nav.transfer": "Überweisung",
     "nav.standingOrders": "Daueraufträge", "nav.directDebits": "Lastschriften",
@@ -3588,7 +3752,7 @@ const translations: TranslationMap = {
     "pay.energy": "Energie", "pay.water": "Wasser", "pay.internet": "Internet & TV",
     "pay.mobile": "Mobilfunk", "pay.council": "Gemeindesteuer", "pay.tax": "Steuern & Behörden",
     "pay.streaming": "Streaming", "pay.music": "Musik", "pay.shopping": "Shopping",
-    "pay.transport": "Transport", "pay.education": "Bildung",
+    "pay.transport": "Transport", "pay.education": "Bildung", "pay.insurance": "Versicherungen",
     "pay.otherOptions": "Weitere Zahlungsoptionen",
     "pay.bankTransfer": "Banküberweisung", "pay.bankTransferDesc": "An jede britische Bank senden",
     "pay.internationalPay": "International", "pay.internationalPayDesc": "Geld ins Ausland per SWIFT senden",

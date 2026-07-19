@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import { standingOrdersApi, accountsApi, type StandingOrder, type Account } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { RefreshCw, Plus, X, Pause, Play, XCircle, Calendar } from "lucide-react";
+import { useLanguage, type TranslationKey } from "@/lib/i18n";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
 import { EmptyState } from "@/components/ui/EmptyState";
 
-const FREQ_LABELS: Record<string, string> = {
-  WEEKLY: "Weekly", BIWEEKLY: "Fortnightly", MONTHLY: "Monthly", QUARTERLY: "Quarterly",
+const FREQ_KEYS: Record<string, TranslationKey> = {
+  WEEKLY: "standingOrders.weekly", BIWEEKLY: "standingOrders.fortnightly",
+  MONTHLY: "standingOrders.monthly", QUARTERLY: "standingOrders.quarterly",
 };
 const FREQ_COLORS: Record<string, string> = {
   WEEKLY: "text-purple-700 bg-purple-50 border-purple-200",
@@ -25,6 +27,7 @@ function statusBadge(status: string) {
 }
 
 export default function StandingOrdersPage() {
+  const { t } = useLanguage();
   const [orders, setOrders] = useState<StandingOrder[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,17 +118,17 @@ export default function StandingOrdersPage() {
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <RefreshCw size={18} className="text-white/80" />
-            <h1 className="text-lg font-bold">Standing Orders</h1>
+            <h1 className="text-lg font-bold">{t("standingOrders.title")}</h1>
           </div>
           <button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 h-8 rounded-full transition-colors"
           >
             <Plus size={13} />
-            Set up
+            {t("standingOrders.setUp")}
           </button>
         </div>
-        <p className="text-white/60 text-sm">Automatic recurring payments on your schedule.</p>
+        <p className="text-white/60 text-sm">{t("standingOrders.subtitle")}</p>
       </div>
 
       {(error || actionError) && (
@@ -140,8 +143,8 @@ export default function StandingOrdersPage() {
         ) : orders.length === 0 ? (
           <EmptyState
             icon={<RefreshCw size={40} className="text-[#E3E3E3]" />}
-            title="No standing orders"
-            description="Set up a recurring payment and it will run automatically — weekly, fortnightly, monthly or quarterly."
+            title={t("standingOrders.none")}
+            description={t("standingOrders.noneDesc")}
           />
         ) : (
           orders.map((o) => (
@@ -154,7 +157,7 @@ export default function StandingOrdersPage() {
                 <div className="flex flex-col items-end gap-1.5">
                   <p className="text-base font-bold text-[#DB0011]">{formatCurrency(Number(o.amount), o.currency)}</p>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${FREQ_COLORS[o.frequency] ?? "text-[#767676] bg-[#F5F5F5] border-[#E8E8E8]"}`}>
-                    {FREQ_LABELS[o.frequency] ?? o.frequency}
+                    {FREQ_KEYS[o.frequency] ? t(FREQ_KEYS[o.frequency]) : o.frequency}
                   </span>
                 </div>
               </div>
@@ -163,8 +166,8 @@ export default function StandingOrdersPage() {
 
               <div className="flex items-center gap-2 mb-3 text-[11px] text-[#AAAAAA]">
                 <Calendar size={11} />
-                <span>Next: <span className="font-semibold text-[#555]">{formatDate(o.nextExecutionDate)}</span></span>
-                {o.endDate && <span>· Ends {formatDate(o.endDate)}</span>}
+                <span>{t("standingOrders.next")}: <span className="font-semibold text-[#555]">{formatDate(o.nextExecutionDate)}</span></span>
+                {o.endDate && <span>· {t("standingOrders.ends")} {formatDate(o.endDate)}</span>}
                 <span className={`ml-auto px-2 py-0.5 rounded-full border text-[10px] font-bold ${statusBadge(o.status)}`}>
                   {o.status.charAt(0) + o.status.slice(1).toLowerCase()}
                 </span>
@@ -177,21 +180,21 @@ export default function StandingOrdersPage() {
                       onClick={() => handleAction(o.id, "pause")}
                       className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-800 font-semibold transition-colors"
                     >
-                      <Pause size={12} /> Pause
+                      <Pause size={12} /> {t("standingOrders.pause")}
                     </button>
                   ) : (
                     <button
                       onClick={() => handleAction(o.id, "resume")}
                       className="flex items-center gap-1 text-xs text-green-600 hover:text-green-800 font-semibold transition-colors"
                     >
-                      <Play size={12} /> Resume
+                      <Play size={12} /> {t("standingOrders.resume")}
                     </button>
                   )}
                   <button
                     onClick={() => handleAction(o.id, "cancel")}
                     className="flex items-center gap-1 text-xs text-[#DB0011] hover:text-[#900] font-semibold transition-colors ml-auto"
                   >
-                    <XCircle size={12} /> Cancel
+                    <XCircle size={12} /> {t("standingOrders.cancel")}
                   </button>
                 </div>
               )}
@@ -206,12 +209,12 @@ export default function StandingOrdersPage() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowCreate(false)} />
           <div className="relative bg-white w-full max-w-lg rounded-t-3xl shadow-2xl flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
-              <h2 className="text-base font-bold text-[#333]">New standing order</h2>
+              <h2 className="text-base font-bold text-[#333]">{t("standingOrders.new")}</h2>
               <button onClick={() => setShowCreate(false)} className="p-1 text-[#999] hover:text-[#333]"><X size={18} /></button>
             </div>
             <form onSubmit={handleCreate} className="overflow-y-auto px-5 pb-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">From account</label>
+                <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{t("standingOrders.fromAccount")}</label>
                 <select
                   value={fromAccountId}
                   onChange={(e) => setFromAccountId(e.target.value)}
@@ -226,10 +229,10 @@ export default function StandingOrdersPage() {
               </div>
 
               {[
-                { label: "Payee name", value: toAccountName, set: setToAccountName, placeholder: "John Smith" },
-                { label: "Account number", value: toAccountNumber, set: setToAccountNumber, placeholder: "12345678" },
-                { label: "Sort code", value: toBankCode, set: setToBankCode, placeholder: "20-00-00" },
-                { label: "Reference / description", value: description, set: setDescription, placeholder: "Rent payment" },
+                { label: t("standingOrders.payeeName"), value: toAccountName, set: setToAccountName, placeholder: "John Smith" },
+                { label: t("standingOrders.accountNumber"), value: toAccountNumber, set: setToAccountNumber, placeholder: "12345678" },
+                { label: t("standingOrders.sortCode"), value: toBankCode, set: setToBankCode, placeholder: "20-00-00" },
+                { label: t("standingOrders.reference"), value: description, set: setDescription, placeholder: "Rent payment" },
               ].map(({ label, value, set, placeholder }) => (
                 <div key={label}>
                   <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{label}</label>
@@ -244,7 +247,7 @@ export default function StandingOrdersPage() {
               ))}
 
               <div>
-                <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">Amount (£)</label>
+                <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{t("standingOrders.amount")} (£)</label>
                 <input
                   type="number"
                   min="0.01"
@@ -257,14 +260,14 @@ export default function StandingOrdersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">Frequency</label>
+                <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{t("standingOrders.frequency")}</label>
                 <div className="grid grid-cols-4 gap-2">
                   {(["WEEKLY","BIWEEKLY","MONTHLY","QUARTERLY"] as const).map((f) => (
                     <button
                       key={f} type="button" onClick={() => setFrequency(f)}
                       className={`py-2 rounded-xl text-xs font-bold border-2 transition-all ${frequency === f ? "border-[#DB0011] bg-red-50 text-[#DB0011]" : "border-[#E8E8E8] text-[#555] hover:border-[#CCC]"}`}
                     >
-                      {FREQ_LABELS[f]}
+                      {t(FREQ_KEYS[f])}
                     </button>
                   ))}
                 </div>
@@ -272,7 +275,7 @@ export default function StandingOrdersPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">Start date</label>
+                  <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{t("standingOrders.startDate")}</label>
                   <input
                     type="date"
                     min={today}
@@ -282,7 +285,7 @@ export default function StandingOrdersPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">End date <span className="text-[#AAAAAA] normal-case font-normal">(optional)</span></label>
+                  <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{t("standingOrders.endDate")} <span className="text-[#AAAAAA] normal-case font-normal">(optional)</span></label>
                   <input
                     type="date"
                     min={startDate || today}
@@ -304,7 +307,7 @@ export default function StandingOrdersPage() {
                 disabled={creating}
                 className="w-full py-3.5 rounded-xl bg-[#DB0011] text-white font-bold text-sm hover:bg-[#b0000d] transition-colors disabled:opacity-50"
               >
-                {creating ? "Setting up…" : "Set up standing order"}
+                {creating ? `${t("standingOrders.setUp")}…` : t("standingOrders.submit")}
               </button>
             </form>
           </div>

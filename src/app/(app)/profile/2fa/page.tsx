@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api";
 import { Shield, ShieldCheck, ChevronLeft, CheckCircle2, Copy, RefreshCw } from "lucide-react";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { useLanguage } from "@/lib/i18n";
 
 type Step = "overview" | "setup" | "enable" | "disable" | "done" | "recovery";
 
@@ -28,6 +29,7 @@ function OtpInput({ value, onChange, label }: { value: string; onChange: (v: str
 export default function TwoFAPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const { t } = useLanguage();
   const [step, setStep] = useState<Step>("overview");
   const [qrUrl, setQrUrl] = useState("");
   const [secret, setSecret] = useState("");
@@ -115,13 +117,13 @@ export default function TwoFAPage() {
       {/* Header */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white">
         <button onClick={() => router.back()} className="flex items-center gap-1 text-white/70 hover:text-white mb-4 text-sm">
-          <ChevronLeft size={16} /> Back
+          <ChevronLeft size={16} /> {t("profile2fa.back")}
         </button>
         <div className="flex items-center gap-2 mb-1">
           <Shield size={18} className="text-white/80" />
-          <h1 className="text-lg font-bold">Two-Factor Authentication</h1>
+          <h1 className="text-lg font-bold">{t("profile2fa.title")}</h1>
         </div>
-        <p className="text-white/60 text-sm">Add an extra layer of security to your account.</p>
+        <p className="text-white/60 text-sm">{t("profile2fa.subtitle")}</p>
       </div>
 
       <div className="px-4 -mt-6">
@@ -136,18 +138,16 @@ export default function TwoFAPage() {
                   : <Shield size={22} className="text-amber-500 flex-shrink-0" />}
                 <div>
                   <p className={`text-sm font-bold ${twoFaEnabled ? "text-green-800" : "text-amber-800"}`}>
-                    2FA is currently {twoFaEnabled ? "enabled" : "disabled"}
+                    {twoFaEnabled ? t("profile2fa.currentlyEnabled") : t("profile2fa.currentlyDisabled")}
                   </p>
                   <p className={`text-xs mt-0.5 ${twoFaEnabled ? "text-green-700" : "text-amber-700"}`}>
-                    {twoFaEnabled
-                      ? "Your account is protected with a TOTP authenticator app."
-                      : "Enable 2FA to protect your account from unauthorised access."}
+                    {twoFaEnabled ? t("profile2fa.enabledDesc") : t("profile2fa.disabledDesc")}
                   </p>
                 </div>
               </div>
 
               <p className="text-sm text-[#767676] leading-relaxed">
-                Two-factor authentication uses a time-based code from an authenticator app (e.g. Google Authenticator, Authy) each time you log in.
+                {t("profile2fa.how")}
               </p>
 
               <ErrorBanner />
@@ -159,13 +159,13 @@ export default function TwoFAPage() {
                     disabled={loading}
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-[#E3E3E3] text-sm font-semibold text-[#555] hover:border-[#DB0011] hover:text-[#DB0011] disabled:opacity-50 transition-colors"
                   >
-                    <RefreshCw size={14} /> View / regenerate recovery codes
+                    <RefreshCw size={14} /> {t("profile2fa.recoveryCodes")}
                   </button>
                   <button
                     onClick={() => { setToken(""); setError(""); setStep("disable"); }}
                     className="w-full py-3.5 rounded-xl border-2 border-[#DB0011] text-[#DB0011] text-sm font-bold hover:bg-red-50 transition-colors"
                   >
-                    Disable 2FA
+                    {t("profile2fa.disable")}
                   </button>
                 </div>
               ) : (
@@ -174,7 +174,7 @@ export default function TwoFAPage() {
                   disabled={loading}
                   className="w-full py-3.5 rounded-xl bg-[#DB0011] text-white text-sm font-bold hover:bg-[#b8000e] disabled:opacity-60 transition-colors"
                 >
-                  {loading ? "Setting up…" : "Set up 2FA"}
+                  {loading ? "Setting up…" : t("profile2fa.setUp")}
                 </button>
               )}
             </>
@@ -183,24 +183,22 @@ export default function TwoFAPage() {
           {/* ── QR scan step ── */}
           {step === "setup" && (
             <>
-              <h2 className="text-base font-bold text-[#333]">Step 1 — Scan QR code</h2>
-              <p className="text-sm text-[#767676]">
-                Open your authenticator app and scan the QR code below.
-              </p>
+              <h2 className="text-base font-bold text-[#333]">{t("profile2fa.step1")}</h2>
+              <p className="text-sm text-[#767676]">{t("profile2fa.step1Desc")}</p>
               {qrUrl && (
                 <div className="flex justify-center">
                   <img src={qrUrl} alt="2FA QR code" className="w-48 h-48 border border-[#E3E3E3] rounded-xl p-2" />
                 </div>
               )}
               <div className="bg-[#F8F8F8] rounded-xl p-3">
-                <p className="text-xs text-[#767676] mb-1">Can't scan? Enter this key manually:</p>
+                <p className="text-xs text-[#767676] mb-1">{t("profile2fa.cantScan")}</p>
                 <p className="font-mono text-sm font-bold text-[#333] break-all">{secret}</p>
               </div>
               <button
                 onClick={() => { setToken(""); setError(""); setStep("enable"); }}
                 className="w-full py-3.5 rounded-xl bg-[#DB0011] text-white text-sm font-bold hover:bg-[#b8000e] transition-colors"
               >
-                I've scanned it →
+                {t("profile2fa.scanned")}
               </button>
             </>
           )}
@@ -208,18 +206,16 @@ export default function TwoFAPage() {
           {/* ── Confirm code step ── */}
           {step === "enable" && (
             <>
-              <h2 className="text-base font-bold text-[#333]">Step 2 — Confirm code</h2>
-              <p className="text-sm text-[#767676]">
-                Enter the 6-digit code shown in your authenticator app to complete setup.
-              </p>
+              <h2 className="text-base font-bold text-[#333]">{t("profile2fa.step2")}</h2>
+              <p className="text-sm text-[#767676]">{t("profile2fa.step2Desc")}</p>
               <ErrorBanner />
-              <OtpInput value={token} onChange={setToken} label="Authenticator code" />
+              <OtpInput value={token} onChange={setToken} label={t("profile2fa.codeLabel")} />
               <button
                 onClick={handleEnable}
                 disabled={loading || token.length < 6}
                 className="w-full py-3.5 rounded-xl bg-[#DB0011] text-white text-sm font-bold hover:bg-[#b8000e] disabled:opacity-60 transition-colors"
               >
-                {loading ? "Verifying…" : "Enable 2FA"}
+                {loading ? t("profile2fa.verifying") : t("profile2fa.enableBtn")}
               </button>
             </>
           )}
@@ -227,18 +223,16 @@ export default function TwoFAPage() {
           {/* ── Disable confirm ── */}
           {step === "disable" && (
             <>
-              <h2 className="text-base font-bold text-[#333]">Disable 2FA</h2>
-              <p className="text-sm text-[#767676]">
-                Enter the current code from your authenticator app to confirm you want to disable 2FA.
-              </p>
+              <h2 className="text-base font-bold text-[#333]">{t("profile2fa.disableTitle")}</h2>
+              <p className="text-sm text-[#767676]">{t("profile2fa.disableDesc")}</p>
               <ErrorBanner />
-              <OtpInput value={token} onChange={setToken} label="Authenticator code" />
+              <OtpInput value={token} onChange={setToken} label={t("profile2fa.codeLabel")} />
               <button
                 onClick={handleDisable}
                 disabled={loading || token.length < 6}
                 className="w-full py-3.5 rounded-xl border-2 border-[#DB0011] text-[#DB0011] text-sm font-bold hover:bg-red-50 disabled:opacity-60 transition-colors"
               >
-                {loading ? "Disabling…" : "Confirm disable"}
+                {loading ? t("profile2fa.disabling") : t("profile2fa.confirmDisable")}
               </button>
               <button onClick={() => setStep("overview")} className="w-full text-sm text-[#767676] hover:text-[#333]">
                 Cancel
@@ -251,9 +245,9 @@ export default function TwoFAPage() {
             <div className="space-y-4">
               <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                 <Shield size={16} className="text-amber-600 flex-shrink-0" />
-                <p className="text-xs text-amber-800 font-semibold">Save these codes somewhere safe. Each can only be used once to log in if you lose your phone.</p>
+                <p className="text-xs text-amber-800 font-semibold">{t("profile2fa.recoveryDesc")} {t("profile2fa.eachOnce")}</p>
               </div>
-              <h2 className="text-base font-bold text-[#333]">Recovery codes</h2>
+              <h2 className="text-base font-bold text-[#333]">{t("profile2fa.recoveryTitle")}</h2>
               <div className="grid grid-cols-2 gap-2">
                 {recoveryCodes.map((code) => (
                   <div key={code} className="font-mono text-sm font-bold text-[#333] bg-[#F5F5F5] rounded-lg px-3 py-2 text-center tracking-widest">
@@ -268,13 +262,13 @@ export default function TwoFAPage() {
                 }}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-[#E3E3E3] text-sm font-semibold text-[#555] hover:border-[#DB0011] hover:text-[#DB0011] transition-colors"
               >
-                <Copy size={14} /> Copy all codes
+                <Copy size={14} /> {t("profile2fa.copyAll")}
               </button>
               <button
                 onClick={() => router.push("/profile")}
                 className="w-full py-3.5 rounded-xl bg-[#DB0011] text-white font-bold text-sm hover:bg-[#b8000e] transition-colors"
               >
-                I've saved them — continue
+                {t("profile2fa.savedCodes")}
               </button>
             </div>
           )}
@@ -288,18 +282,16 @@ export default function TwoFAPage() {
                 </div>
               </div>
               <h2 className="text-lg font-bold text-[#333] mb-2">
-                {twoFaEnabled ? "2FA disabled" : "2FA enabled"}
+                {twoFaEnabled ? t("profile2fa.disabledSuccess") : t("profile2fa.enabledSuccess")}
               </h2>
               <p className="text-sm text-[#767676] mb-6">
-                {twoFaEnabled
-                  ? "Two-factor authentication has been turned off."
-                  : "Your account is now protected with two-factor authentication."}
+                {twoFaEnabled ? t("profile2fa.disabledSuccessDesc") : t("profile2fa.enabledSuccessDesc")}
               </p>
               <button
                 onClick={() => router.push("/profile")}
                 className="bg-[#DB0011] text-white text-sm font-semibold px-6 py-3 rounded-xl hover:bg-[#b8000e] transition-colors"
               >
-                Back to profile
+                {t("profile2fa.backToProfile")}
               </button>
             </div>
           )}

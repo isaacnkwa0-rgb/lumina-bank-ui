@@ -10,6 +10,7 @@ import {
   Clock, AlertCircle, Calendar, Percent, Banknote, Star, TrendingDown, ChevronRight,
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useLanguage } from "@/lib/i18n";
 
 function statusConfig(status: string) {
   switch (status.toUpperCase()) {
@@ -21,6 +22,7 @@ function statusConfig(status: string) {
 }
 
 function MortgageCard({ loan, onClick }: { loan: Loan; onClick: () => void }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const principal   = Number(loan.principalAmount);
   const outstanding = Number(loan.outstandingBalance);
@@ -41,10 +43,10 @@ function MortgageCard({ loan, onClick }: { loan: Loan; onClick: () => void }) {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-lg">🏠</span>
-              <p className="text-xs font-semibold text-white/50 uppercase tracking-widest">Mortgage</p>
+              <p className="text-xs font-semibold text-white/50 uppercase tracking-widest">{t("mortgage.title")}</p>
             </div>
             <p className="text-3xl font-bold leading-none">{formatCurrency(outstanding)}</p>
-            <p className="text-white/40 text-xs mt-1">Outstanding balance</p>
+            <p className="text-white/40 text-xs mt-1">{t("mortgage.outstandingBalance")}</p>
           </div>
           <div className="flex flex-col items-end gap-1.5">
             <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs font-semibold ${sc.bg} ${sc.border} ${sc.color}`}>
@@ -52,7 +54,7 @@ function MortgageCard({ loan, onClick }: { loan: Loan; onClick: () => void }) {
               {sc.label}
             </div>
             <div className="flex items-center gap-1 text-white/60 text-xs">
-              <span>View details</span>
+              <span>{t("mortgage.outstanding")}</span>
               <ChevronRight size={12} />
             </div>
           </div>
@@ -74,9 +76,9 @@ function MortgageCard({ loan, onClick }: { loan: Loan; onClick: () => void }) {
       {/* Stats */}
       <div className="grid grid-cols-3 divide-x divide-[#F0F0F0] border-b border-[#F0F0F0]">
         {[
-          { icon: Percent,  label: "Rate",    value: `${rate.toFixed(1)}%`                       },
-          { icon: Banknote, label: "Monthly", value: formatCurrency(Number(loan.monthlyPayment)) },
-          { icon: Calendar, label: "Term",    value: `${loan.termMonths}mo`                      },
+          { icon: Percent,  label: t("mortgage.rate"),    value: `${rate.toFixed(1)}%`                       },
+          { icon: Banknote, label: t("mortgage.monthly"), value: formatCurrency(Number(loan.monthlyPayment)) },
+          { icon: Calendar, label: t("mortgage.term"),    value: `${loan.termMonths}mo`                      },
         ].map(({ icon: Icon, label, value }) => (
           <div key={label} className="flex flex-col items-center py-3.5 px-2">
             <Icon size={13} className="text-[#BBBBBB] mb-1" />
@@ -94,12 +96,12 @@ function MortgageCard({ loan, onClick }: { loan: Loan; onClick: () => void }) {
               <Calendar size={15} className="text-[#DB0011]" />
             </div>
             <div>
-              <p className="text-[11px] text-[#AAAAAA] uppercase tracking-wide font-semibold">Next payment</p>
+              <p className="text-[11px] text-[#AAAAAA] uppercase tracking-wide font-semibold">{t("mortgage.nextPayment")}</p>
               <p className="text-sm font-bold text-[#333]">{formatDate(loan.nextPaymentDate)}</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-[11px] text-[#AAAAAA]">Amount due</p>
+            <p className="text-[11px] text-[#AAAAAA]">{t("mortgage.amountDue")}</p>
             <p className="text-base font-bold text-[#DB0011]">{formatCurrency(Number(loan.nextPaymentAmount ?? loan.monthlyPayment))}</p>
           </div>
         </div>
@@ -112,7 +114,7 @@ function MortgageCard({ loan, onClick }: { loan: Loan; onClick: () => void }) {
             onClick={() => setExpanded((v) => !v)}
             className="w-full flex items-center justify-between px-5 py-3.5 text-xs font-semibold text-[#555] hover:bg-[#FAFAFA] transition-colors"
           >
-            <span>Payment history ({loan.payments.length})</span>
+            <span>{t("mortgage.paymentHistory")} ({loan.payments.length})</span>
             {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
           {expanded && (
@@ -146,6 +148,7 @@ function MortgageCard({ loan, onClick }: { loan: Loan; onClick: () => void }) {
 
 export default function MortgagePage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [mortgages, setMortgages] = useState<Loan[]>([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState("");
@@ -168,11 +171,11 @@ export default function MortgagePage() {
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white">
         <div className="flex items-center gap-2 mb-4">
           <Home size={18} className="text-white/80" />
-          <h1 className="text-lg font-bold">Mortgage</h1>
+          <h1 className="text-lg font-bold">{t("mortgage.title")}</h1>
         </div>
         {!loading && mortgages.length > 0 && (
           <div>
-            <p className="text-white/50 text-xs uppercase tracking-widest mb-1">Total outstanding</p>
+            <p className="text-white/50 text-xs uppercase tracking-widest mb-1">{t("mortgage.totalOutstanding")}</p>
             <p className="text-4xl font-bold">{formatCurrency(totalOutstanding)}</p>
             <p className="text-white/40 text-xs mt-1">
               {mortgages.length} mortgage{mortgages.length !== 1 ? "s" : ""}
@@ -196,8 +199,8 @@ export default function MortgagePage() {
           <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm overflow-hidden">
             <EmptyState
               icon={<Home size={36} className="text-[#E0E0E0]" />}
-              title="No active mortgages"
-              description="Your mortgage products will appear here once approved."
+              title={t("mortgage.none")}
+              description={t("mortgage.noneDesc")}
             />
           </div>
         ) : (
@@ -209,16 +212,16 @@ export default function MortgagePage() {
         {/* Apply CTA */}
         <div className="rounded-2xl overflow-hidden border border-[#E8E8E8] shadow-sm">
           <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-5 py-5 text-white">
-            <p className="text-xs font-bold uppercase tracking-widest text-white/50 mb-1">Home mortgage</p>
-            <p className="text-xl font-bold">Buy your dream home</p>
-            <p className="text-white/60 text-xs mt-1">From 3.9% fixed · Up to 30 years</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-white/50 mb-1">{t("mortgage.title")}</p>
+            <p className="text-xl font-bold">{t("mortgage.buyDream")}</p>
+            <p className="text-white/60 text-xs mt-1">{t("mortgage.fromRate")}</p>
           </div>
           <div className="bg-white px-5 py-4 space-y-3">
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: "Min rate", value: "3.9%" },
-                { label: "Max term", value: "30 yrs" },
-                { label: "LTV", value: "Up to 95%" },
+                { label: t("mortgage.minRate"), value: "3.9%" },
+                { label: t("mortgage.maxTerm"), value: "30 yrs" },
+                { label: t("mortgage.ltv"),     value: "Up to 95%" },
               ].map(({ label, value }) => (
                 <div key={label} className="bg-[#F8F8F8] rounded-xl p-2.5 text-center">
                   <p className="text-[10px] text-[#AAAAAA] uppercase tracking-wide">{label}</p>
@@ -230,7 +233,7 @@ export default function MortgagePage() {
               onClick={() => router.push("/mortgage/apply")}
               className="w-full py-3.5 rounded-xl bg-[#DB0011] text-white font-bold text-sm hover:bg-[#b0000d] transition-colors"
             >
-              Get a mortgage quote
+              {t("mortgage.getQuote")}
             </button>
           </div>
         </div>
@@ -240,7 +243,7 @@ export default function MortgagePage() {
           <div className="flex-1 bg-white rounded-2xl border border-[#E8E8E8] p-3.5 flex items-center gap-2.5">
             <TrendingDown size={16} className="text-[#DB0011]" />
             <div>
-              <p className="text-[10px] text-[#AAAAAA] uppercase tracking-wide">Total monthly</p>
+              <p className="text-[10px] text-[#AAAAAA] uppercase tracking-wide">{t("mortgage.totalMonthly")}</p>
               <p className="text-sm font-bold text-[#333]">
                 {formatCurrency(mortgages.reduce((s, l) => s + Number(l.monthlyPayment), 0))}
               </p>
@@ -249,7 +252,7 @@ export default function MortgagePage() {
           <div className="flex-1 bg-white rounded-2xl border border-[#E8E8E8] p-3.5 flex items-center gap-2.5">
             <Percent size={16} className="text-amber-500" />
             <div>
-              <p className="text-[10px] text-[#AAAAAA] uppercase tracking-wide">Avg rate</p>
+              <p className="text-[10px] text-[#AAAAAA] uppercase tracking-wide">{t("mortgage.avgRate")}</p>
               <p className="text-sm font-bold text-[#333]">
                 {mortgages.length
                   ? `${(mortgages.reduce((s, l) => s + Number(l.interestRate), 0) / mortgages.length).toFixed(1)}%`

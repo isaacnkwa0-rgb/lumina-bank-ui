@@ -9,6 +9,7 @@ import {
   PlusCircle, Copy, Check, Clock,
   Landmark, CreditCard, Zap, Info, ChevronRight,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 const ACCOUNT_COLORS: Record<string, string> = {
   CURRENT:  "#DB0011",
@@ -31,14 +32,15 @@ function useCopy(timeout = 1800) {
 
 function AccountDetailsCard({ account }: { account: Account }) {
   const { copied, copy } = useCopy();
+  const { t } = useLanguage();
   const color = ACCOUNT_COLORS[account.type] ?? "#DB0011";
 
   const fields = [
-    { label: "Account name",   value: "Lumina Bank",         key: `name-${account.id}`   },
-    { label: "Account number", value: account.accountNumber, key: `accno-${account.id}`  },
-    { label: "Sort code",      value: account.sortCode,      key: `sort-${account.id}`   },
-    { label: "IBAN",           value: account.iban,          key: `iban-${account.id}`   },
-    { label: "Currency",       value: account.currency,      key: `cur-${account.id}`    },
+    { label: t("topup.accountName"),   value: "Lumina Bank",         key: `name-${account.id}`   },
+    { label: t("topup.accountNumber"), value: account.accountNumber, key: `accno-${account.id}`  },
+    { label: t("topup.sortCode"),      value: account.sortCode,      key: `sort-${account.id}`   },
+    { label: t("topup.iban"),          value: account.iban,          key: `iban-${account.id}`   },
+    { label: t("topup.currency"),      value: account.currency,      key: `cur-${account.id}`    },
   ];
 
   function copyAll() {
@@ -92,7 +94,7 @@ function AccountDetailsCard({ account }: { account: Account }) {
                 }`}
               >
                 {isCopied ? <Check size={11} /> : <Copy size={11} />}
-                {isCopied ? "Copied" : "Copy"}
+                {isCopied ? t("topup.copied") : t("topup.copy")}
               </button>
             </div>
           );
@@ -110,7 +112,7 @@ function AccountDetailsCard({ account }: { account: Account }) {
           }`}
         >
           {copied === `all-${account.id}` ? <Check size={13} /> : <Copy size={13} />}
-          {copied === `all-${account.id}` ? "Details copied!" : "Copy all details"}
+          {copied === `all-${account.id}` ? t("topup.detailsCopied") : t("topup.copyAll")}
         </button>
       </div>
     </div>
@@ -119,6 +121,7 @@ function AccountDetailsCard({ account }: { account: Account }) {
 
 export default function TopUpPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading]   = useState(true);
 
@@ -137,11 +140,11 @@ export default function TopUpPage() {
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white">
         <div className="flex items-center gap-2 mb-4">
           <PlusCircle size={18} className="text-white/80" />
-          <h1 className="text-lg font-bold">Add Money</h1>
+          <h1 className="text-lg font-bold">{t("topup.title")}</h1>
         </div>
         {!loading && accounts.length > 0 && (
           <div>
-            <p className="text-white/50 text-xs uppercase tracking-widest mb-1">Total balance</p>
+            <p className="text-white/50 text-xs uppercase tracking-widest mb-1">{t("topup.totalBalance")}</p>
             <p className="text-4xl font-bold">
               {formatCurrency(totalBalance, primaryCurrency)}
             </p>
@@ -163,7 +166,7 @@ export default function TopUpPage() {
         <div className="flex items-center gap-2 pt-2">
           <Landmark size={14} className="text-[#AAAAAA]" />
           <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest">
-            Bank transfer — your account details
+            {t("topup.bankTransfer")}
           </p>
         </div>
 
@@ -180,14 +183,14 @@ export default function TopUpPage() {
         <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-5">
           <div className="flex items-center gap-2 mb-3">
             <Clock size={13} className="text-[#AAAAAA]" />
-            <p className="text-xs font-bold text-[#555] uppercase tracking-widest">Transfer times</p>
+            <p className="text-xs font-bold text-[#555] uppercase tracking-widest">{t("topup.transferTimes")}</p>
           </div>
           <div className="space-y-3">
             {[
-              { method: "Faster Payments (UK)", time: "Within 2 hours",    icon: Zap,      color: "text-green-600"  },
-              { method: "CHAPS",                time: "Same day",          icon: Landmark, color: "text-blue-600"   },
-              { method: "BACS",                 time: "3 business days",   icon: Clock,    color: "text-amber-600"  },
-              { method: "International (SWIFT)", time: "1–5 business days", icon: Landmark, color: "text-purple-600" },
+              { method: t("topup.fasterPayments"), time: t("topup.within2h"), icon: Zap,      color: "text-green-600"  },
+              { method: t("topup.chaps"),          time: t("topup.sameDay"),  icon: Landmark, color: "text-blue-600"   },
+              { method: t("topup.bacs"),           time: t("topup.3days"),    icon: Clock,    color: "text-amber-600"  },
+              { method: t("topup.swift"),          time: t("topup.15days"),   icon: Landmark, color: "text-purple-600" },
             ].map(({ method, time, icon: Icon, color }) => (
               <div key={method} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -208,12 +211,12 @@ export default function TopUpPage() {
                 <CreditCard size={16} className="text-purple-500" />
               </div>
               <div>
-                <p className="text-sm font-bold text-[#333]">Debit/credit card top up</p>
-                <p className="text-xs text-[#AAAAAA]">Add money instantly from your card</p>
+                <p className="text-sm font-bold text-[#333]">{t("topup.cardTopup")}</p>
+                <p className="text-xs text-[#AAAAAA]">{t("topup.cardDesc")}</p>
               </div>
             </div>
             <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-1 rounded-full">
-              Coming soon
+              {t("topup.comingSoon")}
             </span>
           </div>
         </div>
@@ -229,8 +232,8 @@ export default function TopUpPage() {
                 <span className="text-lg">💳</span>
               </div>
               <div className="text-left">
-                <p className="text-sm font-bold text-[#333]">Apply for a loan</p>
-                <p className="text-xs text-[#AAAAAA]">Personal, Business, Auto or Student · from 5.5% APR</p>
+                <p className="text-sm font-bold text-[#333]">{t("topup.applyLoan")}</p>
+                <p className="text-xs text-[#AAAAAA]">{t("topup.loanDesc")}</p>
               </div>
             </div>
             <ChevronRight size={16} className="text-[#AAAAAA] flex-shrink-0" />
@@ -241,7 +244,7 @@ export default function TopUpPage() {
         <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3.5">
           <Info size={14} className="text-blue-500 mt-0.5 flex-shrink-0" />
           <p className="text-xs text-blue-700 leading-relaxed">
-            Lumina Bank accounts are protected up to £85,000 by the Financial Services Compensation Scheme (FSCS).
+            {t("topup.fscs")}
           </p>
         </div>
       </div>

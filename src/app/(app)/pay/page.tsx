@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { accountsApi, transfersApi, type Account } from "@/lib/api";
+import { useLanguage, type TranslationKey } from "@/lib/i18n";
 import { formatCurrency } from "@/lib/utils";
 import {
   ArrowLeft, Search, ChevronRight, CheckCircle2, X,
@@ -34,7 +35,7 @@ type Biller = {
 
 type Category = {
   id: string;
-  label: string;
+  labelKey: TranslationKey;
   icon: React.ElementType;
   color: string;
   bg: string;
@@ -66,7 +67,7 @@ function BillerLogo({ biller, size = 32 }: { biller: Biller; size?: number }) {
 const CATEGORIES: Category[] = [
   {
     id: "energy",
-    label: "Energy",
+    labelKey: "pay.energy" as TranslationKey,
     icon: Zap,
     color: "text-amber-600",
     bg: "bg-amber-50",
@@ -121,7 +122,7 @@ const CATEGORIES: Category[] = [
   },
   {
     id: "water",
-    label: "Water",
+    labelKey: "pay.water" as TranslationKey,
     icon: Droplets,
     color: "text-blue-600",
     bg: "bg-blue-50",
@@ -156,7 +157,7 @@ const CATEGORIES: Category[] = [
   },
   {
     id: "broadband",
-    label: "Internet & TV",
+    labelKey: "pay.internet" as TranslationKey,
     icon: Wifi,
     color: "text-indigo-600",
     bg: "bg-indigo-50",
@@ -235,7 +236,7 @@ const CATEGORIES: Category[] = [
   },
   {
     id: "mobile",
-    label: "Mobile",
+    labelKey: "pay.mobile" as TranslationKey,
     icon: Phone,
     color: "text-green-600",
     bg: "bg-green-50",
@@ -335,7 +336,7 @@ const CATEGORIES: Category[] = [
   },
   {
     id: "council",
-    label: "Council Tax",
+    labelKey: "pay.council" as TranslationKey,
     icon: Home,
     color: "text-slate-600",
     bg: "bg-slate-50",
@@ -401,7 +402,7 @@ const CATEGORIES: Category[] = [
   },
   {
     id: "tax",
-    label: "Tax & Government",
+    labelKey: "pay.tax" as TranslationKey,
     icon: Landmark,
     color: "text-red-600",
     bg: "bg-red-50",
@@ -460,7 +461,7 @@ const CATEGORIES: Category[] = [
   },
   {
     id: "insurance",
-    label: "Insurance",
+    labelKey: "pay.insurance" as TranslationKey,
     icon: ShieldCheck,
     color: "text-teal-600",
     bg: "bg-teal-50",
@@ -510,7 +511,7 @@ const CATEGORIES: Category[] = [
   },
   {
     id: "streaming",
-    label: "Streaming",
+    labelKey: "pay.streaming" as TranslationKey,
     icon: Play,
     color: "text-pink-600",
     bg: "bg-pink-50",
@@ -583,7 +584,7 @@ const CATEGORIES: Category[] = [
   },
   {
     id: "music",
-    label: "Music",
+    labelKey: "pay.music" as TranslationKey,
     icon: Music,
     color: "text-purple-600",
     bg: "bg-purple-50",
@@ -642,7 +643,7 @@ const CATEGORIES: Category[] = [
   },
   {
     id: "shopping",
-    label: "Shopping",
+    labelKey: "pay.shopping" as TranslationKey,
     icon: ShoppingBag,
     color: "text-orange-600",
     bg: "bg-orange-50",
@@ -662,7 +663,7 @@ const CATEGORIES: Category[] = [
   },
   {
     id: "transport",
-    label: "Transport",
+    labelKey: "pay.transport" as TranslationKey,
     icon: Car,
     color: "text-cyan-600",
     bg: "bg-cyan-50",
@@ -711,7 +712,7 @@ const CATEGORIES: Category[] = [
   },
   {
     id: "education",
-    label: "Education",
+    labelKey: "pay.education" as TranslationKey,
     icon: GraduationCap,
     color: "text-violet-600",
     bg: "bg-violet-50",
@@ -764,6 +765,7 @@ function PaymentModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const { t } = useLanguage();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(
     biller.plans?.[1] ?? biller.plans?.[0] ?? null
   );
@@ -837,7 +839,7 @@ function PaymentModal({
           {/* Plans */}
           {biller.plans && biller.plans.length > 0 && (
             <div>
-              <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest mb-2">Select plan</p>
+              <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest mb-2">{t("pay.selectPlan")}</p>
               <div className="space-y-2">
                 {biller.plans.map((plan) => {
                   const isSelected = selectedPlan?.name === plan.name;
@@ -895,7 +897,7 @@ function PaymentModal({
                   {!selectedPlan && <Check size={11} className="text-white" />}
                 </div>
                 <p className={`text-sm font-bold ${!selectedPlan ? "text-[#DB0011]" : "text-[#555]"}`}>
-                  Enter custom amount
+                  {t("pay.enterAmount")}
                 </p>
               </button>
             </div>
@@ -904,7 +906,7 @@ function PaymentModal({
           {/* Quick amounts (for variable billers) */}
           {biller.quickAmounts && !biller.plans && (
             <div>
-              <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest mb-2">Quick select</p>
+              <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest mb-2">{t("pay.quickSelect")}</p>
               <div className="grid grid-cols-3 gap-2">
                 {biller.quickAmounts.map((qa) => {
                   const isSelected = !selectedPlan && parseFloat(customAmount) === qa;
@@ -930,7 +932,7 @@ function PaymentModal({
           {(!biller.plans || !selectedPlan) && (
             <div>
               <label className="block text-xs font-semibold text-[#555] mb-1.5">
-                {biller.plans ? "Custom amount" : "Amount"}
+                {biller.plans ? t("pay.customAmount") : t("pay.amount")}
               </label>
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767676] font-semibold">£</span>
@@ -949,7 +951,7 @@ function PaymentModal({
           {/* Biller reference (customer account number with biller) */}
           <div>
             <label className="block text-xs font-semibold text-[#555] mb-1">
-              Your {biller.name} reference
+              {t("pay.ref")} – {biller.name}
               <span className="text-[#DB0011] ml-0.5">*</span>
             </label>
             <p className="text-[10px] text-[#AAAAAA] mb-1.5">
@@ -967,7 +969,7 @@ function PaymentModal({
           {/* Optional payment note */}
           <div>
             <label className="block text-xs font-semibold text-[#555] mb-1.5">
-              Payment note <span className="text-[#AAAAAA] font-normal">(optional)</span>
+              Payment note
             </label>
             <input
               type="text"
@@ -980,7 +982,7 @@ function PaymentModal({
 
           {/* From account */}
           <div>
-            <label className="block text-xs font-semibold text-[#555] mb-1.5">Pay from</label>
+            <label className="block text-xs font-semibold text-[#555] mb-1.5">{t("pay.payFrom")}</label>
             <select
               value={fromAccountId}
               onChange={(e) => setFromAccountId(e.target.value)}
@@ -999,26 +1001,26 @@ function PaymentModal({
             <div className="bg-[#F8F8F8] rounded-xl p-3.5 text-sm">
               {selectedPlan && (
                 <div className="flex justify-between mb-1">
-                  <span className="text-[#767676]">Plan</span>
+                  <span className="text-[#767676]">{t("pay.plan")}</span>
                   <span className="font-semibold text-[#333]">{selectedPlan.name}</span>
                 </div>
               )}
               <div className="flex justify-between mb-1">
-                <span className="text-[#767676]">Paying to</span>
+                <span className="text-[#767676]">{t("pay.payingTo")}</span>
                 <span className="font-semibold text-[#333]">{biller.name}</span>
               </div>
               {billerRef && (
                 <div className="flex justify-between mb-1">
-                  <span className="text-[#767676]">Ref</span>
+                  <span className="text-[#767676]">{t("pay.ref")}</span>
                   <span className="font-semibold text-[#333] font-mono">{billerRef}</span>
                 </div>
               )}
               <div className="flex justify-between mb-1">
-                <span className="text-[#767676]">Amount</span>
+                <span className="text-[#767676]">{t("pay.amount")}</span>
                 <span className="font-bold text-[#DB0011]">{formatCurrency(amount, selectedAccount.currency)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#767676]">From</span>
+                <span className="text-[#767676]">{t("pay.from")}</span>
                 <span className="font-semibold text-[#333]">{selectedAccount.type} ···{selectedAccount.accountNumber.slice(-4)}</span>
               </div>
             </div>
@@ -1035,7 +1037,7 @@ function PaymentModal({
             disabled={submitting || amount <= 0}
             className="w-full py-4 rounded-xl bg-[#DB0011] text-white font-bold text-sm hover:bg-[#b0000d] transition-colors disabled:opacity-50"
           >
-            {submitting ? "Processing payment…" : `Pay ${amount > 0 ? formatCurrency(amount) : ""}`}
+            {submitting ? "Processing…" : `${t("pay.amount")} ${amount > 0 ? formatCurrency(amount) : ""}`}
           </button>
         </div>
       </div>
@@ -1047,6 +1049,7 @@ function PaymentModal({
 
 export default function PayPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [accounts, setAccounts]                 = useState<Account[]>([]);
   const [search, setSearch]                     = useState("");
   const [countryFilter, setCountryFilter]       = useState("ALL");
@@ -1065,7 +1068,7 @@ export default function PayPage() {
       (countryFilter === "🌍" && cat.countries.includes("🌍"));
     const matchesSearch =
       !search ||
-      cat.label.toLowerCase().includes(search.toLowerCase()) ||
+      t(cat.labelKey).toLowerCase().includes(search.toLowerCase()) ||
       cat.billers.some((b) => b.name.toLowerCase().includes(search.toLowerCase()));
     return matchesCountry && matchesSearch;
   });
@@ -1085,22 +1088,22 @@ export default function PayPage() {
         <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
           <CheckCircle2 size={40} className="text-green-500" />
         </div>
-        <h2 className="text-2xl font-bold text-[#333] mb-2">Payment sent!</h2>
+        <h2 className="text-2xl font-bold text-[#333] mb-2">{t("pay.success")}</h2>
         <p className="text-[#767676] text-sm mb-8">
-          Your payment to <span className="font-semibold text-[#333]">{selectedBiller.name}</span> has been submitted successfully.
+          <span className="font-semibold text-[#333]">{selectedBiller.name}</span> — {t("pay.successDesc")}
         </p>
         <div className="flex gap-3 w-full">
           <button
             onClick={() => { setSuccess(false); setSelectedBiller(null); }}
             className="flex-1 py-3.5 rounded-xl border-2 border-[#E3E3E3] text-sm font-bold text-[#555] hover:border-[#CCCCCC]"
           >
-            Pay another bill
+            {t("pay.payAnother")}
           </button>
           <button
             onClick={() => router.push("/dashboard")}
             className="flex-1 py-3.5 rounded-xl bg-[#DB0011] text-white text-sm font-bold hover:bg-[#b0000d]"
           >
-            Done
+            {t("pay.done")}
           </button>
         </div>
       </div>
@@ -1117,12 +1120,12 @@ export default function PayPage() {
             className="flex items-center gap-1 text-white/70 hover:text-white text-sm mb-4 transition-colors"
           >
             <ArrowLeft size={16} />
-            Back to categories
+            {t("pay.back")}
           </button>
         ) : (
           <div className="flex items-center gap-2 mb-4">
             <Receipt size={18} className="text-white/80" />
-            <h1 className="text-lg font-bold">Bill Payments</h1>
+            <h1 className="text-lg font-bold">{t("pay.title")}</h1>
           </div>
         )}
         {selectedCategory ? (
@@ -1131,12 +1134,12 @@ export default function PayPage() {
               <selectedCategory.icon size={20} className={selectedCategory.color} />
             </div>
             <div>
-              <h1 className="text-xl font-bold">{selectedCategory.label}</h1>
+              <h1 className="text-xl font-bold">{t(selectedCategory.labelKey)}</h1>
               <p className="text-white/60 text-xs">{selectedCategory.billers.length} providers · select to pay</p>
             </div>
           </div>
         ) : (
-          <p className="text-white/60 text-sm">Pay bills across UK, USA, Canada, Australia & more</p>
+          <p className="text-white/60 text-sm">{t("pay.subtitle")}</p>
         )}
       </div>
 
@@ -1148,7 +1151,7 @@ export default function PayPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={selectedCategory ? `Search ${selectedCategory.label} providers…` : "Search billers or categories…"}
+            placeholder={selectedCategory ? `Search ${t(selectedCategory.labelKey)} providers…` : "Search billers or categories…"}
             className="w-full pl-9 pr-4 py-3 bg-white border border-[#E3E3E3] rounded-xl text-sm text-[#333] focus:outline-none focus:border-[#DB0011] shadow-sm"
           />
         </div>
@@ -1187,7 +1190,7 @@ export default function PayPage() {
                   <div className={`h-11 w-11 rounded-xl ${cat.bg} flex items-center justify-center`}>
                     <Icon size={20} className={cat.color} />
                   </div>
-                  <p className="text-xs font-bold text-[#333] text-center leading-tight">{cat.label}</p>
+                  <p className="text-xs font-bold text-[#333] text-center leading-tight">{t(cat.labelKey)}</p>
                   <div className="flex flex-wrap justify-center gap-0.5">
                     {cat.countries.slice(0, 4).map((c) => (
                       <span key={c} className="text-[10px]">{c}</span>
@@ -1198,7 +1201,7 @@ export default function PayPage() {
             })}
             {filteredCategories.length === 0 && (
               <div className="col-span-3 py-10 text-center text-[#AAAAAA] text-sm">
-                No results for &ldquo;{search}&rdquo;
+                {t("pay.noResults")} &ldquo;{search}&rdquo;
               </div>
             )}
           </div>
@@ -1208,7 +1211,7 @@ export default function PayPage() {
         {selectedCategory && (
           <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm overflow-hidden">
             {visibleBillers.length === 0 ? (
-              <p className="text-center text-[#AAAAAA] text-sm py-8">No providers match your search.</p>
+              <p className="text-center text-[#AAAAAA] text-sm py-8">{t("pay.noProviders")}</p>
             ) : (
               visibleBillers.map((biller, i) => (
                 <button
@@ -1245,11 +1248,11 @@ export default function PayPage() {
         {!selectedCategory && !search && (
           <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm overflow-hidden">
             <div className="px-5 py-3 border-b border-[#F5F5F5]">
-              <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest">Other payment options</p>
+              <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest">{t("pay.otherOptions")}</p>
             </div>
             {[
-              { label: "Bank transfer",  desc: "Send to any UK bank account",  icon: Landmark, href: "/transfer", color: "text-blue-600",   bg: "bg-blue-50"   },
-              { label: "International",  desc: "Send money abroad via SWIFT",  icon: Globe,    href: "/transfer", color: "text-purple-600", bg: "bg-purple-50" },
+              { label: t("pay.bankTransfer"),     desc: t("pay.bankTransferDesc"),      icon: Landmark, href: "/transfer", color: "text-blue-600",   bg: "bg-blue-50"   },
+              { label: t("pay.internationalPay"), desc: t("pay.internationalPayDesc"),  icon: Globe,    href: "/transfer", color: "text-purple-600", bg: "bg-purple-50" },
             ].map(({ label, desc, icon: Icon, href, color, bg }) => (
               <button
                 key={label}

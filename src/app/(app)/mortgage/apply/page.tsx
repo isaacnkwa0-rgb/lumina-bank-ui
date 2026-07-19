@@ -8,6 +8,7 @@ import {
   ArrowLeft, Home, CheckCircle2, ChevronRight,
   Banknote, Percent, Calendar, AlertTriangle,
 } from "lucide-react";
+import { useLanguage, type TranslationKey } from "@/lib/i18n";
 
 const MORTGAGE_RATE = 6.5;
 const MAX_PROPERTY = 2_000_000;
@@ -15,10 +16,10 @@ const MIN_DEPOSIT_PCT = 5;
 
 const TERM_YEARS = [10, 15, 20, 25, 30];
 
-const REPAYMENT_TYPES = [
-  { value: "repayment", label: "Repayment", desc: "Pay off capital + interest each month" },
-  { value: "interest", label: "Interest only", desc: "Pay interest only — capital due at end" },
-] as const;
+const REPAYMENT_TYPES: { value: "repayment" | "interest"; labelKey: TranslationKey; descKey: TranslationKey }[] = [
+  { value: "repayment", labelKey: "mortgage.repayment",    descKey: "mortgage.repaymentDesc"    },
+  { value: "interest",  labelKey: "mortgage.interestOnly", descKey: "mortgage.interestOnlyDesc" },
+];
 
 function calcMonthly(principal: number, annualRate: number, termMonths: number): number {
   if (termMonths <= 0 || principal <= 0) return 0;
@@ -33,6 +34,7 @@ function calcInterestOnly(principal: number, annualRate: number): number {
 
 export default function MortgageApplyPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [propertyValue, setPropertyValue] = useState("");
   const [deposit, setDeposit] = useState("");
   const [termYears, setTermYears] = useState(25);
@@ -61,6 +63,9 @@ export default function MortgageApplyPage() {
   const ltvWarning = ltv > 90;
   const ltvError   = ltv > 95;
 
+  // suppress unused import warning
+  void MAX_PROPERTY; void MIN_DEPOSIT_PCT;
+
   async function handleSubmit() {
     setError("");
 
@@ -88,23 +93,21 @@ export default function MortgageApplyPage() {
         <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
           <CheckCircle2 size={40} className="text-green-500" />
         </div>
-        <h2 className="text-2xl font-bold text-[#333] mb-2">Application submitted!</h2>
+        <h2 className="text-2xl font-bold text-[#333] mb-2">{t("loans.appSubmitted")}</h2>
         <p className="text-[#767676] text-sm mb-2">
           Your mortgage application for{" "}
           <span className="font-semibold text-[#333]">{formatCurrency(loanAmount)}</span> has been received.
         </p>
-        <p className="text-[#767676] text-sm mb-8">
-          A mortgage advisor will be in touch within 2 business days to discuss your application.
-        </p>
+        <p className="text-[#767676] text-sm mb-8">{t("mortgage.reviewDesc")}</p>
         <div className="w-full bg-[#F8F8F8] rounded-2xl p-4 mb-6 text-left space-y-2">
           {[
-            { label: "Property value",   value: formatCurrency(propVal)      },
-            { label: "Deposit",          value: `${formatCurrency(depVal)} (${depositPct.toFixed(1)}%)`  },
-            { label: "Mortgage amount",  value: formatCurrency(loanAmount)   },
-            { label: "LTV",              value: `${ltv.toFixed(1)}%`         },
-            { label: "Term",             value: `${termYears} years`         },
-            { label: "Monthly payment",  value: formatCurrency(monthly)      },
-            { label: "Rate",             value: `${MORTGAGE_RATE}% fixed`    },
+            { label: t("mortgage.propertyValue"), value: formatCurrency(propVal)                                 },
+            { label: t("mortgage.deposit"),       value: `${formatCurrency(depVal)} (${depositPct.toFixed(1)}%)` },
+            { label: t("mortgage.title"),         value: formatCurrency(loanAmount)                              },
+            { label: t("mortgage.loanToValue"),   value: `${ltv.toFixed(1)}%`                                   },
+            { label: t("mortgage.term"),          value: `${termYears} ${t("loans.years")}`                     },
+            { label: t("mortgage.monthly"),       value: formatCurrency(monthly)                                 },
+            { label: t("mortgage.rate"),          value: `${MORTGAGE_RATE}% fixed`                              },
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between text-sm">
               <span className="text-[#767676]">{label}</span>
@@ -135,7 +138,7 @@ export default function MortgageApplyPage() {
         </button>
         <div className="flex items-center gap-2 mb-1">
           <Home size={20} />
-          <h1 className="text-2xl font-bold">Mortgage quote</h1>
+          <h1 className="text-2xl font-bold">{t("mortgage.applyTitle")}</h1>
         </div>
         <p className="text-white/60 text-sm">
           {MORTGAGE_RATE}% fixed rate · Up to 30 years · Up to 95% LTV
@@ -146,12 +149,12 @@ export default function MortgageApplyPage() {
         {/* Property details */}
         <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-5 space-y-4">
           <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest">
-            Property details
+            {t("mortgage.propertyDetails")}
           </p>
 
           <div>
             <label className="block text-xs font-semibold text-[#555] mb-1.5">
-              Property value
+              {t("mortgage.propertyValue")}
             </label>
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767676] font-semibold text-sm">£</span>
@@ -168,7 +171,7 @@ export default function MortgageApplyPage() {
 
           <div>
             <label className="block text-xs font-semibold text-[#555] mb-1.5">
-              Deposit amount
+              {t("mortgage.deposit")}
             </label>
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767676] font-semibold text-sm">£</span>
@@ -192,7 +195,7 @@ export default function MortgageApplyPage() {
           {propVal > 0 && depVal > 0 && (
             <div>
               <div className="flex justify-between text-[11px] mb-1">
-                <span className="text-[#AAAAAA]">Loan to value</span>
+                <span className="text-[#AAAAAA]">{t("mortgage.loanToValue")}</span>
                 <span className={`font-bold ${ltvError ? "text-[#DB0011]" : ltvWarning ? "text-amber-500" : "text-green-600"}`}>
                   {ltv.toFixed(1)}%
                 </span>
@@ -222,13 +225,13 @@ export default function MortgageApplyPage() {
         {/* Mortgage details */}
         <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-5 space-y-4">
           <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest">
-            Mortgage details
+            {t("mortgage.mortgageDetails")}
           </p>
 
           {/* Term */}
           <div>
             <label className="block text-xs font-semibold text-[#555] mb-2">
-              Mortgage term
+              {t("mortgage.mortgageTerm")}
             </label>
             <div className="grid grid-cols-5 gap-2">
               {TERM_YEARS.map((y) => (
@@ -250,7 +253,7 @@ export default function MortgageApplyPage() {
           {/* Repayment type */}
           <div>
             <label className="block text-xs font-semibold text-[#555] mb-2">
-              Repayment type
+              {t("mortgage.repaymentType")}
             </label>
             <div className="grid grid-cols-2 gap-2">
               {REPAYMENT_TYPES.map((rt) => (
@@ -264,9 +267,9 @@ export default function MortgageApplyPage() {
                   }`}
                 >
                   <p className={`text-xs font-bold mb-0.5 ${repaymentType === rt.value ? "text-[#DB0011]" : "text-[#333]"}`}>
-                    {rt.label}
+                    {t(rt.labelKey)}
                   </p>
-                  <p className="text-[10px] text-[#AAAAAA] leading-tight">{rt.desc}</p>
+                  <p className="text-[10px] text-[#AAAAAA] leading-tight">{t(rt.descKey)}</p>
                 </button>
               ))}
             </div>
@@ -277,20 +280,20 @@ export default function MortgageApplyPage() {
         {propVal > 0 && depVal > 0 && loanAmount > 0 && !ltvError && (
           <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm overflow-hidden">
             <div className="px-5 py-4 bg-gradient-to-r from-[#DB0011]/5 to-transparent border-b border-[#F5F5F5]">
-              <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest mb-3">Your quote</p>
+              <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest mb-3">{t("mortgage.yourQuote")}</p>
               <div className="flex items-end justify-between">
                 <div>
-                  <p className="text-[11px] text-[#AAAAAA] uppercase tracking-wide">Monthly payment</p>
+                  <p className="text-[11px] text-[#AAAAAA] uppercase tracking-wide">{t("mortgage.monthly")}</p>
                   <p className="text-4xl font-bold text-[#DB0011]">{formatCurrency(monthly)}</p>
                 </div>
-                <p className="text-xs text-[#AAAAAA] pb-1">per month</p>
+                <p className="text-xs text-[#AAAAAA] pb-1">{t("loans.perMonth")}</p>
               </div>
             </div>
             <div className="grid grid-cols-3 divide-x divide-[#F0F0F0]">
               {[
-                { icon: Banknote,  label: "Borrowing",       value: formatCurrency(loanAmount)     },
-                { icon: Percent,   label: "Rate",            value: `${MORTGAGE_RATE}% fixed`      },
-                { icon: Calendar,  label: "Total repayable", value: formatCurrency(totalRepayable) },
+                { icon: Banknote,  label: t("mortgage.borrowing"),      value: formatCurrency(loanAmount)     },
+                { icon: Percent,   label: t("mortgage.rate"),           value: `${MORTGAGE_RATE}% fixed`      },
+                { icon: Calendar,  label: t("loans.totalRepayable"),    value: formatCurrency(totalRepayable) },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex flex-col items-center py-4 px-2">
                   <Icon size={13} className="text-[#BBBBBB] mb-1" />
@@ -301,7 +304,7 @@ export default function MortgageApplyPage() {
             </div>
             <div className="px-5 py-3 bg-[#FAFAFA] border-t border-[#F5F5F5]">
               <p className="text-[11px] text-[#AAAAAA] text-center">
-                Total interest over {termYears} years: <span className="font-semibold text-[#555]">{formatCurrency(totalInterest)}</span>
+                {t("mortgage.totalInterestOver")} {termYears} {t("loans.years")}: <span className="font-semibold text-[#555]">{formatCurrency(totalInterest)}</span>
               </p>
             </div>
           </div>
@@ -321,14 +324,14 @@ export default function MortgageApplyPage() {
         >
           {submitting ? "Submitting application…" : (
             <>
-              Apply for mortgage
+              {t("mortgage.applyBtn")}
               <ChevronRight size={16} />
             </>
           )}
         </button>
 
         <p className="text-[11px] text-[#AAAAAA] text-center pb-2">
-          Your home may be repossessed if you do not keep up repayments. Lumina Bank is authorised and regulated by the FCA.
+          {t("mortgage.legalNotice")}
         </p>
       </div>
     </div>
