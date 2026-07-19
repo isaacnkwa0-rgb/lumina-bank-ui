@@ -684,10 +684,12 @@ function Stage4({
       dispatch({ type: "COMPLETE", step: 4 });
       dispatch({ type: "NEXT" });
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: { message?: string }; message?: string } } })
-        ?.response?.data?.error?.message
-        ?? (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-        ?? "Registration failed. Please try again.";
+      const data = (err as { response?: { data?: { error?: { message?: string; details?: Array<{ field: string; message: string }> }; message?: string } } })?.response?.data;
+      const baseMsg = data?.error?.message ?? data?.message ?? "Registration failed. Please try again.";
+      const details = data?.error?.details;
+      const msg = details?.length
+        ? `${baseMsg} — ${details.map((d) => `${d.field}: ${d.message}`).join("; ")}`
+        : baseMsg;
       dispatch({ type: "API_ERROR", message: msg });
     }
   }
