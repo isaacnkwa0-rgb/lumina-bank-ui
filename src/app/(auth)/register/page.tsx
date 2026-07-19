@@ -1085,7 +1085,7 @@ function Stage7({
         autoComplete="address-line1"
       />
       <Input
-        label={t("onboarding.address.line2")}
+        label={`${t("onboarding.address.line2")} (Optional)`}
         value={state.addressLine2}
         onChange={(e) => dispatch({ type: "SET", field: "addressLine2", value: e.target.value })}
         autoComplete="address-line2"
@@ -1099,7 +1099,7 @@ function Stage7({
           autoComplete="address-level2"
         />
         <Input
-          label={t("onboarding.address.state")}
+          label={`${t("onboarding.address.state")} (Optional)`}
           value={state.addressState}
           onChange={(e) => dispatch({ type: "SET", field: "addressState", value: e.target.value })}
           autoComplete="address-level1"
@@ -1155,6 +1155,8 @@ function Stage8({
   function validate(): boolean {
     const errs: Record<string, string> = {};
     if (!state.employmentStatus) errs.employmentStatus = "Please select your employment status";
+    if (showOccupation && !state.occupation.trim()) errs.occupation = "Occupation is required";
+    if (showOccupation && !state.industry) errs.industry = "Please select your industry";
     if (!state.annualIncomeRange) errs.annualIncomeRange = "Please select your annual income range";
     if (state.sourceOfFunds.length === 0) errs.sourceOfFunds = "Please select at least one source of funds";
     if (!state.expectedMonthlyVolume) errs.expectedMonthlyVolume = "Please select expected monthly volume";
@@ -1209,20 +1211,25 @@ function Stage8({
             label={t("onboarding.finance.occupation")}
             value={state.occupation}
             onChange={(e) => dispatch({ type: "SET", field: "occupation", value: e.target.value })}
+            error={state.errors.occupation}
           />
           <div>
             <label className="block text-sm font-medium text-[#333333] mb-2">{t("onboarding.finance.industry")}</label>
             <select
               value={state.industry}
               onChange={(e) => dispatch({ type: "SET", field: "industry", value: e.target.value })}
-              className="w-full border border-[#E3E3E3] rounded-sm px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:border-[#DB0011] transition-colors"
+              className={cn(
+                "w-full border rounded-sm px-3 py-2.5 text-sm text-[#333333] focus:outline-none focus:border-[#DB0011] transition-colors",
+                state.errors.industry ? "border-[#DB0011]" : "border-[#E3E3E3]"
+              )}
             >
               <option value="">Select industry</option>
               {INDUSTRIES.map((ind) => <option key={ind} value={ind}>{ind}</option>)}
             </select>
+            <FieldError msg={state.errors.industry} />
           </div>
           <Input
-            label={t("onboarding.finance.employer")}
+            label={`${t("onboarding.finance.employer")} (Optional)`}
             value={state.employerName}
             onChange={(e) => dispatch({ type: "SET", field: "employerName", value: e.target.value })}
           />
