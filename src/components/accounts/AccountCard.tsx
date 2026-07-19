@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { type Account } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
 import { formatCurrency, maskAccountNumber } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 
@@ -7,14 +10,6 @@ interface AccountCardProps {
   account: Account;
   compact?: boolean;
 }
-
-const accountTypeLabels: Record<string, string> = {
-  CURRENT: "Current Account",
-  SAVINGS: "Savings Account",
-  BUSINESS: "Business Account",
-  ISA: "Cash ISA",
-  CREDIT: "Credit Account",
-};
 
 const accountTypeColors: Record<string, string> = {
   CURRENT: "bg-[#DB0011]",
@@ -25,6 +20,16 @@ const accountTypeColors: Record<string, string> = {
 };
 
 export function AccountCard({ account, compact = false }: AccountCardProps) {
+  const { t } = useLanguage();
+
+  const accountTypeLabels: Record<string, string> = {
+    CURRENT: t("accountCard.current"),
+    SAVINGS: t("accountCard.savings"),
+    BUSINESS: t("accountCard.business"),
+    ISA: t("accountCard.isa"),
+    CREDIT: t("accountCard.credit"),
+  };
+
   const label = accountTypeLabels[account.type] || account.type;
   const gradientColor = accountTypeColors[account.type] || "bg-[#DB0011]";
 
@@ -64,7 +69,7 @@ export function AccountCard({ account, compact = false }: AccountCardProps) {
             {formatCurrency(Number(account.balance), account.currency)}
           </p>
           <p className="text-xs text-[#767676] mt-1">
-            Available: {formatCurrency(Number(account.availableBalance), account.currency)}
+            {t("accountCard.available")} {formatCurrency(Number(account.availableBalance), account.currency)}
           </p>
         </div>
       </div>

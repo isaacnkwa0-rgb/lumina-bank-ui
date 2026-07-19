@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ratesApi, type Rate, type ConversionResult } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
 import { ArrowLeftRight, RefreshCw, TrendingUp, Globe } from "lucide-react";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
 
@@ -23,6 +24,7 @@ function getCurrencyMeta(code: string) {
 }
 
 export default function RatesPage() {
+  const { t } = useLanguage();
   const [rates, setRates] = useState<Rate[]>([]);
   const [loading, setLoading] = useState(true);
   const [fromCurrency, setFromCurrency] = useState("GBP");
@@ -81,7 +83,7 @@ export default function RatesPage() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Globe size={18} className="text-white/80" />
-            <h1 className="text-lg font-bold">Exchange Rates</h1>
+            <h1 className="text-lg font-bold">{t("rates.title")}</h1>
           </div>
           <button
             onClick={fetchRates}
@@ -90,13 +92,13 @@ export default function RatesPage() {
             aria-label="Refresh rates"
           >
             <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
-            Refresh
+            {t("rates.refresh")}
           </button>
         </div>
         <div>
-          <p className="text-white/50 text-xs uppercase tracking-widest mb-1">GBP base rate</p>
-          <p className="text-3xl font-bold">{gbpRates.length} pairs</p>
-          <p className="text-white/40 text-xs mt-1">Updated {lastRefreshed.toLocaleTimeString()}</p>
+          <p className="text-white/50 text-xs uppercase tracking-widest mb-1">{t("rates.base")}</p>
+          <p className="text-3xl font-bold">{gbpRates.length} {t("rates.pairs")}</p>
+          <p className="text-white/40 text-xs mt-1">{t("rates.updated")} {lastRefreshed.toLocaleTimeString()}</p>
         </div>
       </div>
 
@@ -105,13 +107,13 @@ export default function RatesPage() {
         <div className="bg-white rounded-2xl shadow-lg border border-[#E8E8E8] overflow-hidden">
           <div className="px-4 py-3.5 border-b border-[#F0F0F0] flex items-center gap-2">
             <TrendingUp size={15} className="text-[#DB0011]" />
-            <h2 className="text-sm font-bold text-[#333]">Currency Converter</h2>
+            <h2 className="text-sm font-bold text-[#333]">{t("rates.converter")}</h2>
           </div>
           <div className="px-4 py-5 space-y-4">
             {/* Amount */}
             <div>
               <label className="block text-[10px] text-[#AAAAAA] mb-1.5 font-bold uppercase tracking-widest">
-                Amount
+                {t("rates.amount")}
               </label>
               <input
                 type="number"
@@ -128,7 +130,7 @@ export default function RatesPage() {
             <div className="flex items-center gap-3">
               <div className="flex-1">
                 <label className="block text-[10px] text-[#AAAAAA] mb-1.5 font-bold uppercase tracking-widest">
-                  From
+                  {t("rates.from")}
                 </label>
                 <select
                   value={fromCurrency}
@@ -152,7 +154,7 @@ export default function RatesPage() {
 
               <div className="flex-1">
                 <label className="block text-[10px] text-[#AAAAAA] mb-1.5 font-bold uppercase tracking-widest">
-                  To
+                  {t("rates.to")}
                 </label>
                 <select
                   value={toCurrency}
@@ -173,7 +175,7 @@ export default function RatesPage() {
               disabled={converting || !amount}
               className="w-full bg-[#DB0011] text-white text-sm font-bold py-3.5 rounded-xl hover:bg-[#b8000e] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {converting ? "Converting…" : "Convert"}
+              {converting ? t("rates.converting") : t("rates.convert")}
             </button>
 
             {conversion && (
@@ -192,7 +194,7 @@ export default function RatesPage() {
                   </div>
                 </div>
                 <p className="text-xs text-white/40">
-                  1 {conversion.from} = {conversion.rate.toFixed(4)} {conversion.to} · Indicative only
+                  1 {conversion.from} = {conversion.rate.toFixed(4)} {conversion.to} · {t("rates.indicative")}
                 </p>
               </div>
             )}
@@ -203,7 +205,7 @@ export default function RatesPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-[#E8E8E8] overflow-hidden">
           <div className="px-4 py-3.5 border-b border-[#F0F0F0] flex items-center gap-2">
             <Globe size={15} className="text-[#DB0011]" />
-            <h2 className="text-sm font-bold text-[#333]">Live Rates — GBP Base</h2>
+            <h2 className="text-sm font-bold text-[#333]">{t("rates.live")}</h2>
           </div>
 
           {loading ? (
@@ -214,7 +216,7 @@ export default function RatesPage() {
             </div>
           ) : gbpRates.length === 0 ? (
             <div className="py-10 text-center text-sm text-[#AAAAAA]">
-              Rates unavailable. Please refresh.
+              {t("rates.unavailable")}
             </div>
           ) : (
             <div className="divide-y divide-[#F5F5F5]">
@@ -236,7 +238,7 @@ export default function RatesPage() {
                       <p className="text-sm font-bold text-[#222]">
                         {r.rate.toFixed(4)}
                       </p>
-                      <p className="text-xs text-[#AAAAAA]">per £1</p>
+                      <p className="text-xs text-[#AAAAAA]">{t("rates.perPound")}</p>
                     </div>
                   </div>
                 );

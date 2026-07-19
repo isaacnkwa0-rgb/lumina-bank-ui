@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useLanguage } from "@/lib/i18n";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -37,6 +38,7 @@ function TradeModal({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t } = useLanguage();
   const [query, setQuery] = useState(holding?.ticker ?? "");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selected, setSelected] = useState<SearchResult | null>(
@@ -105,7 +107,7 @@ function TradeModal({
       <div className="relative bg-white w-full max-w-lg rounded-t-3xl shadow-2xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
           <h2 className="text-base font-bold text-[#333]">
-            {mode === "buy" ? "Buy asset" : `Sell ${holding?.ticker ?? ""}`}
+            {mode === "buy" ? t("investments.buyAsset") : `${t("investments.sell")} ${holding?.ticker ?? ""}`}
           </h2>
           <button onClick={onClose} className="p-1 text-[#999] hover:text-[#333]"><X size={18} /></button>
         </div>
@@ -114,14 +116,14 @@ function TradeModal({
           {/* Asset selector — only for buy */}
           {mode === "buy" && (
             <div className="relative">
-              <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">Search asset</label>
+              <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{t("investments.searchAsset")}</label>
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#AAAAAA]" />
                 <input
                   type="text"
                   value={query}
                   onChange={(e) => { setQuery(e.target.value); setSelected(null); setQuote(null); }}
-                  placeholder="AAPL, BTC, SPY…"
+                  placeholder={t("investments.searchPlaceholder")}
                   className="w-full pl-8 pr-3 py-2.5 border-2 border-[#E3E3E3] rounded-xl text-sm focus:outline-none focus:border-[#DB0011]"
                 />
                 {searching && <RefreshCw size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#AAAAAA] animate-spin" />}
@@ -181,7 +183,7 @@ function TradeModal({
                   onClick={() => setInputMode(m)}
                   className={`flex-1 py-2 rounded-xl text-xs font-bold border-2 transition-all ${inputMode === m ? "border-[#DB0011] bg-red-50 text-[#DB0011]" : "border-[#E8E8E8] text-[#777]"}`}
                 >
-                  {m === "amount" ? "By amount (£)" : "By quantity"}
+                  {m === "amount" ? t("investments.byAmount") : t("investments.byQuantity")}
                 </button>
               ))}
             </div>
@@ -190,7 +192,7 @@ function TradeModal({
           {/* Input */}
           <div>
             <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">
-              {mode === "sell" || inputMode === "quantity" ? "Quantity (units)" : "Amount (£)"}
+              {mode === "sell" || inputMode === "quantity" ? t("investments.quantity") : t("investments.byAmount")}
             </label>
             <input
               type="number"
@@ -202,7 +204,7 @@ function TradeModal({
               className="w-full px-3 py-2.5 border-2 border-[#E3E3E3] rounded-xl text-sm focus:outline-none focus:border-[#DB0011]"
             />
             {mode === "sell" && holding && (
-              <p className="text-xs text-[#AAAAAA] mt-1">Available: {holding.quantity} units</p>
+              <p className="text-xs text-[#AAAAAA] mt-1">{t("investments.available")} {holding.quantity} units</p>
             )}
           </div>
 
@@ -210,13 +212,13 @@ function TradeModal({
           {price > 0 && (estimatedQty > 0 || estimatedCost > 0) && (
             <div className="bg-[#F8F8F8] rounded-xl px-4 py-3 text-xs text-[#777] space-y-1">
               {mode === "buy" && inputMode === "amount" && estimatedQty > 0 && (
-                <p>≈ <span className="font-bold text-[#333]">{estimatedQty.toFixed(4)} units</span> at {formatCurrency(price)}/unit</p>
+                <p>≈ <span className="font-bold text-[#333]">{estimatedQty.toFixed(4)} units</span> {t("investments.at")} {formatCurrency(price)}{t("investments.perUnit")}</p>
               )}
               {mode === "buy" && inputMode === "quantity" && estimatedCost > 0 && (
-                <p>≈ <span className="font-bold text-[#333]">{formatCurrency(estimatedCost)}</span> at {formatCurrency(price)}/unit</p>
+                <p>≈ <span className="font-bold text-[#333]">{formatCurrency(estimatedCost)}</span> {t("investments.at")} {formatCurrency(price)}{t("investments.perUnit")}</p>
               )}
               {mode === "sell" && estimatedCost > 0 && (
-                <p>You'll receive ≈ <span className="font-bold text-green-700">{formatCurrency(estimatedCost)}</span></p>
+                <p>{t("investments.youReceive")} <span className="font-bold text-green-700">{formatCurrency(estimatedCost)}</span></p>
               )}
             </div>
           )}
@@ -236,7 +238,7 @@ function TradeModal({
                 : "border-2 border-[#DB0011] text-[#DB0011] hover:bg-red-50"
             }`}
           >
-            {loading ? (mode === "buy" ? "Buying…" : "Selling…") : mode === "buy" ? "Confirm buy" : "Confirm sell"}
+            {loading ? (mode === "buy" ? "Buying…" : "Selling…") : mode === "buy" ? t("investments.confirmBuy") : t("investments.confirmSell")}
           </button>
         </div>
       </div>
@@ -246,6 +248,7 @@ function TradeModal({
 
 // ── Main page ───────────────────────────────────────────────────────────────
 export default function InvestmentsPage() {
+  const { t } = useLanguage();
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [performance, setPerformance] = useState<PerformancePoint[]>([]);
@@ -328,19 +331,19 @@ export default function InvestmentsPage() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <LineChartIcon size={18} className="text-white/80" />
-            <h1 className="text-lg font-bold">Investments</h1>
+            <h1 className="text-lg font-bold">{t("investments.title")}</h1>
           </div>
           <button
             onClick={() => { setTradeMode("buy"); setSellHolding(undefined); }}
             className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 h-8 rounded-full transition-colors"
           >
             <ShoppingCart size={13} />
-            Buy
+            {t("investments.buyAsset")}
           </button>
         </div>
         {!loading && portfolio && (
           <div>
-            <p className="text-white/50 text-xs uppercase tracking-widest mb-1">Portfolio value</p>
+            <p className="text-white/50 text-xs uppercase tracking-widest mb-1">{t("investments.portfolio")}</p>
             <p className="text-4xl font-bold">{formatCurrency(portfolio.totalValue)}</p>
             <div className="flex items-center gap-2 mt-2">
               <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
@@ -371,7 +374,7 @@ export default function InvestmentsPage() {
         {/* Performance chart */}
         <div className="bg-white rounded-2xl shadow-lg border border-[#E8E8E8] overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#F0F0F0]">
-            <h2 className="text-sm font-bold text-[#222]">Performance</h2>
+            <h2 className="text-sm font-bold text-[#222]">{t("investments.performance")}</h2>
             <div className="flex gap-1">
               {PERIODS.map((p) => (
                 <button
@@ -423,7 +426,7 @@ export default function InvestmentsPage() {
         {(loading || allocation.length > 0) && (
           <div className="bg-white rounded-2xl shadow-sm border border-[#E8E8E8] overflow-hidden">
             <div className="px-4 py-3.5 border-b border-[#F0F0F0]">
-              <h2 className="text-sm font-bold text-[#222]">Asset Allocation</h2>
+              <h2 className="text-sm font-bold text-[#222]">{t("investments.allocation")}</h2>
             </div>
             {loading ? (
               <div className="p-4"><SkeletonBlock className="h-44 w-full rounded-xl" /></div>
@@ -458,24 +461,24 @@ export default function InvestmentsPage() {
         {/* Holdings */}
         <div className="bg-white rounded-2xl shadow-sm border border-[#E8E8E8] overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#F0F0F0]">
-            <h2 className="text-sm font-bold text-[#222]">Holdings</h2>
+            <h2 className="text-sm font-bold text-[#222]">{t("investments.holdings")}</h2>
             <button
               onClick={() => { setTradeMode("buy"); setSellHolding(undefined); }}
               className="flex items-center gap-1 text-xs font-semibold text-[#DB0011] hover:text-[#900]"
             >
-              <Plus size={12} /> Buy more
+              <Plus size={12} /> {t("investments.buyMore")}
             </button>
           </div>
           {loading ? (
             <div className="p-4"><SkeletonCard /></div>
           ) : portfolio?.holdings.length === 0 ? (
             <div className="py-8 text-center">
-              <p className="text-sm text-[#AAAAAA] mb-3">No holdings yet</p>
+              <p className="text-sm text-[#AAAAAA] mb-3">{t("investments.noHoldings")}</p>
               <button
                 onClick={() => { setTradeMode("buy"); setSellHolding(undefined); }}
                 className="text-xs font-bold text-[#DB0011] hover:underline"
               >
-                Make your first investment →
+                {t("investments.firstInvestment")}
               </button>
             </div>
           ) : (
@@ -500,7 +503,7 @@ export default function InvestmentsPage() {
                       </div>
                       <button
                         onClick={() => { setSellHolding(h); setTradeMode("sell"); }}
-                        title="Sell"
+                        title={t("investments.sell")}
                         className="p-1.5 rounded-lg text-[#AAAAAA] hover:text-[#DB0011] hover:bg-red-50 transition-colors"
                       >
                         <ArrowDownCircle size={15} />
@@ -516,14 +519,14 @@ export default function InvestmentsPage() {
         {/* Watchlist */}
         <div className="bg-white rounded-2xl shadow-sm border border-[#E8E8E8] overflow-hidden">
           <div className="px-4 py-3.5 border-b border-[#F0F0F0]">
-            <h2 className="text-sm font-bold text-[#222] mb-3">Watchlist</h2>
+            <h2 className="text-sm font-bold text-[#222] mb-3">{t("investments.watchlist")}</h2>
             <div className="relative">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#AAAAAA]" />
               <input
                 type="text"
                 value={watchQuery}
                 onChange={(e) => setWatchQuery(e.target.value)}
-                placeholder="Add to watchlist…"
+                placeholder={t("investments.addWatchlist")}
                 className="w-full pl-8 pr-3 py-2 border border-[#E8E8E8] rounded-xl text-xs focus:outline-none focus:border-[#DB0011]"
               />
               {watchSearching && <RefreshCw size={11} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#AAAAAA] animate-spin" />}
@@ -548,7 +551,7 @@ export default function InvestmentsPage() {
           {loading ? (
             <div className="p-4"><SkeletonBlock className="h-24 w-full rounded-xl" /></div>
           ) : watchlist.length === 0 ? (
-            <div className="py-6 text-center text-sm text-[#AAAAAA]">Search above to add assets</div>
+            <div className="py-6 text-center text-sm text-[#AAAAAA]">{t("investments.searchAbove")}</div>
           ) : (
             <div className="divide-y divide-[#F5F5F5]">
               {watchlist.map((item) => {

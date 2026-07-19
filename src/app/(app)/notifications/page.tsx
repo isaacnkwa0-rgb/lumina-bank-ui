@@ -7,6 +7,7 @@ import {
   ArrowLeftRight, Clock, type LucideIcon,
 } from "lucide-react";
 import { notificationsApi, type Notification } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
 import { formatRelativeDate } from "@/lib/utils";
 import { SkeletonList } from "@/components/ui/LoadingSpinner";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -55,19 +56,20 @@ function extractAmount(body: string): string | null {
 
 // ── Date grouping ─────────────────────────────────────────────────────────────
 
-function getGroup(dateStr: string): string {
+function getGroup(dateStr: string): "today" | "yesterday" | "thisWeek" | "earlier" {
   const d = new Date(dateStr);
-  if (isToday(d))     return "Today";
-  if (isYesterday(d)) return "Yesterday";
-  if (isThisWeek(d))  return "This week";
-  return "Earlier";
+  if (isToday(d))     return "today";
+  if (isYesterday(d)) return "yesterday";
+  if (isThisWeek(d))  return "thisWeek";
+  return "earlier";
 }
 
-const GROUP_ORDER = ["Today", "Yesterday", "This week", "Earlier"];
+const GROUP_ORDER = ["today", "yesterday", "thisWeek", "earlier"] as const;
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function NotificationsPage() {
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
@@ -116,7 +118,7 @@ export default function NotificationsPage() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Bell size={18} className="text-white/80" />
-            <h1 className="text-lg font-bold">Notifications</h1>
+            <h1 className="text-lg font-bold">{t("notifications.title")}</h1>
           </div>
           {unreadCount > 0 && (
             <button
@@ -125,7 +127,7 @@ export default function NotificationsPage() {
               className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white text-xs font-semibold px-3 py-2 rounded-full hover:bg-white/25 transition-colors disabled:opacity-50"
             >
               <CheckCheck size={13} />
-              {markingAll ? "Marking…" : "Mark all read"}
+              {markingAll ? t("notifications.marking") : t("notifications.markAllRead")}
             </button>
           )}
         </div>
@@ -133,14 +135,14 @@ export default function NotificationsPage() {
           <div className="flex items-center gap-4">
             <div>
               <p className="text-3xl font-bold">{notifications.length}</p>
-              <p className="text-white/40 text-xs">Total</p>
+              <p className="text-white/40 text-xs">{t("notifications.total")}</p>
             </div>
             {unreadCount > 0 && (
               <>
                 <div className="h-8 w-px bg-white/10" />
                 <div>
                   <p className="text-xl font-bold text-white">{unreadCount}</p>
-                  <p className="text-white/40 text-xs">Unread</p>
+                  <p className="text-white/40 text-xs">{t("notifications.unread")}</p>
                 </div>
               </>
             )}
@@ -160,8 +162,8 @@ export default function NotificationsPage() {
         ) : notifications.length === 0 ? (
           <EmptyState
             icon={<Bell size={40} className="text-[#E3E3E3]" />}
-            title="All caught up"
-            description="New notifications will appear here."
+            title={t("notifications.allCaughtUp")}
+            description={t("notifications.noneDesc")}
           />
         ) : (
           <div>
@@ -169,7 +171,7 @@ export default function NotificationsPage() {
               <div key={group}>
                 <div className="px-4 py-2.5 bg-[#F8F8F8] border-b border-[#EFEFEF]">
                   <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest">
-                    {group}
+                    {t(`notifications.${group}` as Parameters<typeof t>[0])}
                   </p>
                 </div>
 

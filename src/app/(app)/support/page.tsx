@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/lib/i18n";
 import {
   ArrowLeft, HelpCircle, MessageSquare, Mail, Phone,
   ChevronDown, ChevronUp, ShieldCheck, CreditCard,
@@ -75,6 +76,7 @@ function FaqItem({ icon: Icon, q, a }: { icon: React.ElementType; q: string; a: 
 }
 
 export default function SupportPage() {
+  const { t } = useLanguage();
   const router = useRouter();
 
   return (
@@ -91,8 +93,8 @@ export default function SupportPage() {
             <HelpCircle size={22} className="text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Help & Support</h1>
-            <p className="text-white/60 text-xs mt-0.5">We&apos;re here to help</p>
+            <h1 className="text-xl font-bold">{t("support.title")}</h1>
+            <p className="text-white/60 text-xs mt-0.5">{t("support.subtitle")}</p>
           </div>
         </div>
       </div>
@@ -101,12 +103,12 @@ export default function SupportPage() {
         {/* Contact options */}
         <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-[#F0F0F0]">
-            <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest">Contact us</p>
+            <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest">{t("support.contact")}</p>
           </div>
           {[
             {
               icon: Mail,
-              label: "Email support",
+              label: t("support.emailSupport"),
               sub: "support@lumina.bank",
               color: "text-blue-600",
               bg: "bg-blue-50",
@@ -114,15 +116,15 @@ export default function SupportPage() {
             },
             {
               icon: MessageSquare,
-              label: "Live chat",
-              sub: "Mon–Fri, 9am–6pm GMT",
+              label: t("support.liveChat"),
+              sub: t("support.chatHours"),
               color: "text-green-600",
               bg: "bg-green-50",
               href: null,
             },
             {
               icon: Phone,
-              label: "Phone",
+              label: t("support.phone"),
               sub: "+44 800 000 0000 · 24/7",
               color: "text-purple-600",
               bg: "bg-purple-50",
@@ -148,7 +150,7 @@ export default function SupportPage() {
         {/* FAQ */}
         <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-[#F0F0F0]">
-            <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest">Frequently asked questions</p>
+            <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest">{t("support.faq")}</p>
           </div>
           {FAQS.map((faq) => (
             <FaqItem key={faq.q} {...faq} />
@@ -158,8 +160,9 @@ export default function SupportPage() {
         {/* Footer note */}
         <div className="bg-[#F8F8F8] rounded-2xl border border-[#E8E8E8] px-5 py-4">
           <p className="text-xs text-[#AAAAAA] text-center leading-relaxed">
-            Lumina Bank is a demo banking application.
-            For urgent account security concerns, email{" "}
+            {t("support.demo")}
+            {" "}
+            {t("support.urgent")}{" "}
             <span className="text-[#DB0011] font-medium">security@lumina.bank</span>
           </p>
         </div>

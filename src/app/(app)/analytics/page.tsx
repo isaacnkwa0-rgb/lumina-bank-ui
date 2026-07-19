@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/lib/i18n";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line,
@@ -124,6 +125,7 @@ function InsightCard({ insight }: { insight: Insight }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AnalyticsPage() {
+  const { t } = useLanguage();
   const [cashflow, setCashflow]   = useState<CashflowData[]>([]);
   const [spending, setSpending]   = useState<SpendingCategory[]>([]);
   const [insights, setInsights]   = useState<Insight[]>([]);
@@ -170,11 +172,11 @@ export default function AnalyticsPage() {
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-16 text-white">
         <div className="flex items-center gap-2 mb-4">
           <BarChart2 size={18} className="text-white/80" />
-          <h1 className="text-lg font-bold">Spending Analytics</h1>
+          <h1 className="text-lg font-bold">{t("analytics.title")}</h1>
         </div>
         {!loading && cashflow.length > 0 && (
           <div>
-            <p className="text-white/40 text-xs uppercase tracking-widest mb-1">Last 12 months · net savings</p>
+            <p className="text-white/40 text-xs uppercase tracking-widest mb-1">{t("analytics.subtitle")}</p>
             <p className={`text-4xl font-bold ${netSavings >= 0 ? "text-white" : "text-yellow-300"}`}>
               {netSavings >= 0 ? "+" : ""}{formatCurrency(netSavings)}
             </p>
@@ -200,16 +202,16 @@ export default function AnalyticsPage() {
           ))
         ) : (
           <>
-            <StatCard label="Income"   value={fmtK(totalIncome)}   icon={ArrowDownLeft} iconColor="text-green-600" iconBg="bg-green-50" trend="up"      sub={`${cashflow.length}mo`} />
-            <StatCard label="Expenses" value={fmtK(totalExpenses)} icon={ArrowUpRight}  iconColor="text-[#DB0011]" iconBg="bg-red-50"   trend="down"    sub={`${cashflow.length}mo`} />
-            <StatCard label="Saved"    value={fmtK(netSavings)}    icon={Wallet}        iconColor="text-blue-600" iconBg="bg-blue-50"  trend="neutral" sub={`${savingsRate.toFixed(0)}%`} />
+            <StatCard label={t("analytics.income")}   value={fmtK(totalIncome)}   icon={ArrowDownLeft} iconColor="text-green-600" iconBg="bg-green-50" trend="up"      sub={`${cashflow.length}mo`} />
+            <StatCard label={t("analytics.expenses")} value={fmtK(totalExpenses)} icon={ArrowUpRight}  iconColor="text-[#DB0011]" iconBg="bg-red-50"   trend="down"    sub={`${cashflow.length}mo`} />
+            <StatCard label={t("analytics.saved")}    value={fmtK(netSavings)}    icon={Wallet}        iconColor="text-blue-600" iconBg="bg-blue-50"  trend="neutral" sub={`${savingsRate.toFixed(0)}%`} />
           </>
         )}
       </div>
 
       <div className="px-4 mt-4 space-y-4">
         {/* ── Cashflow chart ── */}
-        <Section title="Income vs Expenses">
+        <Section title={t("analytics.incomeVsExpenses")}>
           <div className="px-5 pt-4 pb-5">
             {loading ? (
               <SkeletonBlock className="h-52 w-full rounded-xl" />
@@ -226,7 +228,7 @@ export default function AnalyticsPage() {
                   </BarChart>
                 </ResponsiveContainer>
                 <div className="flex justify-center gap-5 mt-3">
-                  {[["#22c55e", "Income"], ["#DB0011", "Expenses"]].map(([color, label]) => (
+                  {[[`#22c55e`, t("analytics.income")], [`#DB0011`, t("analytics.expenses")]].map(([color, label]) => (
                     <div key={label} className="flex items-center gap-1.5">
                       <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
                       <span className="text-xs text-[#AAAAAA] font-medium">{label}</span>
@@ -240,7 +242,7 @@ export default function AnalyticsPage() {
 
         {/* ── Net cashflow trend ── */}
         {!loading && netData.length > 0 && (
-          <Section title="Net cashflow trend">
+          <Section title={t("analytics.netCashflow")}>
             <div className="px-5 pt-4 pb-5">
               <ResponsiveContainer width="100%" height={120}>
                 <LineChart data={netData} margin={{ top: 4, right: 4, left: -18, bottom: 0 }}>
@@ -264,7 +266,7 @@ export default function AnalyticsPage() {
 
         {/* ── Spending by category ── */}
         {(loading || spending.length > 0) && (
-          <Section title="Spending by category">
+          <Section title={t("analytics.byCategory")}>
             {loading ? (
               <div className="p-5"><SkeletonBlock className="h-48 w-full rounded-xl" /></div>
             ) : (
@@ -298,7 +300,7 @@ export default function AnalyticsPage() {
                       </ResponsiveContainer>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-0.5">Total spent</p>
+                      <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-0.5">{t("analytics.totalSpent")}</p>
                       <p className="text-2xl font-bold text-[#222]">{formatCurrency(totalSpend)}</p>
                       <p className="text-xs text-[#AAAAAA] mt-1">{spending.length} categories</p>
                     </div>
@@ -340,7 +342,7 @@ export default function AnalyticsPage() {
         )}
 
         {/* ── Top merchants ── */}
-        <Section title="Top merchants">
+        <Section title={t("analytics.topMerchants")}>
           {loading ? (
             <div className="p-5 space-y-3">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -401,7 +403,7 @@ export default function AnalyticsPage() {
         {(loading || insights.length > 0) && (
           <div>
             <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest mb-3 px-0.5">
-              Smart insights
+              {t("analytics.insights")}
             </p>
             {loading ? (
               <div className="space-y-3">
@@ -423,7 +425,7 @@ export default function AnalyticsPage() {
             <div className="bg-white rounded-2xl border border-[#EFEFEF] shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
                 <ShoppingBag size={14} className="text-[#DB0011]" />
-                <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest">Top category</p>
+                <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest">{t("analytics.topMerchants")}</p>
               </div>
               <p className="text-sm font-bold text-[#222] capitalize">
                 {(spending[0]?.category ?? "—").toLowerCase().replace(/_/g, " ")}
@@ -433,12 +435,12 @@ export default function AnalyticsPage() {
             <div className="bg-white rounded-2xl border border-[#EFEFEF] shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingDown size={14} className="text-amber-500" />
-                <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest">Avg monthly spend</p>
+                <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest">{t("analytics.avgMonthly")}</p>
               </div>
               <p className="text-sm font-bold text-[#222]">
                 {formatCurrency(cashflow.length ? totalExpenses / cashflow.length : 0)}
               </p>
-              <p className="text-xs text-[#AAAAAA] mt-0.5">per month</p>
+              <p className="text-xs text-[#AAAAAA] mt-0.5">{t("analytics.perMonth")}</p>
             </div>
           </div>
         )}

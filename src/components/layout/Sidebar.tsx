@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { useLanguage, type TranslationKey } from "@/lib/i18n";
 import {
   Home, Landmark, ArrowLeftRight, CreditCard, Receipt,
   BarChart2, TrendingUp, Globe, Target, PiggyBank,
@@ -14,54 +15,54 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 const navGroups = [
   {
-    label: "Overview",
+    labelKey: "sidebar.overview",
     items: [
-      { href: "/dashboard",    label: "Home",            icon: Home },
-      { href: "/accounts",     label: "Accounts",        icon: Landmark },
-      { href: "/transactions", label: "Transactions",    icon: Receipt },
-      { href: "/notifications",label: "Notifications",   icon: Bell },
+      { href: "/dashboard",    labelKey: "nav.home",            icon: Home },
+      { href: "/accounts",     labelKey: "nav.accounts",        icon: Landmark },
+      { href: "/transactions", labelKey: "nav.transactions",    icon: Receipt },
+      { href: "/notifications",labelKey: "nav.notifications",   icon: Bell },
     ],
   },
   {
-    label: "Move Money",
+    labelKey: "sidebar.moveMoney",
     items: [
-      { href: "/transfer",          label: "Transfer",          icon: ArrowLeftRight },
-      { href: "/standing-orders",   label: "Standing Orders",   icon: RefreshCw },
-      { href: "/direct-debits",     label: "Direct Debits",     icon: Landmark },
-      { href: "/beneficiaries",     label: "Saved Payees",      icon: PiggyBank },
+      { href: "/transfer",          labelKey: "nav.transfer",          icon: ArrowLeftRight },
+      { href: "/standing-orders",   labelKey: "nav.standingOrders",    icon: RefreshCw },
+      { href: "/direct-debits",     labelKey: "nav.directDebits",      icon: Landmark },
+      { href: "/beneficiaries",     labelKey: "nav.beneficiaries",     icon: PiggyBank },
     ],
   },
   {
-    label: "Cards & Credit",
+    labelKey: "sidebar.cardsCredit",
     items: [
-      { href: "/cards",        label: "Cards",           icon: CreditCard },
-      { href: "/loans",        label: "Loans",           icon: CreditCard },
-      { href: "/mortgage",     label: "Mortgage",        icon: Building },
+      { href: "/cards",        labelKey: "nav.cards",            icon: CreditCard },
+      { href: "/loans",        labelKey: "nav.loans",            icon: CreditCard },
+      { href: "/mortgage",     labelKey: "nav.mortgage",         icon: Building },
     ],
   },
   {
-    label: "Grow",
+    labelKey: "sidebar.grow",
     items: [
-      { href: "/investments",  label: "Investments",     icon: TrendingUp },
-      { href: "/goals",        label: "Savings Goals",   icon: Target },
-      { href: "/crypto",       label: "Crypto",          icon: Bitcoin },
-      { href: "/insurance",    label: "Insurance",       icon: ShieldCheck },
+      { href: "/investments",  labelKey: "nav.investments",      icon: TrendingUp },
+      { href: "/goals",        labelKey: "nav.savingsGoals",     icon: Target },
+      { href: "/crypto",       labelKey: "nav.crypto",           icon: Bitcoin },
+      { href: "/insurance",    labelKey: "nav.insurance",        icon: ShieldCheck },
     ],
   },
   {
-    label: "Tools",
+    labelKey: "sidebar.tools",
     items: [
-      { href: "/analytics",    label: "Analytics",       icon: BarChart2 },
-      { href: "/rates",        label: "Exchange Rates",  icon: Globe },
+      { href: "/analytics",    labelKey: "nav.analytics",        icon: BarChart2 },
+      { href: "/rates",        labelKey: "nav.rates",            icon: Globe },
     ],
   },
   {
-    label: "Support",
+    labelKey: "nav.support",
     items: [
-      { href: "/disputes",     label: "My Disputes",     icon: AlertCircle },
+      { href: "/disputes",     labelKey: "nav.disputes",         icon: AlertCircle },
     ],
   },
-];
+] as const;
 
 function DiamondLogo() {
   return (
@@ -75,6 +76,7 @@ function DiamondLogo() {
 export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
 
   function isActive(href: string) {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -108,11 +110,11 @@ export function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-2">
         {navGroups.map((group) => (
-          <div key={group.label} className="mb-1">
+          <div key={group.labelKey} className="mb-1">
             <p className="px-4 py-1.5 text-[9px] font-bold text-[#AAAAAA] uppercase tracking-widest">
-              {group.label}
+              {t(group.labelKey as TranslationKey)}
             </p>
-            {group.items.map(({ href, label, icon: Icon }) => {
+            {group.items.map(({ href, labelKey, icon: Icon }) => {
               const active = isActive(href);
               return (
                 <Link
@@ -126,7 +128,7 @@ export function Sidebar() {
                   )}
                 >
                   <Icon size={15} strokeWidth={active ? 2.5 : 1.8} />
-                  <span>{label}</span>
+                  <span>{t(labelKey as TranslationKey)}</span>
                   {active && <ChevronRight size={12} className="ml-auto" />}
                 </Link>
               );
@@ -150,14 +152,14 @@ export function Sidebar() {
           )}
         >
           <User size={15} />
-          Profile & Settings
+          {t("nav.profileSettings")}
         </Link>
         <button
           onClick={logout}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-sm text-[#DB0011] hover:bg-red-50 transition-colors"
         >
           <LogOut size={15} />
-          Log off
+          {t("nav.logOff")}
         </button>
       </div>
     </aside>

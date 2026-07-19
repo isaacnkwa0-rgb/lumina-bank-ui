@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useLanguage } from "@/lib/i18n";
 import {
   ShieldCheck, Heart, Home, Car, Plane, Briefcase,
   ChevronRight, CheckCircle2, X, FileText, Clock, XCircle, BadgeCheck,
@@ -396,6 +397,7 @@ function MyQuotes({
   onCancel: (id: string) => void;
   actioning: string;
 }) {
+  const { t } = useLanguage();
   const active = quotes.filter((q) => q.status === "ACCEPTED");
   const pending = quotes.filter((q) => q.status === "QUOTED" || q.status === "REQUESTED");
   const closed = quotes.filter((q) => q.status === "DECLINED");
@@ -406,7 +408,7 @@ function MyQuotes({
     <div className="px-4 mt-4 space-y-5">
       {active.length > 0 && (
         <div>
-          <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-2">Active policies</p>
+          <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-2">{t("insurance.active")}</p>
           <div className="space-y-2">
             {active.map((q) => <QuoteCard key={q.id} quote={q} onAccept={onAccept} onCancel={onCancel} actioning={actioning} />)}
           </div>
@@ -414,7 +416,7 @@ function MyQuotes({
       )}
       {pending.length > 0 && (
         <div>
-          <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-2">Open quotes</p>
+          <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-2">{t("insurance.quotes")}</p>
           <div className="space-y-2">
             {pending.map((q) => <QuoteCard key={q.id} quote={q} onAccept={onAccept} onCancel={onCancel} actioning={actioning} />)}
           </div>
@@ -422,7 +424,7 @@ function MyQuotes({
       )}
       {closed.length > 0 && (
         <div>
-          <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-2">Closed</p>
+          <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-2">{t("insurance.closed")}</p>
           <div className="space-y-2">
             {closed.map((q) => <QuoteCard key={q.id} quote={q} onAccept={onAccept} onCancel={onCancel} actioning={actioning} />)}
           </div>
@@ -435,6 +437,7 @@ function MyQuotes({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function InsurancePage() {
+  const { t } = useLanguage();
   const [selected, setSelected] = useState<Product | null>(null);
   const [quotes, setQuotes] = useState<InsuranceQuote[]>([]);
   const [actioning, setActioning] = useState("");
@@ -471,14 +474,14 @@ export default function InsurancePage() {
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white">
         <div className="flex items-center gap-2 mb-4">
           <ShieldCheck size={18} className="text-white/80" />
-          <h1 className="text-lg font-bold">Insurance</h1>
+          <h1 className="text-lg font-bold">{t("insurance.title")}</h1>
         </div>
         <div>
-          <p className="text-white/50 text-xs uppercase tracking-widest mb-1">Lumina Protect</p>
+          <p className="text-white/50 text-xs uppercase tracking-widest mb-1">{t("insurance.protect")}</p>
           {activeCount > 0 ? (
             <>
-              <p className="text-3xl font-bold">{activeCount} active {activeCount === 1 ? "policy" : "policies"}</p>
-              <p className="text-white/40 text-xs mt-1">You&apos;re covered by Lumina Protect</p>
+              <p className="text-3xl font-bold">{t("insurance.activePolicies").replace("{n}", String(activeCount))}</p>
+              <p className="text-white/40 text-xs mt-1">{t("insurance.covered")}</p>
             </>
           ) : (
             <>
@@ -492,9 +495,9 @@ export default function InsurancePage() {
       {/* Trust badges */}
       <div className="mx-4 -mt-8 bg-white rounded-2xl shadow-lg border border-[#E8E8E8] px-4 py-3.5 flex items-center justify-around relative z-10">
         {[
-          { label: "FCA regulated", emoji: "✅" },
-          { label: "24/7 support",  emoji: "📞" },
-          { label: "Fast claims",   emoji: "⚡" },
+          { label: t("insurance.fca"),        emoji: "✅" },
+          { label: t("insurance.support247"), emoji: "📞" },
+          { label: t("insurance.fastClaims"), emoji: "⚡" },
         ].map(({ label, emoji }) => (
           <div key={label} className="flex flex-col items-center gap-1">
             <span className="text-xl">{emoji}</span>
@@ -509,10 +512,10 @@ export default function InsurancePage() {
       {/* Product cards */}
       <div className="px-4 mt-4 space-y-3">
         {quotes.length === 0 && (
-          <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-2">Browse products</p>
+          <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-2">{t("insurance.browse")}</p>
         )}
         {quotes.length > 0 && (
-          <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-2">Get another quote</p>
+          <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-2">{t("insurance.anotherQuote")}</p>
         )}
         {PRODUCTS.map((product) => {
           const Icon = product.icon;

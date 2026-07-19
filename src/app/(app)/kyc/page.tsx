@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { kycApi } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
 import { Shield, Upload, CheckCircle2, Clock, XCircle, FileImage, X } from "lucide-react";
 
 type KycStatus = "PENDING" | "VERIFIED" | "REJECTED" | null;
@@ -12,11 +13,6 @@ interface FileField {
   hint: string;
 }
 
-const FIELDS: FileField[] = [
-  { key: "idFront", label: "ID — Front", hint: "Passport, driving licence or national ID (front)" },
-  { key: "idBack",  label: "ID — Back",  hint: "Back of the same document" },
-  { key: "selfie",  label: "Selfie",     hint: "Clear photo of your face holding the ID document" },
-];
 
 function StatusBanner({ status }: { status: KycStatus }) {
   if (!status || status === "PENDING" && true) return null;
@@ -35,6 +31,7 @@ function StatusBanner({ status }: { status: KycStatus }) {
 }
 
 function FileDropZone({ field, file, onChange }: { field: FileField; file: File | null; onChange: (f: File | null) => void }) {
+  const { t } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
@@ -82,8 +79,8 @@ function FileDropZone({ field, file, onChange }: { field: FileField; file: File 
           className="border-2 border-dashed border-[#E3E3E3] rounded-xl p-6 flex flex-col items-center gap-2 cursor-pointer hover:border-[#DB0011] hover:bg-red-50/30 transition-all"
         >
           <Upload size={22} className="text-[#AAAAAA]" />
-          <p className="text-sm text-[#767676]">Tap to upload or drag & drop</p>
-          <p className="text-xs text-[#CCCCCC]">JPG, PNG or PDF · max 5 MB</p>
+          <p className="text-sm text-[#767676]">{t("kyc.tapUpload")}</p>
+          <p className="text-xs text-[#CCCCCC]">{t("kyc.uploadFormat")}</p>
         </div>
       )}
 
@@ -99,6 +96,12 @@ function FileDropZone({ field, file, onChange }: { field: FileField; file: File 
 }
 
 export default function KycPage() {
+  const { t } = useLanguage();
+  const FIELDS: FileField[] = [
+    { key: "idFront", label: t("kyc.idFront"), hint: "Passport, driving licence or national ID (front)" },
+    { key: "idBack",  label: t("kyc.idBack"),  hint: "Back of the same document" },
+    { key: "selfie",  label: t("kyc.selfie"),  hint: t("kyc.selfieDesc") },
+  ];
   const [status, setStatus]     = useState<KycStatus>(null);
   const [loading, setLoading]   = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -121,7 +124,7 @@ export default function KycPage() {
     e.preventDefault();
     setError("");
     if (!files.idFront || !files.idBack || !files.selfie) {
-      setError("All three documents are required.");
+      setError(t("kyc.allRequired"));
       return;
     }
     setSubmitting(true);
@@ -147,10 +150,10 @@ export default function KycPage() {
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white">
         <div className="flex items-center gap-2 mb-2">
           <Shield size={18} className="text-white/80" />
-          <h1 className="text-lg font-bold">Identity Verification</h1>
+          <h1 className="text-lg font-bold">{t("kyc.title")}</h1>
         </div>
         <p className="text-white/60 text-sm">
-          Verify your identity to unlock full access to all Lumina Bank features.
+          {t("kyc.subtitle")}
         </p>
       </div>
 
@@ -168,9 +171,9 @@ export default function KycPage() {
                   <Clock size={32} className="text-amber-500" />
                 </div>
               </div>
-              <h2 className="text-lg font-bold text-[#333] mb-2">Documents under review</h2>
+              <h2 className="text-lg font-bold text-[#333] mb-2">{t("kyc.underReview")}</h2>
               <p className="text-sm text-[#767676]">
-                We've received your documents and are verifying them. This usually takes 1–2 business days. We'll notify you by email and in-app when complete.
+                {t("kyc.reviewDesc")}
               </p>
             </div>
           ) : status === "VERIFIED" ? (
@@ -180,8 +183,8 @@ export default function KycPage() {
                   <CheckCircle2 size={32} className="text-green-600" />
                 </div>
               </div>
-              <h2 className="text-lg font-bold text-[#333] mb-2">Identity verified</h2>
-              <p className="text-sm text-[#767676]">Your identity is verified. You have full access to all features.</p>
+              <h2 className="text-lg font-bold text-[#333] mb-2">{t("kyc.verified")}</h2>
+              <p className="text-sm text-[#767676]">{t("kyc.verifiedDesc")}</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -208,7 +211,7 @@ export default function KycPage() {
                 disabled={submitting}
                 className="w-full py-3.5 rounded-xl bg-[#DB0011] text-white text-sm font-bold hover:bg-[#b8000e] disabled:opacity-60 transition-colors"
               >
-                {submitting ? "Submitting…" : "Submit documents"}
+                {submitting ? "Submitting…" : t("kyc.submit")}
               </button>
             </form>
           )}

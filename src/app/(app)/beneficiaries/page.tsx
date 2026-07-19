@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { beneficiariesApi, type Beneficiary } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
 import {
   Users, Trash2, PlusCircle, Globe, Building2,
   Search, X, Send, AlertCircle, Star, CheckCircle2,
@@ -42,6 +43,7 @@ function Avatar({ name, size = 44 }: { name: string; size?: number }) {
 
 // ── Add payee sheet ────────────────────────────────────────────────────────────
 function AddPayeeSheet({ onClose, onAdded }: { onClose: () => void; onAdded: (b: Beneficiary) => void }) {
+  const { t } = useLanguage();
   const [accountNumber, setAccountNumber] = useState("");
   const [bankCode, setBankCode] = useState("LMN");
   const [verifying, setVerifying] = useState(false);
@@ -92,13 +94,13 @@ function AddPayeeSheet({ onClose, onAdded }: { onClose: () => void; onAdded: (b:
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-white w-full max-w-lg rounded-t-3xl shadow-2xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
-          <h2 className="text-base font-bold text-[#333]">Add new payee</h2>
+          <h2 className="text-base font-bold text-[#333]">{t("beneficiaries.addNew")}</h2>
           <button onClick={onClose} className="p-1 text-[#999] hover:text-[#333]"><X size={18} /></button>
         </div>
 
         <div className="overflow-y-auto px-5 pb-6 space-y-4">
           <div>
-            <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">Sort code / Bank</label>
+            <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{t("beneficiaries.sortCode")}</label>
             <select
               value={bankCode}
               onChange={(e) => { setBankCode(e.target.value); setVerified(null); }}
@@ -111,7 +113,7 @@ function AddPayeeSheet({ onClose, onAdded }: { onClose: () => void; onAdded: (b:
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">Account number</label>
+            <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{t("beneficiaries.accountNumber")}</label>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -126,7 +128,7 @@ function AddPayeeSheet({ onClose, onAdded }: { onClose: () => void; onAdded: (b:
                 disabled={verifying || accountNumber.length < 6}
                 className="px-4 py-2.5 bg-[#DB0011] text-white text-sm font-bold rounded-xl hover:bg-[#b8000e] disabled:opacity-50 transition-colors"
               >
-                {verifying ? <RefreshCw size={14} className="animate-spin" /> : "Verify"}
+                {verifying ? <RefreshCw size={14} className="animate-spin" /> : t("beneficiaries.verify")}
               </button>
             </div>
           </div>
@@ -144,7 +146,7 @@ function AddPayeeSheet({ onClose, onAdded }: { onClose: () => void; onAdded: (b:
           {verified && (
             <>
               <div>
-                <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">Nickname</label>
+                <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{t("beneficiaries.nickname")}</label>
                 <input
                   type="text"
                   value={nickname}
@@ -158,7 +160,7 @@ function AddPayeeSheet({ onClose, onAdded }: { onClose: () => void; onAdded: (b:
                 className={`flex items-center gap-2 text-sm font-semibold transition-colors ${isFavorite ? "text-amber-500" : "text-[#AAAAAA]"}`}
               >
                 <Star size={16} fill={isFavorite ? "currentColor" : "none"} />
-                {isFavorite ? "Added to favourites" : "Add to favourites"}
+                {isFavorite ? t("beneficiaries.addedFavourite") : t("beneficiaries.addFavourite")}
               </button>
             </>
           )}
@@ -175,7 +177,7 @@ function AddPayeeSheet({ onClose, onAdded }: { onClose: () => void; onAdded: (b:
               disabled={saving || !nickname}
               className="w-full py-3.5 rounded-xl bg-[#DB0011] text-white font-bold text-sm hover:bg-[#b8000e] disabled:opacity-50 transition-colors"
             >
-              {saving ? "Saving…" : "Save payee"}
+              {saving ? "…" : t("beneficiaries.addPayee")}
             </button>
           )}
         </div>
@@ -193,6 +195,7 @@ function BeneficiaryCard({
   onSend: () => void;
   onToggleFav: () => void;
 }) {
+  const { t } = useLanguage();
   const acct = beneficiary.accountNumber ?? "";
   const isIntl = beneficiary.country !== "GB";
 
@@ -226,7 +229,7 @@ function BeneficiaryCard({
       <div className={`px-4 py-2 ${isIntl ? "bg-blue-50" : "bg-[#FAFAFA]"} border-t border-[#F5F5F5] flex items-center gap-1.5`}>
         {isIntl ? <Globe size={11} className="text-blue-500" /> : <Building2 size={11} className="text-[#BBBBBB]" />}
         <span className={`text-[10px] font-semibold uppercase tracking-wide ${isIntl ? "text-blue-500" : "text-[#BBBBBB]"}`}>
-          {isIntl ? "International" : "UK Domestic"}
+          {isIntl ? t("beneficiaries.international") : t("beneficiaries.ukDomestic")}
         </span>
         <span className="text-[#DDD] text-[10px]">·</span>
         <span className="text-[10px] text-[#CCCCCC] font-mono">{beneficiary.bankCode}</span>
@@ -284,6 +287,7 @@ function DeleteSheet({ beneficiary, onCancel, onConfirm }: { beneficiary: Benefi
 // ── Page ───���────────────────────────────────��──────────────────────────────────
 export default function BeneficiariesPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -328,26 +332,26 @@ export default function BeneficiariesPage() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Users size={18} className="text-white/80" />
-            <h1 className="text-lg font-bold">Saved Payees</h1>
+            <h1 className="text-lg font-bold">{t("beneficiaries.title")}</h1>
           </div>
           <button
             onClick={() => setShowAdd(true)}
             className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 h-8 rounded-full transition-colors"
           >
             <PlusCircle size={13} />
-            Add payee
+            {t("beneficiaries.addPayee")}
           </button>
         </div>
         {!loading && (
           <div className="flex items-center gap-4">
             <div>
               <p className="text-3xl font-bold">{beneficiaries.length}</p>
-              <p className="text-white/40 text-xs">Total payees</p>
+              <p className="text-white/40 text-xs">{t("beneficiaries.total")}</p>
             </div>
             <div className="h-8 w-px bg-white/10" />
             <div>
               <p className="text-xl font-bold">{favourites.length}</p>
-              <p className="text-white/40 text-xs">Favourites</p>
+              <p className="text-white/40 text-xs">{t("beneficiaries.favourites")}</p>
             </div>
           </div>
         )}
@@ -359,7 +363,7 @@ export default function BeneficiariesPage() {
           <Search size={15} className="text-[#AAAAAA] flex-shrink-0" />
           <input
             type="text"
-            placeholder="Search name, bank or account…"
+            placeholder={t("beneficiaries.search")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1 text-sm text-[#333] outline-none placeholder:text-[#BBBBBB] bg-transparent"
@@ -367,9 +371,9 @@ export default function BeneficiariesPage() {
           {search && <button onClick={() => setSearch("")} className="text-[#BBBBBB]"><X size={14} /></button>}
         </div>
         <div className="flex gap-2">
-          {([["all", `All (${beneficiaries.length})`], ["favourites", `Favourites (${favourites.length})`]] as [typeof tab, string][]).map(([t, label]) => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${tab === t ? "bg-[#1a1a2e] text-white shadow-sm" : "bg-white text-[#777] border border-[#E8E8E8]"}`}>
+          {([["all", `${t("beneficiaries.all")} (${beneficiaries.length})`], ["favourites", `${t("beneficiaries.favourites")} (${favourites.length})`]] as [typeof tab, string][]).map(([tabKey, label]) => (
+            <button key={tabKey} onClick={() => setTab(tabKey as typeof tab)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${tab === tabKey ? "bg-[#1a1a2e] text-white shadow-sm" : "bg-white text-[#777] border border-[#E8E8E8]"}`}>
               {label}
             </button>
           ))}
@@ -388,8 +392,8 @@ export default function BeneficiariesPage() {
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={<Users size={36} className="text-[#E0E0E0]" />}
-            title={search ? "No payees found" : "No saved payees"}
-            description={search ? "Try a different name or account number." : "Add a payee to quickly send money without re-entering details."}
+            title={t("beneficiaries.none")}
+            description={t("beneficiaries.search")}
           />
         ) : (
           filtered.map((b) => (

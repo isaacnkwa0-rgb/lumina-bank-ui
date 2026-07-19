@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { goalsApi, accountsApi, type Goal, type Account } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
 import {
@@ -34,6 +35,7 @@ function ContributeSheet({
 }: {
   goal: Goal; accounts: Account[]; onClose: () => void; onDone: (updated: Goal) => void;
 }) {
+  const { t } = useLanguage();
   const [amount, setAmount]   = useState("");
   const [accId, setAccId]     = useState(accounts[0]?.id ?? "");
   const [loading, setLoading] = useState(false);
@@ -80,7 +82,7 @@ function ContributeSheet({
             <div className="h-16 w-16 rounded-full bg-green-50 flex items-center justify-center mb-4">
               <CheckCircle2 size={32} className="text-green-500" />
             </div>
-            <p className="text-lg font-bold text-[#222]">Added!</p>
+            <p className="text-lg font-bold text-[#222]">{t("goals.added")}</p>
             <p className="text-sm text-[#999] mt-1">{formatCurrency(num)} added to {goal.name}</p>
           </div>
         ) : (
@@ -99,7 +101,7 @@ function ContributeSheet({
             {/* Amount */}
             <div>
               <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest block mb-2">
-                Amount to add
+                {t("goals.addAmount")}
               </label>
               <div className="flex items-center border-2 border-[#E3E3E3] rounded-2xl px-4 h-14 focus-within:border-[#DB0011] transition-colors">
                 <span className="text-xl font-bold text-[#BBBBBB] mr-1">£</span>
@@ -129,7 +131,7 @@ function ContributeSheet({
             {/* Account picker */}
             <div>
               <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest block mb-2">
-                Debit from
+                {t("goals.debitFrom")}
               </label>
               <div className="relative">
                 <select value={accId} onChange={(e) => setAccId(e.target.value)}
@@ -170,6 +172,7 @@ function ContributeSheet({
 function AddGoalSheet({ onClose, onCreated }: {
   onClose: () => void; onCreated: (g: Goal) => void;
 }) {
+  const { t } = useLanguage();
   const [name, setName]         = useState("");
   const [emoji, setEmoji]       = useState("");
   const [target, setTarget]     = useState("");
@@ -205,7 +208,7 @@ function AddGoalSheet({ onClose, onCreated }: {
           <div className="h-1 w-10 rounded-full bg-[#E0E0E0]" />
         </div>
         <div className="flex items-center justify-between px-5 pt-2 pb-4 border-b border-[#F5F5F5]">
-          <p className="text-sm font-bold text-[#222]">New savings goal</p>
+          <p className="text-sm font-bold text-[#222]">{t("goals.new")}</p>
           <button onClick={onClose} className="h-8 w-8 flex items-center justify-center rounded-full bg-[#F5F5F5]">
             <X size={15} className="text-[#555]" />
           </button>
@@ -215,13 +218,13 @@ function AddGoalSheet({ onClose, onCreated }: {
           {/* Emoji + name row */}
           <div className="flex gap-3">
             <div className="w-16">
-              <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest block mb-2">Icon</label>
+              <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest block mb-2">{t("goals.icon")}</label>
               <input type="text" maxLength={2} placeholder="🎯" value={emoji}
                 onChange={(e) => setEmoji(e.target.value)}
                 className="w-full h-12 text-center text-xl border-2 border-[#E3E3E3] rounded-2xl outline-none focus:border-[#DB0011]" />
             </div>
             <div className="flex-1">
-              <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest block mb-2">Goal name</label>
+              <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest block mb-2">{t("goals.name")}</label>
               <input type="text" placeholder="e.g. Dream holiday" value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full h-12 px-4 border-2 border-[#E3E3E3] rounded-2xl text-sm text-[#222] font-medium outline-none focus:border-[#DB0011]" />
@@ -229,7 +232,7 @@ function AddGoalSheet({ onClose, onCreated }: {
           </div>
 
           <div>
-            <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest block mb-2">Target amount (£)</label>
+            <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest block mb-2">{t("goals.targetAmount")}</label>
             <div className="flex items-center border-2 border-[#E3E3E3] rounded-2xl px-4 h-12 focus-within:border-[#DB0011] transition-colors">
               <span className="text-base font-bold text-[#BBBBBB] mr-1">£</span>
               <input type="number" placeholder="5,000" value={target} onChange={(e) => setTarget(e.target.value)}
@@ -238,7 +241,7 @@ function AddGoalSheet({ onClose, onCreated }: {
           </div>
 
           <div>
-            <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest block mb-2">Target date (optional)</label>
+            <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest block mb-2">{t("goals.targetDate")}</label>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
               className="w-full h-12 px-4 border-2 border-[#E3E3E3] rounded-2xl text-sm text-[#222] outline-none focus:border-[#DB0011]" />
           </div>
@@ -251,7 +254,7 @@ function AddGoalSheet({ onClose, onCreated }: {
 
           <button onClick={submit} disabled={!name.trim() || !target || loading}
             className="w-full py-4 rounded-2xl bg-[#DB0011] text-white font-bold text-sm hover:bg-[#b0000d] transition-colors disabled:opacity-40">
-            {loading ? "Creating…" : "Create goal"}
+            {loading ? "Creating…" : t("goals.create")}
           </button>
         </div>
       </div>
@@ -262,6 +265,7 @@ function AddGoalSheet({ onClose, onCreated }: {
 // ── Goal card ─────────────────────────────────────────────────────────────────
 
 function GoalCard({ goal, onContribute }: { goal: Goal; onContribute: () => void }) {
+  const { t } = useLanguage();
   const current   = Number(goal.currentAmount);
   const target    = Number(goal.targetAmount);
   const pct       = Math.min((current / target) * 100, 100);
@@ -305,11 +309,11 @@ function GoalCard({ goal, onContribute }: { goal: Goal; onContribute: () => void
           {!done && (
             <button onClick={onContribute}
               className="flex items-center gap-1 text-[11px] font-bold text-white bg-[#DB0011] rounded-full px-3 py-1.5 hover:bg-[#b0000d] transition-colors">
-              <Plus size={10} /> Add
+              <Plus size={10} /> {t("goals.add")}
             </button>
           )}
           {done && (
-            <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Done!</span>
+            <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">{t("goals.done")}</span>
           )}
         </div>
       </div>
@@ -324,10 +328,10 @@ function GoalCard({ goal, onContribute }: { goal: Goal; onContribute: () => void
       {!done && (
         <div className="px-5 py-2.5 bg-[#FAFAFA] flex items-center justify-between">
           <p className="text-[11px] text-[#AAAAAA]">
-            <span className="font-semibold text-[#555]">{formatCurrency(remaining)}</span> still to go
+            <span className="font-semibold text-[#555]">{formatCurrency(remaining)}</span> {t("goals.stillToGo")}
           </p>
           <p className="text-[10px] text-[#CCCCCC]">
-            {goal.status === "ACHIEVED" ? "Achieved" : goal.status}
+            {goal.status === "ACHIEVED" ? t("goals.achieved") : goal.status}
           </p>
         </div>
       )}
@@ -338,6 +342,7 @@ function GoalCard({ goal, onContribute }: { goal: Goal; onContribute: () => void
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function GoalsPage() {
+  const { t } = useLanguage();
   const [goals, setGoals]         = useState<Goal[]>([]);
   const [accounts, setAccounts]   = useState<Account[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -369,23 +374,23 @@ export default function GoalsPage() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Target size={18} className="text-white/80" />
-            <h1 className="text-lg font-bold">Savings Goals</h1>
+            <h1 className="text-lg font-bold">{t("goals.title")}</h1>
           </div>
           <button onClick={() => setShowAdd(true)}
             className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white text-xs font-bold px-3 py-2 rounded-full hover:bg-white/25 transition-colors">
-            <Plus size={13} /> New goal
+            <Plus size={13} /> {t("goals.new")}
           </button>
         </div>
         {!loading && goals.length > 0 && (
           <div className="flex items-end gap-6">
             <div>
-              <p className="text-white/40 text-xs uppercase tracking-widest mb-1">Total saved</p>
+              <p className="text-white/40 text-xs uppercase tracking-widest mb-1">{t("goals.totalSaved")}</p>
               <p className="text-4xl font-bold">{formatCurrency(totalSaved)}</p>
               <p className="text-white/40 text-xs mt-1">of {formatCurrency(totalTarget)} across {goals.length} goal{goals.length !== 1 ? "s" : ""}</p>
             </div>
             {achieved > 0 && (
               <div className="mb-1">
-                <p className="text-white/40 text-xs uppercase tracking-widest mb-0.5">Achieved</p>
+                <p className="text-white/40 text-xs uppercase tracking-widest mb-0.5">{t("goals.achieved")}</p>
                 <div className="flex items-center gap-1.5">
                   <Sparkles size={14} className="text-yellow-400" />
                   <p className="text-xl font-bold text-yellow-400">{achieved}</p>
@@ -412,11 +417,11 @@ export default function GoalsPage() {
         ) : goals.length === 0 ? (
           <div className="bg-white rounded-2xl border border-[#EFEFEF] shadow-sm p-8 text-center mt-4">
             <PiggyBank size={40} className="text-[#E0E0E0] mx-auto mb-3" />
-            <p className="text-sm font-bold text-[#333]">No savings goals yet</p>
-            <p className="text-xs text-[#AAAAAA] mt-1 mb-4">Set a goal and track your progress</p>
+            <p className="text-sm font-bold text-[#333]">{t("goals.none")}</p>
+            <p className="text-xs text-[#AAAAAA] mt-1 mb-4">{t("goals.noneDesc")}</p>
             <button onClick={() => setShowAdd(true)}
               className="inline-flex items-center gap-2 bg-[#DB0011] text-white text-sm font-bold px-5 py-2.5 rounded-xl hover:bg-[#b0000d] transition-colors">
-              <Plus size={14} /> Create first goal
+              <Plus size={14} /> {t("goals.createFirst")}
             </button>
           </div>
         ) : (

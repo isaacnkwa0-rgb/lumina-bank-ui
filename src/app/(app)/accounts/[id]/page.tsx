@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ChevronLeft, Search, Filter, Copy, Check } from "lucide-react";
 import { accountsApi, transactionsApi, type Account, type Transaction } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
 import { formatCurrency, maskAccountNumber, formatDate } from "@/lib/utils";
 import { TransactionItem } from "@/components/transactions/TransactionItem";
 import { Badge } from "@/components/ui/Badge";
@@ -17,6 +18,7 @@ const PAGE_SIZE = 20;
 export default function AccountDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { t } = useLanguage();
   const id = params.id as string;
 
   const [account, setAccount] = useState<Account | null>(null);
@@ -113,7 +115,7 @@ export default function AccountDetailPage() {
           >
             <ChevronLeft size={24} />
           </button>
-          <h1 className="text-base font-semibold text-[#333333]">Account details</h1>
+          <h1 className="text-base font-semibold text-[#333333]">{t("accountDetail.title")}</h1>
         </div>
 
         {account && (
@@ -134,7 +136,7 @@ export default function AccountDetailPage() {
               {formatCurrency(Number(account.balance), account.currency)}
             </p>
             <p className="text-xs opacity-70 mt-1">
-              Available: {formatCurrency(Number(account.availableBalance), account.currency)}
+              {t("accountCard.available")} {formatCurrency(Number(account.availableBalance), account.currency)}
             </p>
           </div>
         )}
@@ -151,14 +153,14 @@ export default function AccountDetailPage() {
       {account && (
         <div className="bg-white border-b border-[#E3E3E3] px-4 py-4">
           <p className="text-xs font-medium text-[#767676] uppercase tracking-wide mb-3">
-            Receive money
+            {t("accountDetail.receiveMoney")}
           </p>
           <div className="space-y-2">
-            <CopyRow label="Account number" value={account.accountNumber} />
+            <CopyRow label={t("accountDetail.accountNumber")} value={account.accountNumber} />
             {account.sortCode && (
-              <CopyRow label="Sort code" value={account.sortCode} />
+              <CopyRow label={t("accountDetail.sortCode")} value={account.sortCode} />
             )}
-            <CopyRow label="IBAN" value={account.iban} mono />
+            <CopyRow label={t("accountDetail.iban")} value={account.iban} mono />
           </div>
         </div>
       )}
@@ -170,7 +172,7 @@ export default function AccountDetailPage() {
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#767676]" />
             <input
               type="search"
-              placeholder="Search transactions..."
+              placeholder={t("accountDetail.search")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-3 py-2 text-sm bg-[#F8F8F8] border border-[#E3E3E3] rounded-sm focus:outline-none focus:border-[#DB0011]"
@@ -185,7 +187,7 @@ export default function AccountDetailPage() {
             }`}
           >
             <Filter size={14} />
-            Filter
+            {t("accountDetail.filter")}
           </button>
         </div>
 
@@ -232,8 +234,8 @@ export default function AccountDetailPage() {
           <SkeletonList count={8} />
         ) : Object.keys(filteredGrouped).length === 0 ? (
           <EmptyState
-            title="No transactions"
-            description="No transactions match your search or filters."
+            title={t("accountDetail.noTransactions")}
+            description={t("accountDetail.noTransactionsDesc")}
           />
         ) : (
           Object.entries(filteredGrouped).map(([date, txs]) => (
@@ -258,7 +260,7 @@ export default function AccountDetailPage() {
               onClick={() => fetchTransactions(false)}
               isLoading={txLoading}
             >
-              Load more
+              {t("accountDetail.loadMore")}
             </Button>
           </div>
         )}

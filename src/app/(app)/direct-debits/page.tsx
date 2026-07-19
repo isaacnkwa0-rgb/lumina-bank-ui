@@ -2,14 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { directDebitsApi, accountsApi, type DirectDebit, type Account } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { RefreshCw, Plus, X, Pause, Play, XCircle, Calendar, Building } from "lucide-react";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
 import { EmptyState } from "@/components/ui/EmptyState";
 
-const FREQ_LABELS: Record<string, string> = {
-  WEEKLY: "Weekly", BIWEEKLY: "Fortnightly", MONTHLY: "Monthly", QUARTERLY: "Quarterly",
-};
 
 const FREQ_COLORS: Record<string, string> = {
   WEEKLY:    "text-purple-700 bg-purple-50 border-purple-200",
@@ -39,6 +37,13 @@ function OrgAvatar({ name }: { name: string }) {
 }
 
 export default function DirectDebitsPage() {
+  const { t } = useLanguage();
+  const FREQ_LABELS: Record<string, string> = {
+    WEEKLY: t("directDebits.weekly"),
+    BIWEEKLY: t("directDebits.fortnightly"),
+    MONTHLY: t("directDebits.monthlyFreq"),
+    QUARTERLY: t("directDebits.quarterly"),
+  };
   const [debits, setDebits] = useState<DirectDebit[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,29 +130,29 @@ export default function DirectDebitsPage() {
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <Building size={18} className="text-white/80" />
-            <h1 className="text-lg font-bold">Direct Debits</h1>
+            <h1 className="text-lg font-bold">{t("directDebits.title")}</h1>
           </div>
           <button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 h-8 rounded-full transition-colors"
           >
             <Plus size={13} />
-            Set up
+            {t("directDebits.setUp")}
           </button>
         </div>
-        <p className="text-white/60 text-sm">Authorised mandates that let billers collect payments.</p>
+        <p className="text-white/60 text-sm">{t("directDebits.subtitle")}</p>
         {!loading && debits.length > 0 && (
           <div className="flex items-center gap-4 mt-4">
             <div>
               <p className="text-3xl font-bold">{active}</p>
-              <p className="text-white/40 text-xs">Active</p>
+              <p className="text-white/40 text-xs">{t("directDebits.active")}</p>
             </div>
             {totalMonthly > 0 && (
               <>
                 <div className="h-8 w-px bg-white/10" />
                 <div>
                   <p className="text-xl font-bold">{formatCurrency(totalMonthly)}</p>
-                  <p className="text-white/40 text-xs">Monthly (fixed)</p>
+                  <p className="text-white/40 text-xs">{t("directDebits.monthly")}</p>
                 </div>
               </>
             )}
@@ -167,8 +172,8 @@ export default function DirectDebitsPage() {
         ) : debits.length === 0 ? (
           <EmptyState
             icon={<Building size={40} className="text-[#E3E3E3]" />}
-            title="No direct debits"
-            description="Set up a direct debit mandate to let a company collect payments from your account automatically."
+            title={t("directDebits.none")}
+            description={t("directDebits.noneDesc")}
           />
         ) : (
           debits.map((dd) => (
@@ -191,8 +196,8 @@ export default function DirectDebitsPage() {
 
               <div className="flex items-center gap-2 mb-3 text-[11px] text-[#AAAAAA]">
                 <Calendar size={11} />
-                <span>Next: <span className="font-semibold text-[#555]">{formatDate(dd.nextCollectionDate)}</span></span>
-                {dd.lastCollectedAt && <span>· Last: {formatDate(dd.lastCollectedAt)}</span>}
+                <span>{t("directDebits.next")} <span className="font-semibold text-[#555]">{formatDate(dd.nextCollectionDate)}</span></span>
+                {dd.lastCollectedAt && <span>· {t("directDebits.last")} {formatDate(dd.lastCollectedAt)}</span>}
                 <span className={`ml-auto px-2 py-0.5 rounded-full border text-[10px] font-bold ${statusBadge(dd.status)}`}>
                   {dd.status.charAt(0) + dd.status.slice(1).toLowerCase()}
                 </span>
@@ -200,7 +205,7 @@ export default function DirectDebitsPage() {
 
               {dd.account && (
                 <p className="text-[11px] text-[#BBBBBB] mb-3">
-                  From: {dd.account.type.replace("_", " ")} ••••{dd.account.accountNumber.slice(-4)}
+                  {t("directDebits.from")} {dd.account.type.replace("_", " ")} ••••{dd.account.accountNumber.slice(-4)}
                 </p>
               )}
 
@@ -211,21 +216,21 @@ export default function DirectDebitsPage() {
                       onClick={() => handleAction(dd.id, "suspend")}
                       className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-800 font-semibold transition-colors"
                     >
-                      <Pause size={12} /> Suspend
+                      <Pause size={12} /> {t("directDebits.suspend")}
                     </button>
                   ) : (
                     <button
                       onClick={() => handleAction(dd.id, "resume")}
                       className="flex items-center gap-1 text-xs text-green-600 hover:text-green-800 font-semibold transition-colors"
                     >
-                      <Play size={12} /> Resume
+                      <Play size={12} /> {t("directDebits.resume")}
                     </button>
                   )}
                   <button
                     onClick={() => handleAction(dd.id, "cancel")}
                     className="flex items-center gap-1 text-xs text-[#DB0011] hover:text-[#900] font-semibold transition-colors ml-auto"
                   >
-                    <XCircle size={12} /> Cancel
+                    <XCircle size={12} /> {t("directDebits.cancel")}
                   </button>
                 </div>
               )}
@@ -240,13 +245,13 @@ export default function DirectDebitsPage() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowCreate(false)} />
           <div className="relative bg-white w-full max-w-lg rounded-t-3xl shadow-2xl flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
-              <h2 className="text-base font-bold text-[#333]">New direct debit</h2>
+              <h2 className="text-base font-bold text-[#333]">{t("directDebits.new")}</h2>
               <button onClick={() => setShowCreate(false)} className="p-1 text-[#999] hover:text-[#333]"><X size={18} /></button>
             </div>
 
             <form onSubmit={handleCreate} className="overflow-y-auto px-5 pb-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">Debit account</label>
+                <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{t("directDebits.debitAccount")}</label>
                 <select
                   value={accountId}
                   onChange={(e) => setAccountId(e.target.value)}
@@ -261,7 +266,7 @@ export default function DirectDebitsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">Company / Originator name</label>
+                <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{t("directDebits.company")}</label>
                 <input
                   type="text"
                   value={originatorName}
@@ -273,7 +278,7 @@ export default function DirectDebitsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">Originator reference</label>
+                  <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{t("directDebits.originatorRef")}</label>
                   <input
                     type="text"
                     value={originatorRef}
@@ -283,7 +288,7 @@ export default function DirectDebitsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">Your reference</label>
+                  <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{t("directDebits.yourRef")}</label>
                   <input
                     type="text"
                     value={userRef}
@@ -296,7 +301,7 @@ export default function DirectDebitsPage() {
 
               <div>
                 <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">
-                  Amount (£) <span className="text-[#AAAAAA] normal-case font-normal">(leave blank if variable)</span>
+                  {t("directDebits.amount")} <span className="text-[#AAAAAA] normal-case font-normal">(leave blank if variable)</span>
                 </label>
                 <input
                   type="number"
@@ -310,7 +315,7 @@ export default function DirectDebitsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">Collection frequency</label>
+                <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{t("directDebits.frequency")}</label>
                 <div className="grid grid-cols-4 gap-2">
                   {(["WEEKLY", "BIWEEKLY", "MONTHLY", "QUARTERLY"] as const).map((f) => (
                     <button
@@ -324,7 +329,7 @@ export default function DirectDebitsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">First collection date</label>
+                <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{t("directDebits.firstDate")}</label>
                 <input
                   type="date"
                   min={today}
@@ -345,7 +350,7 @@ export default function DirectDebitsPage() {
                 disabled={creating}
                 className="w-full py-3.5 rounded-xl bg-[#DB0011] text-white font-bold text-sm hover:bg-[#b0000d] transition-colors disabled:opacity-50"
               >
-                {creating ? "Setting up…" : "Set up direct debit"}
+                {creating ? "Setting up…" : t("directDebits.submit")}
               </button>
             </form>
           </div>

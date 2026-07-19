@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { accountsApi, cryptoApi, type Account, type CryptoOrder } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
+import { useLanguage } from "@/lib/i18n";
 import {
   RefreshCw, Search, Bitcoin, X, ChevronDown,
   ShieldCheck, Clock, Info, AlertTriangle,
@@ -141,6 +142,7 @@ function BuyModal({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t } = useLanguage();
   const [amount, setAmount] = useState("");
   const [wallet, setWallet] = useState("");
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
@@ -199,7 +201,7 @@ function BuyModal({
         <div className="flex items-center gap-3 px-5 py-3 border-b border-[#F0F0F0]">
           <CoinIcon config={coin.config} size={40} />
           <div className="flex-1">
-            <p className="text-sm font-bold text-[#222222]">Buy {label}</p>
+            <p className="text-sm font-bold text-[#222222]">{t("crypto.buy")} {label}</p>
             <p className="text-xs text-[#999999]">{coin.config.network} · {fmtPrice(coin.price)}/coin</p>
           </div>
           <button onClick={onClose}
@@ -355,6 +357,7 @@ function LastUpdated({ ts }: { ts: number }) {
 type Tab = "all" | "stable";
 
 export default function CryptoPage() {
+  const { t } = useLanguage();
   const [coins, setCoins]             = useState<CoinMarket[]>([]);
   const [accounts, setAccounts]       = useState<Account[]>([]);
   const [orders, setOrders]           = useState<CryptoOrder[]>([]);
@@ -445,7 +448,7 @@ export default function CryptoPage() {
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <Bitcoin size={20} className="text-[#F7931A]" />
-            <h1 className="text-lg font-bold tracking-tight">Crypto Market</h1>
+            <h1 className="text-lg font-bold tracking-tight">{t("crypto.title")}</h1>
           </div>
           <button
             onClick={() => fetchMarket(true)}
@@ -462,7 +465,7 @@ export default function CryptoPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-400" />
             </span>
-            <span className="text-green-400 text-[11px] font-semibold">LIVE</span>
+            <span className="text-green-400 text-[11px] font-semibold">{t("crypto.live")}</span>
           </span>
           <span className="text-white/20 text-[11px]">·</span>
           <LastUpdated ts={lastTs} />
@@ -483,7 +486,7 @@ export default function CryptoPage() {
           <Search size={16} className="text-[#AAAAAA] flex-shrink-0" />
           <input
             type="text"
-            placeholder="Search Bitcoin, ETH, USDT…"
+            placeholder={t("crypto.search")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1 text-sm text-[#333] outline-none placeholder:text-[#BBBBBB] bg-transparent"
@@ -497,12 +500,12 @@ export default function CryptoPage() {
 
         {/* Tabs */}
         <div className="flex gap-2">
-          {([["all", "All Assets"], ["stable", "Stablecoins"]] as [Tab, string][]).map(([t, label]) => (
+          {([["all", t("crypto.allAssets")], ["stable", t("crypto.stablecoins")]] as [Tab, string][]).map(([tab_, label]) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
+              key={tab_}
+              onClick={() => setTab(tab_)}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                tab === t
+                tab === tab_
                   ? "bg-[#1a1a3e] text-white shadow-sm"
                   : "bg-white text-[#777] border border-[#E8E8E8]"
               }`}
@@ -518,7 +521,7 @@ export default function CryptoPage() {
         <div className="mx-4 mt-4 flex items-start gap-2 bg-green-50 border border-green-200 rounded-2xl px-4 py-3.5">
           <Clock size={14} className="text-green-600 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-green-800">Order submitted</p>
+            <p className="text-sm font-semibold text-green-800">{t("crypto.orderSubmitted")}</p>
             <p className="text-xs text-green-600 mt-0.5">Your purchase is under compliance review. We&apos;ll notify you once it&apos;s approved.</p>
           </div>
           <button onClick={() => setBanner(false)} className="ml-auto text-green-400 hover:text-green-600">
@@ -536,7 +539,7 @@ export default function CryptoPage() {
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center">
             <Bitcoin size={36} className="text-[#E0E0E0] mx-auto mb-2" />
-            <p className="text-sm text-[#AAAAAA]">No coins found</p>
+            <p className="text-sm text-[#AAAAAA]">{t("crypto.noCoins")}</p>
           </div>
         ) : (
           filtered.map((coin, idx) => {
@@ -579,15 +582,15 @@ export default function CryptoPage() {
                 <div className="flex items-center gap-3 px-4 py-2.5 bg-[#FAFAFA] border-t border-[#F2F2F2]">
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div>
-                      <p className="text-[9px] font-bold text-[#BBBBBB] uppercase tracking-wide">Mkt Cap</p>
+                      <p className="text-[9px] font-bold text-[#BBBBBB] uppercase tracking-wide">{t("crypto.mktCap")}</p>
                       <p className="text-[11px] font-semibold text-[#444]">{fmtBig(coin.marketCap)}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-bold text-[#BBBBBB] uppercase tracking-wide">24h Vol</p>
+                      <p className="text-[9px] font-bold text-[#BBBBBB] uppercase tracking-wide">{t("crypto.vol")}</p>
                       <p className="text-[11px] font-semibold text-[#444]">{fmtBig(coin.volume24h)}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-bold text-[#BBBBBB] uppercase tracking-wide">24h H/L</p>
+                      <p className="text-[9px] font-bold text-[#BBBBBB] uppercase tracking-wide">{t("crypto.highLow")}</p>
                       <p className="text-[11px] font-semibold text-[#444]">
                         {fmtPrice(coin.high24h)}<span className="text-[#DDD]">/</span>{fmtPrice(coin.low24h)}
                       </p>
@@ -598,7 +601,7 @@ export default function CryptoPage() {
                     className="flex-shrink-0 text-xs font-bold px-4 py-2 rounded-xl text-white transition-all active:scale-95"
                     style={{ background: `linear-gradient(135deg, ${coin.config.color}dd, ${coin.config.color})` }}
                   >
-                    Buy
+                    {t("crypto.buy")}
                   </button>
                 </div>
               </div>
@@ -610,14 +613,14 @@ export default function CryptoPage() {
       {/* My Orders */}
       {orders.length > 0 && (
         <div className="px-4 mt-6">
-          <p className="text-xs font-bold text-[#999] uppercase tracking-widest mb-3">My Orders</p>
+          <p className="text-xs font-bold text-[#999] uppercase tracking-widest mb-3">{t("crypto.myOrders")}</p>
           <div className="space-y-2">
             {orders.map((order) => {
               const statusCfg = {
-                PENDING:   { label: "Under Review", color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200" },
-                COMPLETED: { label: "Completed",    color: "text-green-600", bg: "bg-green-50", border: "border-green-200" },
-                REJECTED:  { label: "Rejected",     color: "text-[#DB0011]", bg: "bg-red-50",   border: "border-red-200"   },
-                APPROVED:  { label: "Approved",     color: "text-blue-600",  bg: "bg-blue-50",  border: "border-blue-200"  },
+                PENDING:   { label: t("crypto.underReview"), color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200" },
+                COMPLETED: { label: t("crypto.completed"),   color: "text-green-600", bg: "bg-green-50", border: "border-green-200" },
+                REJECTED:  { label: t("crypto.rejected"),    color: "text-[#DB0011]", bg: "bg-red-50",   border: "border-red-200"   },
+                APPROVED:  { label: t("crypto.approved"),    color: "text-blue-600",  bg: "bg-blue-50",  border: "border-blue-200"  },
               }[order.status] ?? { label: order.status, color: "text-[#555]", bg: "bg-[#F5F5F5]", border: "border-[#E8E8E8]" };
 
               return (
@@ -643,7 +646,7 @@ export default function CryptoPage() {
 
       {/* Disclaimer */}
       <p className="mx-4 mt-6 text-[10px] text-[#CCCCCC] leading-relaxed">
-        Prices sourced from CoinGecko in real time and displayed in GBP. Crypto assets are highly volatile and unregulated. Lumina Bank acts as a payment facilitator only and does not provide investment advice. All purchases subject to FCA compliance and our Crypto Purchase Policy.
+        {t("crypto.pricesSource")}
       </p>
 
       {/* Buy modal */}

@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { type Transaction } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
 import { formatCurrency, formatRelativeDate } from "@/lib/utils";
 import {
   ShoppingBag, Coffee, Utensils, Car, Home, Zap, Heart,
@@ -45,6 +48,7 @@ function getCategoryConfig(category: string) {
 }
 
 export function TransactionItem({ transaction, showDate = false }: TransactionItemProps) {
+  const { t } = useLanguage();
   const { icon: Icon, color, bg } = getCategoryConfig(transaction.category);
   const isDebit = transaction.type === "DEBIT";
 
@@ -86,7 +90,7 @@ export function TransactionItem({ transaction, showDate = false }: TransactionIt
           {formatCurrency(Number(transaction.amount), transaction.currency)}
         </p>
         <p className="text-[10px] text-[#BBBBBB] mt-0.5">
-          Bal. {formatCurrency(Number(transaction.balanceAfter), transaction.currency)}
+          {t("txItem.bal")} {formatCurrency(Number(transaction.balanceAfter), transaction.currency)}
         </p>
       </div>
     </Link>
