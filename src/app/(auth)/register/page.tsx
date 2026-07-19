@@ -658,19 +658,22 @@ function Stage4({
     dispatch({ type: "SUBMITTING", value: true });
     try {
       const phone = `${state.phonePrefix}${state.phoneNumber}`;
+      // Backend enum only accepts MALE | FEMALE | OTHER
+      const genderValue = ["MALE", "FEMALE", "OTHER"].includes(state.gender)
+        ? (state.gender as "MALE" | "FEMALE" | "OTHER")
+        : undefined;
       const res = await authApi.register({
         firstName: state.firstName,
         lastName: state.lastName,
         email: state.email,
         phone,
         password: state.password,
-        confirmPassword: state.confirmPassword,
-        gender: state.gender || undefined,
+        gender: genderValue,
         dateOfBirth: state.dateOfBirth || undefined,
         nationality: state.nationality || undefined,
         countryOfResidence: state.countryOfResidence,
-        taxResidency: state.taxResidency,
-        accountType: state.accountType,
+        taxResidency: state.taxResidency ? [state.taxResidency] : undefined,
+        accountType: state.accountType || undefined,
         ssn: state.ssn || undefined,
       });
       const data = res.data.data as { accessToken: string; refreshToken: string; user: { firstName: string } };
@@ -829,14 +832,14 @@ function Stage5({
   }, []);
 
   async function handleResend() {
-    try { await authApi.resendVerification(); startCooldown(); } catch { /* ignore */ }
+    try { await authApi.resendVerification(state.email); startCooldown(); } catch { /* ignore */ }
   }
 
   async function handleVerify() {
     if (state.emailOtp.length < 6) return;
     dispatch({ type: "SUBMITTING", value: true });
     try {
-      await authApi.verifyEmail(state.emailOtp);
+      await authApi.verifyEmail(state.emailOtp, state.email);
       dispatch({ type: "SUBMITTING", value: false });
       dispatch({ type: "COMPLETE", step: 5 });
       dispatch({ type: "NEXT" });

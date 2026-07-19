@@ -119,7 +119,7 @@ export const authApi = {
     dateOfBirth?: string;
     nationality?: string;
     countryOfResidence?: string;
-    taxResidency?: string;
+    taxResidency?: string | string[];
     accountType?: string;
     ssn?: string;
   }) => api.post<ApiResponse<{ accessToken: string; refreshToken: string; user: unknown }>>("/auth/register", data),
@@ -130,10 +130,10 @@ export const authApi = {
   onboardingStatus: () =>
     api.get<ApiResponse<{ onboardingStep: number; kycStatus: string }>>("/auth/onboarding-status"),
   me: () => api.get<ApiResponse<unknown>>("/auth/me"),
-  verifyEmail: (code: string) =>
-    api.post<ApiResponse<{ message: string }>>("/auth/verify-email", { code }),
-  resendVerification: () =>
-    api.post<ApiResponse<{ message: string }>>("/auth/resend-verification"),
+  verifyEmail: (code: string, email?: string) =>
+    api.post<ApiResponse<{ message: string }>>("/auth/verify-email", { code, ...(email ? { email } : {}) }),
+  resendVerification: (email?: string) =>
+    api.post<ApiResponse<{ message: string }>>("/auth/resend-verification", email ? { email } : {}),
   forgotPassword: (email: string) =>
     api.post<ApiResponse<{ message: string }>>("/auth/forgot-password", { email }),
   resetPassword: (data: { email: string; code: string; newPassword: string }) =>
