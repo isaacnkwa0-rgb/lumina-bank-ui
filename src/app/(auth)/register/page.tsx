@@ -684,12 +684,14 @@ function Stage4({
       dispatch({ type: "COMPLETE", step: 4 });
       dispatch({ type: "NEXT" });
     } catch (err: unknown) {
-      const data = (err as { response?: { data?: { error?: { message?: string; details?: Array<{ field: string; message: string }> }; message?: string } } })?.response?.data;
-      const baseMsg = data?.error?.message ?? data?.message ?? "Registration failed. Please try again.";
-      const details = data?.error?.details;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errData = (err as any)?.response?.data;
+      console.error("[Stage4 register error]", JSON.stringify(errData, null, 2));
+      const details = errData?.error?.details as Array<{ field: string; message: string }> | undefined;
+      const baseMsg = errData?.error?.message ?? errData?.message ?? "Registration failed.";
       const msg = details?.length
-        ? `${baseMsg} — ${details.map((d) => `${d.field}: ${d.message}`).join("; ")}`
-        : baseMsg;
+        ? `${baseMsg}: ${details.map((d) => `${d.field} — ${d.message}`).join(" | ")}`
+        : `${baseMsg} (raw: ${JSON.stringify(errData?.error ?? errData)})`;
       dispatch({ type: "API_ERROR", message: msg });
     }
   }
