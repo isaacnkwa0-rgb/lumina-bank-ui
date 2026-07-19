@@ -657,7 +657,7 @@ function Stage4({
     if (!validate()) return;
     dispatch({ type: "SUBMITTING", value: true });
     try {
-      const phone = `${state.phonePrefix}${state.phoneNumber}`;
+      const phone = `${state.phonePrefix}${state.phoneNumber.replace(/\s/g, "")}`;
       // Backend enum only accepts MALE | FEMALE | OTHER
       const genderValue = ["MALE", "FEMALE", "OTHER"].includes(state.gender)
         ? (state.gender as "MALE" | "FEMALE" | "OTHER")
