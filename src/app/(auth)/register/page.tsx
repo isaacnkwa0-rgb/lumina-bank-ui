@@ -657,7 +657,13 @@ function Stage4({
     if (!validate()) return;
     dispatch({ type: "SUBMITTING", value: true });
     try {
-      const phone = `${state.phonePrefix}${state.phoneNumber.replace(/\s/g, "")}`;
+      const prefixDigits = state.phonePrefix.replace("+", "");
+      let rawPhone = state.phoneNumber.replace(/\s/g, "");
+      // Auto-strip country code if user accidentally included it (e.g. entered 234XXXXXXX with +234 prefix)
+      if (rawPhone.startsWith(prefixDigits) && rawPhone.slice(prefixDigits.length).length >= 7) {
+        rawPhone = rawPhone.slice(prefixDigits.length);
+      }
+      const phone = `${state.phonePrefix}${rawPhone}`;
       // Backend enum only accepts MALE | FEMALE | OTHER
       const genderValue = ["MALE", "FEMALE", "OTHER"].includes(state.gender)
         ? (state.gender as "MALE" | "FEMALE" | "OTHER")
@@ -686,12 +692,13 @@ function Stage4({
     } catch (err: unknown) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const errData = (err as any)?.response?.data;
-      console.error("[Stage4 register error]", JSON.stringify(errData, null, 2));
-      const details = errData?.error?.details as Array<{ field: string; message: string }> | undefined;
-      const baseMsg = errData?.error?.message ?? errData?.message ?? "Registration failed.";
-      const msg = details?.length
-        ? `${baseMsg}: ${details.map((d) => `${d.field} — ${d.message}`).join(" | ")}`
-        : `${baseMsg} (raw: ${JSON.stringify(errData?.error ?? errData)})`;
+      const serverMsg: string = errData?.error?.message ?? errData?.message ?? "";
+      // Map common server errors to friendly messages
+      const msg = serverMsg.toLowerCase().includes("email")
+        ? "This email address is already registered."
+        : serverMsg.toLowerCase().includes("phone")
+        ? "Please enter a valid phone number without the country code."
+        : serverMsg || "Something went wrong. Please check your details and try again.";
       dispatch({ type: "API_ERROR", message: msg });
     }
   }
@@ -734,7 +741,7 @@ function Stage4({
             type="tel"
             value={state.phoneNumber}
             onChange={(e) => dispatch({ type: "SET", field: "phoneNumber", value: e.target.value })}
-            placeholder="7700 900000"
+            placeholder="Phone number (without country code)"
             autoComplete="tel"
             className={cn(
               "flex-1 border rounded-sm px-3 py-2.5 text-sm text-[#333333] focus:outline-none transition-colors",
