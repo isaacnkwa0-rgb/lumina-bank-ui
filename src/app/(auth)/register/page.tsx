@@ -853,7 +853,8 @@ function Stage5({
       await authApi.verifyEmail(state.emailOtp, state.email);
       dispatch({ type: "SUBMITTING", value: false });
       dispatch({ type: "COMPLETE", step: 5 });
-      dispatch({ type: "NEXT" });
+      dispatch({ type: "COMPLETE", step: 6 }); // phone verification skipped
+      dispatch({ type: "GO_TO", step: 7 });
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: { message?: string } } } })
         ?.response?.data?.error?.message ?? "Invalid or expired code";
