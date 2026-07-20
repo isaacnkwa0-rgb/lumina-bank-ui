@@ -816,8 +816,8 @@ function Stage4({
 // ── Stage 5 — Verify Email ─────────────────────────────────────────────────────
 
 function Stage5({
-  state, dispatch, onSuccess,
-}: { state: WizardState; dispatch: React.Dispatch<WizardAction>; onSuccess: () => void }) {
+  state, dispatch,
+}: { state: WizardState; dispatch: React.Dispatch<WizardAction> }) {
   const { t } = useLanguage();
   const [cooldown, setCooldown] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -844,8 +844,9 @@ function Stage5({
     dispatch({ type: "SUBMITTING", value: true });
     try {
       await authApi.verifyEmail(state.emailOtp, state.email);
-      clearProgress();
-      onSuccess();
+      dispatch({ type: "SUBMITTING", value: false });
+      dispatch({ type: "COMPLETE", step: 5 });
+      dispatch({ type: "NEXT" });
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: { message?: string } } } })
         ?.response?.data?.error?.message ?? "Invalid or expired code";
@@ -1795,7 +1796,7 @@ export default function RegisterPage() {
         {state.step === 2 && <Stage2 state={state} dispatch={dispatch} />}
         {state.step === 3 && <Stage3 state={state} dispatch={dispatch} />}
         {state.step === 4 && <Stage4 state={state} dispatch={dispatch} />}
-        {state.step === 5 && <Stage5 state={state} dispatch={dispatch} onSuccess={() => router.push("/dashboard")} />}
+        {state.step === 5 && <Stage5 state={state} dispatch={dispatch} />}
         {state.step === 6 && <Stage6 state={state} dispatch={dispatch} />}
         {state.step === 7 && <Stage7 state={state} dispatch={dispatch} />}
         {state.step === 8 && <Stage8 state={state} dispatch={dispatch} />}
