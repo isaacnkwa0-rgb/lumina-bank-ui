@@ -376,6 +376,8 @@ export const adminApi = {
     api.patch<ApiResponse<AdminAccount>>(`/admin/accounts/${accountId}/unfreeze`),
   closeAccount: (accountId: string) =>
     api.patch<ApiResponse<AdminAccount>>(`/admin/accounts/${accountId}/close`),
+  getKycSubmissions: (status?: string) =>
+    api.get<ApiResponse<AdminKycUser[]>>('/admin/kyc', { params: status ? { status } : undefined }),
   approveKyc: (userId: string) =>
     api.patch<ApiResponse<{ userId: string; kycStatus: string }>>(`/admin/kyc/${userId}/verify`),
   rejectKyc: (userId: string, reason: string) =>
@@ -911,6 +913,17 @@ export interface AdminUserDetail extends AdminUser {
   kycDocuments?: { idFront: string; idBack: string } | null;
   kycStatus: string;
   _count: { accounts: number; transactions: number };
+}
+
+export interface AdminKycUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string | null;
+  kycStatus: string;
+  kycDocuments: { idFront: string; idBack: string } | null;
+  createdAt: string;
 }
 
 export interface AdminLoan {

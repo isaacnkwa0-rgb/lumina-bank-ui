@@ -6,7 +6,7 @@ import {
   type AdminTransfer, type AdminUser, type AdminLoan, type AdminDispute,
   type AdminInsuranceQuote, type AdminCard, type AdminTransaction,
   type AdminExchangeRate, type AdminPortfolio, type AdminGoal, type AdminAccount,
-  type AdminCryptoOrder, type AuditLog,
+  type AdminCryptoOrder, type AuditLog, type AdminKycUser,
 } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
@@ -15,7 +15,7 @@ import {
   TrendingUp, Target, Home, ShieldAlert, Bitcoin, ScrollText,
 } from "lucide-react";
 
-type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "audit";
+type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "kyc" | "audit";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -1120,6 +1120,131 @@ function Empty({ icon: Icon, label }: { icon: React.ElementType; label: string }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+// ── KYC Review ───────────────────────────────────────────────────────────────
+
+function KycTab() {
+  const [filter, setFilter] = useState<"PENDING" | "VERIFIED" | "REJECTED" | "ALL">("PENDING");
+  const [items, setItems] = useState<AdminKycUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [actionId, setActionId] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await adminApi.getKycSubmissions(filter === "ALL" ? undefined : filter);
+      setItems(r.data.data);
+    } catch {} finally { setLoading(false); }
+  }, [filter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function approve(id: string) {
+    setActionId(id + ":approve");
+    try {
+      await adminApi.approveKyc(id);
+      setItems((p) => p.map((u) => u.id === id ? { ...u, kycStatus: "VERIFIED" } : u));
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
+  async function reject(id: string) {
+    const reason = prompt("Reason for KYC rejection:");
+    if (!reason?.trim()) return;
+    setActionId(id + ":reject");
+    try {
+      await adminApi.rejectKyc(id, reason.trim());
+      setItems((p) => p.map((u) => u.id === id ? { ...u, kycStatus: "REJECTED" } : u));
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
+  function DocImage({ src, alt }: { src: string; alt: string }) {
+    return src.match(/\.(jpg|jpeg|png)$/i) ? (
+      <img
+        src={`/${src}`}
+        alt={alt}
+        className="max-w-full max-h-72 object-contain rounded-lg border border-[#E3E3E3] bg-white"
+      />
+    ) : (
+      <a href={`/${src}`} target="_blank" rel="noreferrer" className="text-xs text-[#DB0011] underline">
+        Open {alt} (PDF)
+      </a>
+    );
+  }
+
+  return (
+    <div>
+      <FilterBar
+        filters={["PENDING", "VERIFIED", "REJECTED", "ALL"]}
+        active={filter}
+        onSelect={(f) => setFilter(f as any)}
+        labels={{ PENDING: "Pending Review", VERIFIED: "Approved", REJECTED: "Rejected", ALL: "All" }}
+      />
+      {loading ? <LoadingRows /> : items.length === 0 ? (
+        <Empty icon={ShieldCheck} label={filter === "PENDING" ? "No pending KYC submissions" : "No submissions found"} />
+      ) : (
+        <div className="divide-y divide-[#F0F0F0]">
+          {items.map((u) => {
+            const isOpen = expandedId === u.id;
+            return (
+              <div key={u.id} className="bg-white px-4 py-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                      <p className="text-sm font-semibold text-[#333]">{u.firstName} {u.lastName}</p>
+                      <Pill status={u.kycStatus} />
+                    </div>
+                    <p className="text-xs text-[#767676] truncate">{u.email}</p>
+                    {u.phone && <p className="text-[10px] text-[#AAAAAA]">{u.phone}</p>}
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-3">
+                    <p className="text-[10px] text-[#AAAAAA]">{formatDate(u.createdAt)}</p>
+                    <button
+                      onClick={() => setExpandedId(isOpen ? null : u.id)}
+                      className="text-[10px] font-semibold text-[#DB0011] mt-1"
+                    >
+                      {isOpen ? "Hide documents ▲" : "View documents ▼"}
+                    </button>
+                  </div>
+                </div>
+
+                {isOpen && (
+                  <div className="bg-[#F8F8F8] rounded-xl p-3 mb-3 space-y-4">
+                    {u.kycDocuments ? (
+                      <>
+                        <div>
+                          <p className="text-[9px] text-[#AAAAAA] uppercase font-bold tracking-widest mb-2">ID — Front</p>
+                          <DocImage src={u.kycDocuments.idFront} alt="ID Front" />
+                        </div>
+                        <div>
+                          <p className="text-[9px] text-[#AAAAAA] uppercase font-bold tracking-widest mb-2">ID — Back</p>
+                          <DocImage src={u.kycDocuments.idBack} alt="ID Back" />
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-xs text-[#AAAAAA]">No documents on file</p>
+                    )}
+                  </div>
+                )}
+
+                {u.kycStatus === "PENDING" && (
+                  <div className="flex gap-2">
+                    <ActButton label="Approve KYC" variant="approve" onClick={() => approve(u.id)} loading={actionId === u.id + ":approve"} />
+                    <ActButton label="Reject KYC" variant="reject" onClick={() => reject(u.id)} loading={actionId === u.id + ":reject"} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function AuditLogsTab() {
   const [logs, setLogs]         = useState<AuditLog[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -1237,6 +1362,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "investments",  label: "Investments",  icon: TrendingUp     },
   { id: "goals",        label: "Goals",        icon: Target         },
   { id: "users",        label: "Users",        icon: Users          },
+  { id: "kyc",          label: "KYC Review",   icon: ShieldCheck    },
   { id: "audit",        label: "Audit Log",    icon: ScrollText     },
 ];
 
@@ -1280,6 +1406,7 @@ export default function AdminPage() {
         {activeTab === "investments"  && <InvestmentsTab />}
         {activeTab === "goals"        && <GoalsTab />}
         {activeTab === "users"        && <UsersTab />}
+        {activeTab === "kyc"          && <KycTab />}
         {activeTab === "audit"        && <AuditLogsTab />}
       </div>
     </div>
