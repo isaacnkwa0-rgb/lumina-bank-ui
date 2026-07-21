@@ -152,6 +152,10 @@ export const authApi = {
     api.post<ApiResponse<{ message: string }>>("/auth/change-password", { currentPassword, newPassword }),
   verifyPassword: (password: string) =>
     api.post<ApiResponse<{ verified: boolean }>>("/auth/verify-password", { password }),
+  requestTransferOtp: () =>
+    api.post<ApiResponse<{ sent: boolean; maskedEmail: string }>>("/auth/transfer-otp"),
+  verifyTransferOtp: (code: string) =>
+    api.post<ApiResponse<{ verified: boolean }>>("/auth/verify-transfer-otp", { code }),
 };
 
 export const accountsApi = {

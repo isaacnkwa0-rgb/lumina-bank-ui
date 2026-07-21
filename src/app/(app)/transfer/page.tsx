@@ -1053,7 +1053,9 @@ function SuccessScreen({ result, onReset }: { result: Transfer; onReset: () => v
 
 // ── Confirm Modal ────────────────────────────────────────────────────────────
 
-const REAUTH_THRESHOLD = 500;
+import { ShieldCheck, Mail } from "lucide-react";
+
+type OtpStep = "review" | "sending" | "enter" | "verifying" | "done";
 
 function ConfirmModal({
   amount,
@@ -1070,97 +1072,229 @@ function ConfirmModal({
   onCancel: () => void;
   isLoading: boolean;
 }) {
-  const { t } = useLanguage();
-  const requiresReauth = amount >= REAUTH_THRESHOLD;
-  const [password, setPassword] = useState("");
-  const [verifying, setVerifying] = useState(false);
-  const [authError, setAuthError] = useState("");
-  const [verified, setVerified] = useState(!requiresReauth);
+  const [step, setStep] = useState<OtpStep>("review");
+  const [maskedEmail, setMaskedEmail] = useState("");
+  const [digits, setDigits] = useState(["", "", "", "", "", ""]);
+  const [otpError, setOtpError] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  async function handleVerify() {
-    if (!password) return;
-    setAuthError(""); setVerifying(true);
+  const code = digits.join("");
+
+  async function sendOtp() {
+    setStep("sending");
+    setOtpError("");
     try {
-      await authApi.verifyPassword(password);
-      setVerified(true);
+      const res = await authApi.requestTransferOtp();
+      setMaskedEmail(res.data.data.maskedEmail);
+      setStep("enter");
+      startCooldown();
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setAuthError(msg || "Incorrect password.");
-    } finally { setVerifying(false); }
+      setOtpError(msg || "Failed to send code. Please try again.");
+      setStep("review");
+    }
+  }
+
+  function startCooldown() {
+    setResendCooldown(60);
+    const iv = setInterval(() => {
+      setResendCooldown((c) => {
+        if (c <= 1) { clearInterval(iv); return 0; }
+        return c - 1;
+      });
+    }, 1000);
+  }
+
+  function handleDigit(idx: number, val: string) {
+    const ch = val.replace(/\D/g, "").slice(-1);
+    const next = [...digits];
+    next[idx] = ch;
+    setDigits(next);
+    setOtpError("");
+    if (ch && idx < 5) inputRefs.current[idx + 1]?.focus();
+  }
+
+  function handleKeyDown(idx: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Backspace" && !digits[idx] && idx > 0) {
+      inputRefs.current[idx - 1]?.focus();
+    }
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    const text = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!text) return;
+    e.preventDefault();
+    const next = text.split("").concat(Array(6).fill("")).slice(0, 6);
+    setDigits(next);
+    inputRefs.current[Math.min(text.length, 5)]?.focus();
+  }
+
+  async function verifyOtp() {
+    if (code.length !== 6) return;
+    setStep("verifying");
+    setOtpError("");
+    try {
+      await authApi.verifyTransferOtp(code);
+      setStep("done");
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setOtpError(msg || "Incorrect code. Please try again.");
+      setDigits(["", "", "", "", "", ""]);
+      setStep("enter");
+      setTimeout(() => inputRefs.current[0]?.focus(), 50);
+    }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-8">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-[#E3E3E3]">
-          <p className="text-sm font-bold text-[#333333]">{t("transfer.confirmTitle")}</p>
-          <p className="text-xs text-[#767676] mt-0.5">{t("transfer.confirmDesc")}</p>
-        </div>
-        <div className="px-5 py-4 space-y-3">
-          <div className="flex justify-between">
-            <span className="text-sm text-[#767676]">{t("transfer.amount")}</span>
-            <span className="text-sm font-bold text-[#333333]">{formatCurrency(amount, currency)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-sm text-[#767676]">{t("transfer.to")}</span>
-            <span className="text-sm font-semibold text-[#333333] max-w-[60%] text-right truncate">{recipient}</span>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
+      <div className="w-full sm:max-w-sm bg-white sm:rounded-2xl shadow-2xl overflow-hidden">
 
-          {/* Password re-auth for large transfers */}
-          {requiresReauth && !verified && (
-            <div className="space-y-2 pt-1">
-              <p className="text-xs font-bold text-[#555] uppercase tracking-wide">
-                {t("transfer.passwordRequired")}
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => { setPassword(e.target.value); setAuthError(""); }}
-                  onKeyDown={(e) => e.key === "Enter" && handleVerify()}
-                  placeholder={t("transfer.password")}
-                  className="flex-1 px-3 py-2 border-2 border-[#E3E3E3] rounded-xl text-sm focus:outline-none focus:border-[#DB0011]"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={handleVerify}
-                  disabled={verifying || !password}
-                  className="px-3 py-2 bg-[#DB0011] text-white text-xs font-bold rounded-xl disabled:opacity-50 hover:bg-[#b8000e] transition-colors"
-                >
-                  {verifying ? <Loader2 size={13} className="animate-spin" /> : t("transfer.verifyBtn")}
-                </button>
+        {/* Header */}
+        <div className="bg-[#1a1a2e] px-5 py-4 flex items-center gap-3">
+          <div className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+            <ShieldCheck size={18} className="text-white" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white leading-tight">Payment Security</p>
+            <p className="text-[11px] text-white/50 mt-0.5">Lumina Bank · Secure authorisation</p>
+          </div>
+        </div>
+
+        {/* Payment summary strip */}
+        <div className="bg-[#f8f8f8] border-b border-[#ebebeb] px-5 py-3.5 flex items-center justify-between">
+          <div>
+            <p className="text-[10px] text-[#AAAAAA] uppercase font-bold tracking-widest">Paying</p>
+            <p className="text-sm font-semibold text-[#222] mt-0.5 truncate max-w-[180px]">{recipient}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] text-[#AAAAAA] uppercase font-bold tracking-widest">Amount</p>
+            <p className="text-lg font-bold text-[#DB0011] mt-0.5">{formatCurrency(amount, currency)}</p>
+          </div>
+        </div>
+
+        <div className="px-5 py-5">
+
+          {/* Step: review */}
+          {(step === "review" || step === "sending") && (
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-3.5">
+                <ShieldCheck size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  To protect you, we need to verify this payment. We'll send a one-time code to your registered email address.
+                </p>
               </div>
-              {authError && <p className="text-xs text-[#DB0011]">{authError}</p>}
+              {otpError && <p className="text-xs text-[#DB0011] font-medium">{otpError}</p>}
+              <button
+                type="button"
+                onClick={sendOtp}
+                disabled={step === "sending"}
+                className="w-full py-3 bg-[#1a1a2e] text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-[#2a2a4e] transition-colors"
+              >
+                {step === "sending" ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
+                {step === "sending" ? "Sending code…" : "Send me a verification code"}
+              </button>
             </div>
           )}
 
-          {requiresReauth && verified && (
-            <div className="flex items-center gap-2 text-xs text-green-700 font-semibold">
-              <CheckCircle2 size={14} className="text-green-600" />
-              {t("transfer.identityConfirmed")}
+          {/* Step: enter OTP */}
+          {(step === "enter" || step === "verifying") && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="h-12 w-12 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto mb-3">
+                  <Mail size={20} className="text-blue-600" />
+                </div>
+                <p className="text-sm font-bold text-[#222]">Check your email</p>
+                <p className="text-xs text-[#767676] mt-1 leading-relaxed">
+                  We sent a 6-digit code to<br />
+                  <span className="font-semibold text-[#333]">{maskedEmail}</span>
+                </p>
+              </div>
+
+              {/* 6-digit input */}
+              <div className="flex gap-2 justify-center" onPaste={handlePaste}>
+                {digits.map((d, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => { inputRefs.current[i] = el; }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={d}
+                    onChange={(e) => handleDigit(i, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(i, e)}
+                    autoFocus={i === 0}
+                    className={`w-11 h-13 text-center text-xl font-bold border-2 rounded-xl outline-none transition-colors
+                      ${d ? "border-[#1a1a2e] bg-[#f8f8f8]" : "border-[#E3E3E3]"}
+                      focus:border-[#1a1a2e]`}
+                    style={{ height: "52px" }}
+                  />
+                ))}
+              </div>
+
+              {otpError && (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                  <AlertCircle size={13} className="text-[#DB0011] flex-shrink-0" />
+                  <p className="text-xs text-[#DB0011] font-medium">{otpError}</p>
+                </div>
+              )}
+
+              <p className="text-center text-xs text-[#AAAAAA]">
+                Didn't receive it?{" "}
+                {resendCooldown > 0
+                  ? <span className="text-[#999]">Resend in {resendCooldown}s</span>
+                  : <button type="button" onClick={sendOtp} className="text-[#DB0011] font-semibold underline">Resend code</button>
+                }
+              </p>
+
+              <button
+                type="button"
+                onClick={verifyOtp}
+                disabled={code.length !== 6 || step === "verifying"}
+                className="w-full py-3 bg-[#DB0011] text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-[#b8000e] transition-colors"
+              >
+                {step === "verifying" ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
+                {step === "verifying" ? "Verifying…" : "Confirm code"}
+              </button>
+            </div>
+          )}
+
+          {/* Step: verified */}
+          {step === "done" && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="h-12 w-12 rounded-full bg-green-50 border border-green-200 flex items-center justify-center mx-auto mb-3">
+                  <CheckCircle2 size={22} className="text-green-600" />
+                </div>
+                <p className="text-sm font-bold text-[#222]">Identity verified</p>
+                <p className="text-xs text-[#767676] mt-1">Your payment is ready to be sent.</p>
+              </div>
+              <button
+                type="button"
+                onClick={onConfirm}
+                disabled={isLoading}
+                className="w-full py-3 bg-[#DB0011] text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-[#b8000e] transition-colors"
+              >
+                {isLoading ? <Loader2 size={15} className="animate-spin" /> : null}
+                {isLoading ? "Sending payment…" : `Confirm — send ${formatCurrency(amount, currency)}`}
+              </button>
             </div>
           )}
         </div>
-        <div className="px-5 pb-5 flex gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isLoading}
-            className="flex-1 py-2.5 border border-[#E3E3E3] rounded-xl text-sm font-semibold text-[#767676] hover:border-[#BBBBBB] transition-colors disabled:opacity-50"
-          >
-            {t("transfer.cancelBtn")}
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={isLoading || !verified}
-            className="flex-1 py-2.5 bg-[#DB0011] rounded-xl text-sm font-bold text-white hover:bg-[#B0000E] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {isLoading && <Loader2 size={14} className="animate-spin" />}
-            {isLoading ? t("transfer.sending") : t("transfer.confirmSend")}
-          </button>
-        </div>
+
+        {/* Cancel */}
+        {step !== "done" && (
+          <div className="px-5 pb-5 -mt-1">
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={isLoading}
+              className="w-full py-2.5 border border-[#E3E3E3] rounded-xl text-sm font-semibold text-[#767676] hover:border-[#BBBBBB] transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
