@@ -6,7 +6,7 @@ import {
   User, Mail, Phone, Shield, ChevronRight,
   LogOut, Lock, Smartphone, HelpCircle, BadgeCheck,
   Star, type LucideIcon, FileCheck, Edit3, X, MapPin,
-  Calendar, Globe, Briefcase, Trash2, Monitor, Tablet,
+  Calendar, Globe, Briefcase, Trash2, Monitor, Tablet, KeyRound,
 } from "lucide-react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { kycApi, usersApi, type Device } from "@/lib/api";
@@ -293,6 +293,9 @@ export default function ProfilePage() {
           <MenuRow icon={Shield}     bg="bg-amber-100" color="text-amber-600"   label="Two-factor authentication"
             badge={(user as { twoFactorEnabled?: boolean })?.twoFactorEnabled ? "On" : "Off"}
             onClick={() => router.push("/profile/2fa")} />
+          <Divider />
+          <MenuRow icon={KeyRound}   bg="bg-blue-100"  color="text-blue-600"    label="Transfer PIN"
+            onClick={() => router.push("/profile/transfer-pin")} />
           <Divider />
           <MenuRow icon={FileCheck}  bg="bg-green-100" color="text-green-600"   label="Identity verification (KYC)"
             badge={kycStatus === "VERIFIED" ? "Verified" : kycStatus === "PENDING" ? "Pending" : "Required"}

@@ -156,6 +156,12 @@ export const authApi = {
     api.post<ApiResponse<{ sent: boolean; maskedEmail: string }>>("/auth/transfer-otp"),
   verifyTransferOtp: (code: string) =>
     api.post<ApiResponse<{ verified: boolean }>>("/auth/verify-transfer-otp", { code }),
+  getTransferPinStatus: () =>
+    api.get<ApiResponse<{ hasPin: boolean }>>("/auth/transfer-pin/status"),
+  setupTransferPin: (pin: string, currentPin?: string) =>
+    api.post<ApiResponse<{ set: boolean }>>("/auth/transfer-pin/setup", { pin, ...(currentPin ? { currentPin } : {}) }),
+  verifyTransferPin: (pin: string) =>
+    api.post<ApiResponse<{ verified: boolean }>>("/auth/transfer-pin/verify", { pin }),
 };
 
 export const accountsApi = {

@@ -1053,9 +1053,9 @@ function SuccessScreen({ result, onReset }: { result: Transfer; onReset: () => v
 
 // ── Confirm Modal ────────────────────────────────────────────────────────────
 
-import { ShieldCheck, Mail } from "lucide-react";
+import { ShieldCheck, KeyRound } from "lucide-react";
 
-type OtpStep = "review" | "sending" | "enter" | "verifying" | "done";
+type PinStep = "enter" | "verifying" | "done" | "no-pin";
 
 function ConfirmModal({
   amount,
@@ -1072,52 +1072,42 @@ function ConfirmModal({
   onCancel: () => void;
   isLoading: boolean;
 }) {
-  const [step, setStep] = useState<OtpStep>("review");
-  const [maskedEmail, setMaskedEmail] = useState("");
+  const [step, setStep] = useState<PinStep>("enter");
   const [digits, setDigits] = useState(["", "", "", "", "", ""]);
-  const [otpError, setOtpError] = useState("");
-  const [resendCooldown, setResendCooldown] = useState(0);
+  const [pinError, setPinError] = useState("");
+  const [shake, setShake] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const code = digits.join("");
+  const pin = digits.join("");
 
-  async function sendOtp() {
-    setStep("sending");
-    setOtpError("");
-    try {
-      const res = await authApi.requestTransferOtp();
-      setMaskedEmail(res.data.data.maskedEmail);
-      setStep("enter");
-      startCooldown();
-    } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setOtpError(msg || "Failed to send code. Please try again.");
-      setStep("review");
-    }
-  }
-
-  function startCooldown() {
-    setResendCooldown(60);
-    const iv = setInterval(() => {
-      setResendCooldown((c) => {
-        if (c <= 1) { clearInterval(iv); return 0; }
-        return c - 1;
-      });
-    }, 1000);
-  }
+  // Check if user has PIN set on mount
+  useEffect(() => {
+    authApi.getTransferPinStatus().then((r) => {
+      if (!r.data.data.hasPin) setStep("no-pin");
+      else setTimeout(() => inputRefs.current[0]?.focus(), 50);
+    }).catch(() => {});
+  }, []);
 
   function handleDigit(idx: number, val: string) {
     const ch = val.replace(/\D/g, "").slice(-1);
     const next = [...digits];
     next[idx] = ch;
     setDigits(next);
-    setOtpError("");
+    setPinError("");
     if (ch && idx < 5) inputRefs.current[idx + 1]?.focus();
+    else if (ch && idx === 5) {
+      // Auto-submit when last digit entered
+      setTimeout(() => verifyPin(next.join("")), 80);
+    }
   }
 
   function handleKeyDown(idx: number, e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Backspace" && !digits[idx] && idx > 0) {
-      inputRefs.current[idx - 1]?.focus();
+    if (e.key === "Backspace") {
+      if (digits[idx]) {
+        const next = [...digits]; next[idx] = ""; setDigits(next);
+      } else if (idx > 0) {
+        inputRefs.current[idx - 1]?.focus();
+      }
     }
   }
 
@@ -1127,27 +1117,32 @@ function ConfirmModal({
     e.preventDefault();
     const next = text.split("").concat(Array(6).fill("")).slice(0, 6);
     setDigits(next);
-    inputRefs.current[Math.min(text.length, 5)]?.focus();
+    if (text.length === 6) setTimeout(() => verifyPin(text), 80);
+    else inputRefs.current[Math.min(text.length, 5)]?.focus();
   }
 
-  async function verifyOtp() {
-    if (code.length !== 6) return;
+  async function verifyPin(code?: string) {
+    const p = code ?? pin;
+    if (p.length !== 6) return;
     setStep("verifying");
-    setOtpError("");
+    setPinError("");
     try {
-      await authApi.verifyTransferOtp(code);
+      await authApi.verifyTransferPin(p);
       setStep("done");
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setOtpError(msg || "Incorrect code. Please try again.");
+      setPinError(msg || "Incorrect PIN. Please try again.");
       setDigits(["", "", "", "", "", ""]);
       setStep("enter");
-      setTimeout(() => inputRefs.current[0]?.focus(), 50);
+      setShake(true);
+      setTimeout(() => { setShake(false); inputRefs.current[0]?.focus(); }, 600);
     }
   }
 
+  const isVerifying = step === "verifying";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 px-0 sm:px-4">
       <div className="w-full sm:max-w-sm bg-white sm:rounded-2xl shadow-2xl overflow-hidden">
 
         {/* Header */}
@@ -1156,12 +1151,12 @@ function ConfirmModal({
             <ShieldCheck size={18} className="text-white" />
           </div>
           <div>
-            <p className="text-sm font-bold text-white leading-tight">Payment Security</p>
-            <p className="text-[11px] text-white/50 mt-0.5">Lumina Bank · Secure authorisation</p>
+            <p className="text-sm font-bold text-white leading-tight">Authorise payment</p>
+            <p className="text-[11px] text-white/50 mt-0.5">Lumina Bank · Secure transfer</p>
           </div>
         </div>
 
-        {/* Payment summary strip */}
+        {/* Payment summary */}
         <div className="bg-[#f8f8f8] border-b border-[#ebebeb] px-5 py-3.5 flex items-center justify-between">
           <div>
             <p className="text-[10px] text-[#AAAAAA] uppercase font-bold tracking-widest">Paying</p>
@@ -1173,124 +1168,139 @@ function ConfirmModal({
           </div>
         </div>
 
-        <div className="px-5 py-5">
+        <div className="px-5 py-6">
 
-          {/* Step: review */}
-          {(step === "review" || step === "sending") && (
-            <div className="space-y-4">
-              <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-3.5">
-                <ShieldCheck size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-800 leading-relaxed">
-                  To protect you, we need to verify this payment. We'll send a one-time code to your registered email address.
+          {/* No PIN set */}
+          {step === "no-pin" && (
+            <div className="text-center space-y-4">
+              <div className="h-14 w-14 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto">
+                <KeyRound size={24} className="text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[#222]">Transfer PIN not set up</p>
+                <p className="text-xs text-[#767676] mt-1.5 leading-relaxed">
+                  You need a 6-digit transfer PIN to authorise payments.<br />Set one up in your profile security settings.
                 </p>
               </div>
-              {otpError && <p className="text-xs text-[#DB0011] font-medium">{otpError}</p>}
-              <button
-                type="button"
-                onClick={sendOtp}
-                disabled={step === "sending"}
-                className="w-full py-3 bg-[#1a1a2e] text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-[#2a2a4e] transition-colors"
-              >
-                {step === "sending" ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
-                {step === "sending" ? "Sending code…" : "Send me a verification code"}
+              <button type="button" onClick={onCancel}
+                className="w-full py-2.5 border border-[#E3E3E3] rounded-xl text-sm font-semibold text-[#767676]">
+                Close
               </button>
             </div>
           )}
 
-          {/* Step: enter OTP */}
+          {/* PIN entry */}
           {(step === "enter" || step === "verifying") && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div className="text-center">
-                <div className="h-12 w-12 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto mb-3">
-                  <Mail size={20} className="text-blue-600" />
+                <div className="h-12 w-12 rounded-full bg-[#1a1a2e]/5 border border-[#1a1a2e]/10 flex items-center justify-center mx-auto mb-3">
+                  <KeyRound size={20} className="text-[#1a1a2e]" />
                 </div>
-                <p className="text-sm font-bold text-[#222]">Check your email</p>
-                <p className="text-xs text-[#767676] mt-1 leading-relaxed">
-                  We sent a 6-digit code to<br />
-                  <span className="font-semibold text-[#333]">{maskedEmail}</span>
-                </p>
+                <p className="text-sm font-bold text-[#222]">Enter your transfer PIN</p>
+                <p className="text-xs text-[#767676] mt-1">Your 6-digit security PIN</p>
               </div>
 
-              {/* 6-digit input */}
-              <div className="flex gap-2 justify-center" onPaste={handlePaste}>
+              {/* PIN dots */}
+              <div
+                className={`flex gap-3 justify-center transition-transform ${shake ? "animate-[shake_0.4s_ease-in-out]" : ""}`}
+                onPaste={handlePaste}
+                style={shake ? { animation: "shake 0.4s ease-in-out" } : {}}
+              >
                 {digits.map((d, i) => (
-                  <input
-                    key={i}
-                    ref={(el) => { inputRefs.current[i] = el; }}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={d}
-                    onChange={(e) => handleDigit(i, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(i, e)}
-                    autoFocus={i === 0}
-                    className={`w-11 h-13 text-center text-xl font-bold border-2 rounded-xl outline-none transition-colors
-                      ${d ? "border-[#1a1a2e] bg-[#f8f8f8]" : "border-[#E3E3E3]"}
-                      focus:border-[#1a1a2e]`}
-                    style={{ height: "52px" }}
-                  />
+                  <div key={i} className="relative">
+                    <input
+                      ref={(el) => { inputRefs.current[i] = el; }}
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={d}
+                      onChange={(e) => handleDigit(i, e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(i, e)}
+                      disabled={isVerifying}
+                      className="sr-only"
+                    />
+                    <div
+                      onClick={() => inputRefs.current[i]?.focus()}
+                      className={`h-14 w-11 rounded-xl border-2 flex items-center justify-center cursor-text transition-all
+                        ${d ? "border-[#1a1a2e] bg-[#1a1a2e]" : "border-[#E3E3E3] bg-white"}
+                        ${!d && digits.filter(Boolean).length === i ? "border-[#DB0011]" : ""}
+                        ${isVerifying ? "opacity-50" : ""}`}
+                    >
+                      {d && <div className="h-3 w-3 rounded-full bg-white" />}
+                    </div>
+                  </div>
                 ))}
               </div>
 
-              {otpError && (
+              {/* Keyboard for mobile */}
+              <div className="grid grid-cols-3 gap-2">
+                {["1","2","3","4","5","6","7","8","9","","0","⌫"].map((k, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    disabled={isVerifying || k === ""}
+                    onClick={() => {
+                      if (k === "⌫") {
+                        const lastFilled = [...digits].reverse().findIndex(d => d !== "");
+                        if (lastFilled === -1) return;
+                        const idx = 5 - lastFilled;
+                        const next = [...digits]; next[idx] = ""; setDigits(next);
+                        setPinError("");
+                        inputRefs.current[idx]?.focus();
+                      } else {
+                        const nextEmpty = digits.findIndex(d => d === "");
+                        if (nextEmpty === -1) return;
+                        handleDigit(nextEmpty, k);
+                      }
+                    }}
+                    className={`py-4 rounded-xl text-lg font-semibold transition-colors
+                      ${k === "" ? "invisible" : ""}
+                      ${k === "⌫" ? "text-[#DB0011] bg-red-50 hover:bg-red-100" : "bg-[#f5f5f5] text-[#222] hover:bg-[#ebebeb] active:bg-[#e0e0e0]"}
+                      disabled:opacity-40`}
+                  >
+                    {k}
+                  </button>
+                ))}
+              </div>
+
+              {pinError && (
                 <div className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
                   <AlertCircle size={13} className="text-[#DB0011] flex-shrink-0" />
-                  <p className="text-xs text-[#DB0011] font-medium">{otpError}</p>
+                  <p className="text-xs text-[#DB0011] font-medium">{pinError}</p>
                 </div>
               )}
 
-              <p className="text-center text-xs text-[#AAAAAA]">
-                Didn't receive it?{" "}
-                {resendCooldown > 0
-                  ? <span className="text-[#999]">Resend in {resendCooldown}s</span>
-                  : <button type="button" onClick={sendOtp} className="text-[#DB0011] font-semibold underline">Resend code</button>
-                }
-              </p>
-
-              <button
-                type="button"
-                onClick={verifyOtp}
-                disabled={code.length !== 6 || step === "verifying"}
-                className="w-full py-3 bg-[#DB0011] text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-[#b8000e] transition-colors"
-              >
-                {step === "verifying" ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
-                {step === "verifying" ? "Verifying…" : "Confirm code"}
-              </button>
+              {isVerifying && (
+                <div className="flex items-center justify-center gap-2 text-xs text-[#767676]">
+                  <Loader2 size={13} className="animate-spin" /> Checking PIN…
+                </div>
+              )}
             </div>
           )}
 
-          {/* Step: verified */}
+          {/* Verified — ready to send */}
           {step === "done" && (
             <div className="space-y-4">
               <div className="text-center">
-                <div className="h-12 w-12 rounded-full bg-green-50 border border-green-200 flex items-center justify-center mx-auto mb-3">
-                  <CheckCircle2 size={22} className="text-green-600" />
+                <div className="h-14 w-14 rounded-full bg-green-50 border border-green-200 flex items-center justify-center mx-auto mb-3">
+                  <CheckCircle2 size={26} className="text-green-600" />
                 </div>
-                <p className="text-sm font-bold text-[#222]">Identity verified</p>
-                <p className="text-xs text-[#767676] mt-1">Your payment is ready to be sent.</p>
+                <p className="text-sm font-bold text-[#222]">PIN accepted</p>
+                <p className="text-xs text-[#767676] mt-1">Your payment is authorised and ready to send.</p>
               </div>
-              <button
-                type="button"
-                onClick={onConfirm}
-                disabled={isLoading}
-                className="w-full py-3 bg-[#DB0011] text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-[#b8000e] transition-colors"
-              >
-                {isLoading ? <Loader2 size={15} className="animate-spin" /> : null}
-                {isLoading ? "Sending payment…" : `Confirm — send ${formatCurrency(amount, currency)}`}
+              <button type="button" onClick={onConfirm} disabled={isLoading}
+                className="w-full py-3.5 bg-[#DB0011] text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-[#b8000e] transition-colors">
+                {isLoading ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
+                {isLoading ? "Sending…" : `Send ${formatCurrency(amount, currency)}`}
               </button>
             </div>
           )}
         </div>
 
-        {/* Cancel */}
-        {step !== "done" && (
-          <div className="px-5 pb-5 -mt-1">
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={isLoading}
-              className="w-full py-2.5 border border-[#E3E3E3] rounded-xl text-sm font-semibold text-[#767676] hover:border-[#BBBBBB] transition-colors disabled:opacity-50"
-            >
+        {step !== "done" && step !== "no-pin" && (
+          <div className="px-5 pb-5">
+            <button type="button" onClick={onCancel} disabled={isLoading}
+              className="w-full py-2.5 border border-[#E3E3E3] rounded-xl text-sm font-semibold text-[#767676] hover:border-[#BBBBBB] transition-colors">
               Cancel
             </button>
           </div>
