@@ -199,8 +199,8 @@ function reducer(s: WizardState, a: WizardAction): WizardState {
       completedSteps: s.completedSteps.includes(a.step) ? s.completedSteps : [...s.completedSteps, a.step],
     };
     case "GO_TO": return { ...s, step: a.step, errors: {}, apiError: "" };
-    case "NEXT": return { ...s, step: s.step + 1, errors: {}, apiError: "" };
-    case "BACK": return { ...s, step: s.step - 1, errors: {}, apiError: "" };
+    case "NEXT": return { ...s, step: s.step === 5 ? 7 : s.step + 1, errors: {}, apiError: "" };
+    case "BACK": return { ...s, step: s.step === 7 ? 5 : s.step - 1, errors: {}, apiError: "" };
     case "TOGGLE_SOURCE": {
       const next = s.sourceOfFunds.includes(a.value)
         ? s.sourceOfFunds.filter((v) => v !== a.value)
@@ -233,6 +233,8 @@ function loadProgress(): Partial<WizardState> | null {
       localStorage.removeItem(STORAGE_KEY);
       return null;
     }
+    // Phone step (6) is removed — migrate anyone saved there to Address (7)
+    if (parsed.step === 6) parsed.step = 7;
     return parsed;
   } catch { return null; }
 }
@@ -851,8 +853,9 @@ function Stage5({
       dispatch({ type: "COMPLETE", step: 5 });
       dispatch({ type: "NEXT" });
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: { message?: string } } } })
-        ?.response?.data?.error?.message ?? "Invalid or expired code";
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message ?? "Invalid or expired code";
+      dispatch({ type: "SUBMITTING", value: false });
       dispatch({ type: "API_ERROR", message: msg });
     }
   }
@@ -1177,10 +1180,11 @@ function Stage8({
       dispatch({ type: "SUBMITTING", value: false });
       dispatch({ type: "COMPLETE", step: 8 });
       dispatch({ type: "NEXT" });
-    } catch {
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message ?? "Failed to save financial profile. Please try again.";
       dispatch({ type: "SUBMITTING", value: false });
-      dispatch({ type: "COMPLETE", step: 8 });
-      dispatch({ type: "NEXT" });
+      dispatch({ type: "API_ERROR", message: msg });
     }
   }
 
@@ -1292,6 +1296,12 @@ function Stage8({
         <FieldError msg={state.errors.expectedMonthlyVolume} />
       </div>
 
+      {state.apiError && (
+        <div className="bg-red-50 border-l-4 border-[#DB0011] p-3 rounded-sm" role="alert">
+          <p className="text-sm text-[#DB0011]">{state.apiError}</p>
+        </div>
+      )}
+
       <NavButtons
         onBack={() => dispatch({ type: "BACK" })}
         onNext={handleNext}
@@ -1319,7 +1329,7 @@ function Stage9({
   ];
 
   async function handleSubmit() {
-    if (!state.idFront || !state.idBack || !state.selfie) {
+    if (!state.idFront || !state.idBack) {
       dispatch({ type: "ERRORS", errors: { docs: t("onboarding.identity.allRequired") } });
       return;
     }
@@ -1333,14 +1343,14 @@ function Stage9({
       fd.append("documentType", state.docType);
       fd.append("idFront", state.idFront!);
       fd.append("idBack", state.idBack!);
-      fd.append("selfie", state.selfie!);
       await kycApi.submit(fd);
       dispatch({ type: "SET", field: "kycSubmitted", value: true });
       dispatch({ type: "SUBMITTING", value: false });
       setPhase("submitted");
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: { message?: string } } } })
-        ?.response?.data?.error?.message ?? "Failed to submit documents. Please try again.";
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message ?? "Failed to submit documents. Please try again.";
+      dispatch({ type: "SUBMITTING", value: false });
       dispatch({ type: "API_ERROR", message: msg });
       setPhase("upload");
     }
@@ -1389,7 +1399,6 @@ function Stage9({
           {[
             { label: "ID Front", file: state.idFront },
             { label: "ID Back", file: state.idBack },
-            { label: "Selfie", file: state.selfie },
           ].map(({ label, file }) => (
             <div key={label} className="flex items-center justify-between p-3 bg-white border border-[#E3E3E3] rounded-sm">
               <span className="text-sm font-medium text-[#333333]">{label}</span>
@@ -1435,13 +1444,6 @@ function Stage9({
           accept="image/jpeg,image/png,application/pdf"
           file={state.idBack}
           onChange={(f) => dispatch({ type: "SET", field: "idBack", value: f })}
-        />
-        <FileUploadZone
-          label={t("onboarding.identity.selfie")}
-          hint={t("onboarding.identity.selfieHint")}
-          accept="image/jpeg,image/png"
-          file={state.selfie}
-          onChange={(f) => dispatch({ type: "SET", field: "selfie", value: f })}
         />
         <FieldError msg={state.errors.docs} />
         <NavButtons
@@ -1666,7 +1668,6 @@ function Stage12({ state }: { state: WizardState }) {
   const statuses = [
     { key: "onboarding.success.accountCreated" as const, done: true },
     { key: "onboarding.success.emailVerified" as const, done: true },
-    { key: "onboarding.success.phoneVerified" as const, done: true },
     { key: "onboarding.success.docsSubmitted" as const, done: true },
     { key: "onboarding.success.reviewPending" as const, done: false },
   ];
@@ -1793,7 +1794,6 @@ export default function RegisterPage() {
         {state.step === 3 && <Stage3 state={state} dispatch={dispatch} />}
         {state.step === 4 && <Stage4 state={state} dispatch={dispatch} />}
         {state.step === 5 && <Stage5 state={state} dispatch={dispatch} />}
-        {state.step === 6 && <Stage6 state={state} dispatch={dispatch} />}
         {state.step === 7 && <Stage7 state={state} dispatch={dispatch} />}
         {state.step === 8 && <Stage8 state={state} dispatch={dispatch} />}
         {state.step === 9 && <Stage9 state={state} dispatch={dispatch} />}

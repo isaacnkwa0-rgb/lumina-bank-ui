@@ -8,30 +8,30 @@ interface OnboardingProgressProps {
   completedSteps: number[];
 }
 
+// Phone verification (step 6) is disabled — omitted from display
 const STAGES = [
-  "Welcome",
-  "Eligibility",
-  "Personal",
-  "Contact",
-  "Email",
-  "Phone",
-  "Address",
-  "Finances",
-  "Identity",
-  "Review",
-  "Consent",
-  "Complete",
+  { label: "Welcome",     step: 1  },
+  { label: "Eligibility", step: 2  },
+  { label: "Personal",    step: 3  },
+  { label: "Contact",     step: 4  },
+  { label: "Email",       step: 5  },
+  { label: "Address",     step: 7  },
+  { label: "Finances",    step: 8  },
+  { label: "Identity",    step: 9  },
+  { label: "Review",      step: 10 },
+  { label: "Consent",     step: 11 },
+  { label: "Complete",    step: 12 },
 ];
 
 function OnboardingProgress({ currentStep, completedSteps }: OnboardingProgressProps) {
   const totalSteps = STAGES.length;
-  const stageName = STAGES[currentStep - 1] ?? "";
+  const currentIdx = STAGES.findIndex((s) => s.step === currentStep);
+  const stageName = STAGES[currentIdx]?.label ?? "";
 
   return (
     <>
       <div className="hidden lg:flex items-center w-full">
-        {STAGES.map((stage, idx) => {
-          const step = idx + 1;
+        {STAGES.map(({ label, step }, idx) => {
           const isCompleted = completedSteps.includes(step);
           const isCurrent = step === currentStep;
           const isUpcoming = !isCompleted && !isCurrent;
@@ -56,7 +56,7 @@ function OnboardingProgress({ currentStep, completedSteps }: OnboardingProgressP
                         isCurrent ? "text-white" : "text-[#CCCCCC]"
                       )}
                     >
-                      {step}
+                      {idx + 1}
                     </span>
                   )}
                 </div>
@@ -68,7 +68,7 @@ function OnboardingProgress({ currentStep, completedSteps }: OnboardingProgressP
                     isUpcoming && "text-[#AAAAAA]"
                   )}
                 >
-                  {stage}
+                  {label}
                 </span>
               </div>
               {idx < STAGES.length - 1 && (
@@ -87,16 +87,16 @@ function OnboardingProgress({ currentStep, completedSteps }: OnboardingProgressP
       <div className="lg:hidden">
         <div className="flex items-baseline justify-between mb-2">
           <span className="text-xs font-semibold text-[#333333]">
-            Step {currentStep} of {totalSteps} &mdash; {stageName}
+            Step {currentIdx + 1} of {totalSteps} &mdash; {stageName}
           </span>
           <span className="text-xs text-[#767676]">
-            {Math.round(((currentStep - 1) / totalSteps) * 100)}%
+            {Math.round((currentIdx / totalSteps) * 100)}%
           </span>
         </div>
         <div className="h-1 w-full bg-[#E3E3E3] rounded-full overflow-hidden">
           <div
             className="h-full bg-[#DB0011] rounded-full transition-all duration-500"
-            style={{ width: `${((currentStep - 1) / totalSteps) * 100}%` }}
+            style={{ width: `${(currentIdx / totalSteps) * 100}%` }}
           />
         </div>
       </div>
