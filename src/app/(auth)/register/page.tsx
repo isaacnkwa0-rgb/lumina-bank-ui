@@ -500,7 +500,7 @@ function Stage3({
   state, dispatch,
 }: { state: WizardState; dispatch: React.Dispatch<WizardAction> }) {
   const { t } = useLanguage();
-  const isUS = state.countryOfResidence === "US";
+  const isUS = state.countryOfResidence === "US" || state.nationality === "US";
   const genders = [
     { value: "MALE", key: "onboarding.personal.male" as const },
     { value: "FEMALE", key: "onboarding.personal.female" as const },
@@ -625,7 +625,7 @@ function Stage3({
             }}
             error={state.errors.ssn}
             hint={t("onboarding.personal.ssnHint")}
-            type="password"
+            type="text"
             inputMode="numeric"
             autoComplete="off"
           />
