@@ -614,10 +614,17 @@ function Stage3({
             label={t("onboarding.personal.ssn")}
             placeholder="XXX-XX-XXXX"
             value={state.ssn}
-            onChange={(e) => dispatch({ type: "SET", field: "ssn", value: e.target.value })}
+            onChange={(e) => {
+              const digits = e.target.value.replace(/\D/g, "").slice(0, 9);
+              let formatted = digits;
+              if (digits.length > 5) formatted = `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
+              else if (digits.length > 3) formatted = `${digits.slice(0, 3)}-${digits.slice(3)}`;
+              dispatch({ type: "SET", field: "ssn", value: formatted });
+            }}
             error={state.errors.ssn}
             hint={t("onboarding.personal.ssnHint")}
             type="password"
+            inputMode="numeric"
             autoComplete="off"
           />
         </div>
