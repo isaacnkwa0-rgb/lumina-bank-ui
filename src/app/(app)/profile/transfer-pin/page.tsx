@@ -106,8 +106,9 @@ export default function TransferPinPage() {
     );
   }
 
-  async function handleSetPin() {
-    if (newPin !== confirmPin) { setError("PINs don't match. Please try again."); setConfirmPin(""); setStep("confirm-new"); return; }
+  async function handleSetPin(confirmPinValue?: string) {
+    const cp = confirmPinValue ?? confirmPin;
+    if (newPin !== cp) { setError("PINs don't match. Please try again."); setConfirmPin(""); setStep("confirm-new"); return; }
     setLoading(true); setError("");
     try {
       await authApi.setupTransferPin(newPin, hasPin ? currentPin : undefined);
@@ -186,7 +187,7 @@ export default function TransferPinPage() {
             {error && <p className="text-xs text-[#DB0011] text-center font-medium">{error}</p>}
             <PinDots value={confirmPin} label="confirm-new" onDone={(v) => {
               setConfirmPin(v);
-              setTimeout(handleSetPin, 80);
+              setTimeout(() => handleSetPin(v), 80);
             }} />
             {loading && (
               <div className="flex items-center justify-center gap-2 text-xs text-[#767676]">
