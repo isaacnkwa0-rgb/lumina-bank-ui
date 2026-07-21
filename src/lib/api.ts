@@ -908,6 +908,8 @@ export interface AdminUser {
 export interface AdminUserDetail extends AdminUser {
   accounts: { id: string; accountNumber: string; type: string; balance: string; currency: string; isDefault: boolean }[];
   profile: Record<string, unknown> | null;
+  kycDocuments?: { idFront: string; idBack: string } | null;
+  kycStatus: string;
   _count: { accounts: number; transactions: number };
 }
 

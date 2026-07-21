@@ -725,6 +725,10 @@ function UserRow({ u, onUpdate, onDelete }: {
   const [expanded, setExpanded] = useState(false);
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
   const [acctLoading, setAcctLoading] = useState(false);
+  const [acctError, setAcctError] = useState("");
+  const [kycExpanded, setKycExpanded] = useState(false);
+  const [kycDocs, setKycDocs] = useState<{ idFront: string; idBack: string } | null>(null);
+  const [kycDocsLoading, setKycDocsLoading] = useState(false);
 
   async function act(fn: () => Promise<void>) {
     setActionId("x");
@@ -733,13 +737,28 @@ function UserRow({ u, onUpdate, onDelete }: {
   }
 
   async function loadAccounts() {
-    if (accounts.length > 0) { setExpanded((p) => !p); return; }
+    if (accounts.length > 0 || acctError) { setExpanded((p) => !p); return; }
     setExpanded(true);
     setAcctLoading(true);
+    setAcctError("");
     try {
       const r = await adminApi.getUserAccounts(u.id);
       setAccounts(r.data.data);
-    } catch {} finally { setAcctLoading(false); }
+    } catch (e: unknown) {
+      setAcctError((e as any)?.response?.data?.message || "Failed to load accounts");
+    } finally { setAcctLoading(false); }
+  }
+
+  async function loadKycDocs() {
+    if (kycDocs) { setKycExpanded((p) => !p); return; }
+    setKycExpanded(true);
+    setKycDocsLoading(true);
+    try {
+      const r = await adminApi.getUser(u.id);
+      setKycDocs((r.data.data as any).kycDocuments ?? null);
+    } catch {
+      setKycDocs(null);
+    } finally { setKycDocsLoading(false); }
   }
 
   return (
@@ -783,18 +802,73 @@ function UserRow({ u, onUpdate, onDelete }: {
         </div>
       </div>
 
-      {/* KYC actions */}
-      {u.kycStatus === "PENDING" && (
+      {/* KYC section */}
+      {(u.kycStatus === "PENDING" || u.kycStatus === "VERIFIED" || u.kycStatus === "REJECTED") && (
         <div className="mb-2">
           <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-1.5">KYC</p>
-          <div className="flex flex-wrap gap-1.5">
-            <Btn color="green" label="Verify KYC" loading={actionId === "x"} onClick={() => act(async () => { await adminApi.approveKyc(u.id); onUpdate(u.id, { kycStatus: "VERIFIED" }); })} />
-            <Btn color="red" label="Reject KYC" loading={actionId === "x"} onClick={async () => {
-              const reason = prompt("Reason for KYC rejection:");
-              if (!reason?.trim()) return;
-              await act(async () => { await adminApi.rejectKyc(u.id, reason.trim()); onUpdate(u.id, { kycStatus: "REJECTED" }); });
-            }} />
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            <button
+              onClick={loadKycDocs}
+              className="text-[10px] text-[#1a1a2e] font-semibold underline"
+            >
+              {kycExpanded ? "Hide documents ▲" : "View documents ▼"}
+            </button>
           </div>
+
+          {/* KYC document viewer */}
+          {kycExpanded && (
+            <div className="bg-[#F8F8F8] rounded-xl p-3 mb-2">
+              {kycDocsLoading ? (
+                <p className="text-xs text-[#AAAAAA]">Loading documents…</p>
+              ) : kycDocs ? (
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-1.5">ID Front</p>
+                    {kycDocs.idFront.match(/\.(jpg|jpeg|png)$/i) ? (
+                      <img
+                        src={`/${kycDocs.idFront}`}
+                        alt="ID Front"
+                        className="max-w-full rounded-lg border border-[#E3E3E3]"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    ) : (
+                      <a href={`/${kycDocs.idFront}`} target="_blank" rel="noreferrer" className="text-xs text-[#DB0011] underline">
+                        View ID Front (PDF)
+                      </a>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-1.5">ID Back</p>
+                    {kycDocs.idBack.match(/\.(jpg|jpeg|png)$/i) ? (
+                      <img
+                        src={`/${kycDocs.idBack}`}
+                        alt="ID Back"
+                        className="max-w-full rounded-lg border border-[#E3E3E3]"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    ) : (
+                      <a href={`/${kycDocs.idBack}`} target="_blank" rel="noreferrer" className="text-xs text-[#DB0011] underline">
+                        View ID Back (PDF)
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-[#AAAAAA]">No documents on file</p>
+              )}
+            </div>
+          )}
+
+          {u.kycStatus === "PENDING" && (
+            <div className="flex flex-wrap gap-1.5">
+              <Btn color="green" label="Verify KYC" loading={actionId === "x"} onClick={() => act(async () => { await adminApi.approveKyc(u.id); onUpdate(u.id, { kycStatus: "VERIFIED" }); })} />
+              <Btn color="red" label="Reject KYC" loading={actionId === "x"} onClick={async () => {
+                const reason = prompt("Reason for KYC rejection:");
+                if (!reason?.trim()) return;
+                await act(async () => { await adminApi.rejectKyc(u.id, reason.trim()); onUpdate(u.id, { kycStatus: "REJECTED" }); });
+              }} />
+            </div>
+          )}
         </div>
       )}
 
@@ -813,7 +887,11 @@ function UserRow({ u, onUpdate, onDelete }: {
       {expanded && (
         <div className="mt-3 border-t border-[#F0F0F0] pt-3">
           <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-2">Bank Accounts</p>
-          {acctLoading ? <p className="text-xs text-[#AAAAAA]">Loading…</p> : accounts.length === 0 ? (
+          {acctLoading ? (
+            <p className="text-xs text-[#AAAAAA]">Loading…</p>
+          ) : acctError ? (
+            <p className="text-xs text-red-500">{acctError}</p>
+          ) : accounts.length === 0 ? (
             <p className="text-xs text-[#AAAAAA]">No accounts</p>
           ) : (
             <div className="space-y-2">

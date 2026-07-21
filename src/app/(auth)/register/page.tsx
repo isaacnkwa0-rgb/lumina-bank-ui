@@ -1174,9 +1174,14 @@ function Stage8({
     dispatch({ type: "SUBMITTING", value: true });
     try {
       await usersApi.updateProfile({
+        employmentStatus: state.employmentStatus || undefined,
         occupation: state.occupation || undefined,
         employer: state.employerName || undefined,
-      } as Parameters<typeof usersApi.updateProfile>[0]);
+        industry: state.industry || undefined,
+        annualIncomeRange: state.annualIncomeRange || undefined,
+        sourceOfFunds: state.sourceOfFunds.length > 0 ? state.sourceOfFunds : undefined,
+        expectedMonthlyVolume: state.expectedMonthlyVolume || undefined,
+      });
       dispatch({ type: "SUBMITTING", value: false });
       dispatch({ type: "COMPLETE", step: 8 });
       dispatch({ type: "NEXT" });
@@ -1564,7 +1569,7 @@ function Stage11({
         marketingConsent: state.marketingConsent,
         electronicStatementsConsent: state.electronicStatementsConsent,
         dataProcessingConsent: state.dataProcessingConsent,
-        onboardingStep: 11,
+        onboardingStep: 12,
       });
       dispatch({ type: "SUBMITTING", value: false });
       dispatch({ type: "COMPLETE", step: 11 });
