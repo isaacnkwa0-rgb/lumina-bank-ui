@@ -8,7 +8,7 @@ import {
   Home, Landmark, ArrowLeftRight, CreditCard, Receipt,
   BarChart2, TrendingUp, Globe, Target, PiggyBank,
   Bell, User, ShieldCheck, Building, Bitcoin,
-  LogOut, ChevronRight, RefreshCw, AlertCircle,
+  LogOut, ChevronRight, RefreshCw, AlertCircle, HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -59,6 +59,7 @@ const navGroups = [
   {
     labelKey: "nav.support",
     items: [
+      { href: "/support",      labelKey: "support.title",        icon: HelpCircle },
       { href: "/disputes",     labelKey: "nav.disputes",         icon: AlertCircle },
     ],
   },

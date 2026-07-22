@@ -7,7 +7,7 @@ import { useLanguage, type TranslationKey } from "@/lib/i18n";
 import {
   Home, CreditCard, ArrowLeftRight, LayoutGrid, Landmark,
   BarChart2, Globe, PiggyBank, Target, Bell, User,
-  TrendingUp, X, Bitcoin, ShieldCheck, Building, Receipt,
+  TrendingUp, X, Bitcoin, ShieldCheck, Building, Receipt, HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +30,7 @@ const moreItems = [
   { href: "/rates",         labelKey: "nav.rates",         icon: Globe,       color: "bg-sky-50 text-sky-600"        },
   { href: "/beneficiaries", labelKey: "nav.beneficiaries", icon: PiggyBank,   color: "bg-teal-50 text-teal-600"     },
   { href: "/notifications", labelKey: "nav.notifications", icon: Bell,        color: "bg-red-50 text-[#DB0011]"     },
+  { href: "/support",       labelKey: "support.title",      icon: HelpCircle, color: "bg-red-50 text-[#DB0011]"    },
   { href: "/profile",       labelKey: "nav.profileSettings", icon: User,      color: "bg-[#F0F0F0] text-[#555555]" },
 ] as const;
 
