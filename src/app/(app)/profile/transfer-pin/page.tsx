@@ -67,7 +67,7 @@ export default function TransferPinPage() {
               <div
                 onClick={() => refs.current[i]?.focus()}
                 className={`h-14 w-11 rounded-xl border-2 flex items-center justify-center cursor-text transition-all
-                  ${d ? "border-[#1a1a2e] bg-[#1a1a2e]" : "border-[#E3E3E3] bg-white"}
+                  ${d ? "border-[#DB0011] bg-[#DB0011]" : "border-[#E3E3E3] bg-white"}
                   ${!d && digits.filter(Boolean).length === i ? "border-[#DB0011]" : ""}`}
               >
                 {d && <div className="h-3 w-3 rounded-full bg-white" />}
@@ -124,7 +124,7 @@ export default function TransferPinPage() {
   return (
     <div className="max-w-lg mx-auto">
       {/* Header */}
-      <div className="bg-[#1a1a2e] px-4 pt-12 pb-8 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-12 pb-8 text-white">
         <button onClick={() => router.back()} className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center mb-5">
           <ArrowLeft size={16} className="text-white" />
         </button>
@@ -208,7 +208,7 @@ export default function TransferPinPage() {
               </div>
             </div>
             <button onClick={() => { setStep("enter-new"); setError(""); }}
-              className="w-full py-3.5 bg-[#1a1a2e] text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-[#2a2a4e] transition-colors">
+              className="w-full py-3.5 bg-[#DB0011] text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-[#b0000d] transition-colors">
               <KeyRound size={16} /> Set up transfer PIN
             </button>
           </div>
@@ -225,7 +225,7 @@ export default function TransferPinPage() {
               </div>
             </div>
             <button onClick={() => { setStep("enter-current"); setError(""); setHasPin(true); }}
-              className="w-full py-3.5 border-2 border-[#1a1a2e] text-[#1a1a2e] text-sm font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-[#f5f5f5] transition-colors">
+              className="w-full py-3.5 border-2 border-[#DB0011] text-[#DB0011] text-sm font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-red-50 transition-colors">
               <KeyRound size={16} /> Change transfer PIN
             </button>
           </div>
@@ -244,7 +244,7 @@ export default function TransferPinPage() {
               </p>
             </div>
             <button onClick={() => router.back()}
-              className="w-full py-3.5 bg-[#1a1a2e] text-white text-sm font-bold rounded-xl">
+              className="w-full py-3.5 bg-[#DB0011] text-white text-sm font-bold rounded-xl hover:bg-[#b0000d] transition-colors">
               Done
             </button>
           </div>
