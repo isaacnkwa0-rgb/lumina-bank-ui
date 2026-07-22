@@ -442,6 +442,15 @@ export const adminApi = {
     api.patch<ApiResponse<AdminCryptoOrder>>(`/admin/crypto/orders/${id}/approve`, { notes }),
   rejectCryptoOrder: (id: string, reason: string) =>
     api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/crypto/orders/${id}/reject`, { reason }),
+  // Support tickets
+  supportTickets: (params?: { page?: number; status?: string; search?: string }) =>
+    api.get<ApiResponse<{ tickets: AdminSupportTicket[]; meta: unknown }>>("/admin/support/tickets", { params }),
+  getSupportTicket: (id: string) =>
+    api.get<ApiResponse<AdminSupportTicket>>(`/admin/support/tickets/${id}`),
+  replyToTicket: (id: string, body: string) =>
+    api.post<ApiResponse<SupportMessage>>(`/admin/support/tickets/${id}/reply`, { body }),
+  resolveSupportTicket: (id: string) =>
+    api.patch<ApiResponse<SupportTicket>>(`/admin/support/tickets/${id}/resolve`),
 };
 
 export const disputesApi = {
@@ -450,6 +459,16 @@ export const disputesApi = {
   create: (data: { subject: string; description: string; transactionId?: string }) =>
     api.post<ApiResponse<Dispute>>("/disputes", data),
   close: (id: string) => api.patch<ApiResponse<Dispute>>(`/disputes/${id}/close`),
+};
+
+export const supportApi = {
+  listTickets: () => api.get<ApiResponse<SupportTicket[]>>("/support/tickets"),
+  getTicket: (id: string) => api.get<ApiResponse<SupportTicket>>(`/support/tickets/${id}`),
+  createTicket: (subject: string, body: string) =>
+    api.post<ApiResponse<SupportTicket>>("/support/tickets", { subject, body }),
+  postMessage: (id: string, body: string) =>
+    api.post<ApiResponse<SupportMessage>>(`/support/tickets/${id}/messages`, { body }),
+  closeTicket: (id: string) => api.patch<ApiResponse<SupportTicket>>(`/support/tickets/${id}/close`),
 };
 
 export const insuranceApi = {
@@ -1083,4 +1102,32 @@ export interface CryptoOrder {
 
 export interface AdminCryptoOrder extends CryptoOrder {
   user: { id: string; firstName: string; lastName: string; email: string };
+}
+
+export interface AdminSupportTicket extends SupportTicket {
+  user: { id: string; firstName: string; lastName: string; email: string };
+  _count?: { messages: number };
+}
+
+export interface SupportMessage {
+  id: string;
+  ticketId: string;
+  senderId: string;
+  senderRole: "CUSTOMER" | "AGENT";
+  body: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  userId: string;
+  subject: string;
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt: string | null;
+  messages: SupportMessage[];
+  lastMessage?: SupportMessage | null;
+  unreadCount?: number;
 }

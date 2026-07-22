@@ -403,6 +403,11 @@ export type TranslationKey =
   | "support.title" | "support.subtitle" | "support.contact"
   | "support.emailSupport" | "support.liveChat" | "support.chatHours"
   | "support.phone" | "support.faq" | "support.demo" | "support.urgent"
+  | "support.newTicket" | "support.myTickets" | "support.ticketSubject"
+  | "support.ticketMessage" | "support.send" | "support.close"
+  | "support.statusOpen" | "support.statusInProgress" | "support.statusResolved" | "support.statusClosed"
+  | "support.agentLabel" | "support.youLabel"
+  | "support.noTickets" | "support.noTicketsDesc" | "support.agentReviewing"
   // ── TOP UP ──
   | "topup.title" | "topup.totalBalance" | "topup.bankTransfer"
   | "topup.accountName" | "topup.accountNumber" | "topup.sortCode"
@@ -1156,6 +1161,14 @@ const translations: TranslationMap = {
     "support.phone": "Phone", "support.faq": "Frequently asked questions",
     "support.demo": "Lumina Bank is a demo banking application.",
     "support.urgent": "For urgent account security concerns, email",
+    "support.newTicket": "New conversation", "support.myTickets": "My conversations",
+    "support.ticketSubject": "Subject", "support.ticketMessage": "Describe your issue",
+    "support.send": "Send", "support.close": "Close ticket",
+    "support.statusOpen": "Open", "support.statusInProgress": "In progress",
+    "support.statusResolved": "Resolved", "support.statusClosed": "Closed",
+    "support.agentLabel": "Support team", "support.youLabel": "You",
+    "support.noTickets": "No conversations yet", "support.noTicketsDesc": "Start a new conversation with our support team",
+    "support.agentReviewing": "Our team will respond shortly",
     // Top up
     "topup.title": "Add Money", "topup.totalBalance": "Total balance",
     "topup.bankTransfer": "Bank transfer — your account details",
@@ -1936,6 +1949,14 @@ const translations: TranslationMap = {
     "support.phone": "Teléfono", "support.faq": "Preguntas frecuentes",
     "support.demo": "Lumina Bank es una aplicación bancaria de demostración.",
     "support.urgent": "Para problemas urgentes de seguridad, escribe a",
+    "support.newTicket": "Nueva conversación", "support.myTickets": "Mis conversaciones",
+    "support.ticketSubject": "Asunto", "support.ticketMessage": "Describe tu problema",
+    "support.send": "Enviar", "support.close": "Cerrar ticket",
+    "support.statusOpen": "Abierto", "support.statusInProgress": "En progreso",
+    "support.statusResolved": "Resuelto", "support.statusClosed": "Cerrado",
+    "support.agentLabel": "Equipo de soporte", "support.youLabel": "Tú",
+    "support.noTickets": "Sin conversaciones aún", "support.noTicketsDesc": "Inicia una nueva conversación con nuestro equipo",
+    "support.agentReviewing": "Nuestro equipo responderá en breve",
     "topup.title": "Añadir dinero", "topup.totalBalance": "Saldo total",
     "topup.bankTransfer": "Transferencia bancaria — datos de tu cuenta",
     "topup.accountName": "Nombre de la cuenta", "topup.accountNumber": "Número de cuenta",
@@ -2714,6 +2735,14 @@ const translations: TranslationMap = {
     "support.phone": "Téléphone", "support.faq": "Foire aux questions",
     "support.demo": "Lumina Bank est une application bancaire de démonstration.",
     "support.urgent": "Pour les problèmes urgents de sécurité, écrivez à",
+    "support.newTicket": "Nouvelle conversation", "support.myTickets": "Mes conversations",
+    "support.ticketSubject": "Objet", "support.ticketMessage": "Décrivez votre problème",
+    "support.send": "Envoyer", "support.close": "Fermer le ticket",
+    "support.statusOpen": "Ouvert", "support.statusInProgress": "En cours",
+    "support.statusResolved": "Résolu", "support.statusClosed": "Fermé",
+    "support.agentLabel": "Équipe support", "support.youLabel": "Vous",
+    "support.noTickets": "Pas encore de conversations", "support.noTicketsDesc": "Démarrez une conversation avec notre équipe",
+    "support.agentReviewing": "Notre équipe répondra sous peu",
     "topup.title": "Ajouter de l'argent", "topup.totalBalance": "Solde total",
     "topup.bankTransfer": "Virement bancaire — vos coordonnées bancaires",
     "topup.accountName": "Nom du compte", "topup.accountNumber": "Numéro de compte",
@@ -3492,6 +3521,14 @@ const translations: TranslationMap = {
     "support.phone": "Telefone", "support.faq": "Perguntas frequentes",
     "support.demo": "O Lumina Bank é uma aplicação bancária de demonstração.",
     "support.urgent": "Para problemas urgentes de segurança, escreva para",
+    "support.newTicket": "Nova conversa", "support.myTickets": "Minhas conversas",
+    "support.ticketSubject": "Assunto", "support.ticketMessage": "Descreva o seu problema",
+    "support.send": "Enviar", "support.close": "Fechar ticket",
+    "support.statusOpen": "Aberto", "support.statusInProgress": "Em andamento",
+    "support.statusResolved": "Resolvido", "support.statusClosed": "Fechado",
+    "support.agentLabel": "Equipa de suporte", "support.youLabel": "Você",
+    "support.noTickets": "Sem conversas ainda", "support.noTicketsDesc": "Inicie uma nova conversa com a nossa equipa",
+    "support.agentReviewing": "A nossa equipa responderá em breve",
     "topup.title": "Adicionar dinheiro", "topup.totalBalance": "Saldo total",
     "topup.bankTransfer": "Transferência bancária — os seus dados bancários",
     "topup.accountName": "Nome da conta", "topup.accountNumber": "Número de conta",
@@ -4270,6 +4307,14 @@ const translations: TranslationMap = {
     "support.phone": "Telefon", "support.faq": "Häufige Fragen",
     "support.demo": "Lumina Bank ist eine Demo-Banking-App.",
     "support.urgent": "Für dringende Sicherheitsprobleme schreiben Sie an",
+    "support.newTicket": "Neue Konversation", "support.myTickets": "Meine Konversationen",
+    "support.ticketSubject": "Betreff", "support.ticketMessage": "Beschreiben Sie Ihr Problem",
+    "support.send": "Senden", "support.close": "Ticket schließen",
+    "support.statusOpen": "Offen", "support.statusInProgress": "In Bearbeitung",
+    "support.statusResolved": "Gelöst", "support.statusClosed": "Geschlossen",
+    "support.agentLabel": "Support-Team", "support.youLabel": "Sie",
+    "support.noTickets": "Noch keine Konversationen", "support.noTicketsDesc": "Starten Sie eine neue Konversation mit unserem Team",
+    "support.agentReviewing": "Unser Team antwortet in Kürze",
     "topup.title": "Geld hinzufügen", "topup.totalBalance": "Gesamtguthaben",
     "topup.bankTransfer": "Banküberweisung — Ihre Bankdaten",
     "topup.accountName": "Kontoname", "topup.accountNumber": "Kontonummer",
