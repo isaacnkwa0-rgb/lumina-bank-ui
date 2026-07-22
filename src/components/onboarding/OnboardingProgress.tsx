@@ -87,7 +87,7 @@ function OnboardingProgress({ currentStep, completedSteps }: OnboardingProgressP
       <div className="lg:hidden">
         <div className="flex items-baseline justify-between mb-2">
           <span className="text-xs font-semibold text-[#333333]">
-            Step {currentIdx + 1} of {totalSteps} &mdash; {stageName}
+            Step {currentIdx + 1} of {totalSteps}: {stageName}
           </span>
           <span className="text-xs text-[#767676]">
             {Math.round((currentIdx / totalSteps) * 100)}%

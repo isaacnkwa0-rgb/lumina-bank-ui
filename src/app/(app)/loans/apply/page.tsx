@@ -389,7 +389,7 @@ export default function LoanApplyPage() {
           >
             {submitting ? "Submitting application…" : (
               <>
-                {t("loans.applyTitle")} — {t(selectedType.labelKey)}
+                {t("loans.applyTitle")}: {t(selectedType.labelKey)}
                 <ChevronRight size={16} />
               </>
             )}

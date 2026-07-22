@@ -434,7 +434,7 @@ export default function LoansPage() {
               <p className="text-sm font-bold text-[#333]">
                 {loans.length
                   ? `${(loans.reduce((s, l) => s + Number(l.interestRate), 0) / loans.length).toFixed(1)}%`
-                  : "—"}
+                  : "N/A"}
               </p>
             </div>
           </div>

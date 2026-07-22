@@ -990,7 +990,7 @@ function PaymentModal({
             >
               {accounts.map((acc) => (
                 <option key={acc.id} value={acc.id}>
-                  {acc.type} — {acc.accountNumber} ({formatCurrency(Number(acc.availableBalance), acc.currency)})
+                  {acc.type} · {acc.accountNumber} ({formatCurrency(Number(acc.availableBalance), acc.currency)})
                 </option>
               ))}
             </select>
@@ -1090,7 +1090,7 @@ export default function PayPage() {
         </div>
         <h2 className="text-2xl font-bold text-[#333] mb-2">{t("pay.success")}</h2>
         <p className="text-[#767676] text-sm mb-8">
-          <span className="font-semibold text-[#333]">{selectedBiller.name}</span> — {t("pay.successDesc")}
+          <span className="font-semibold text-[#333]">{selectedBiller.name}</span>. {t("pay.successDesc")}
         </p>
         <div className="flex gap-3 w-full">
           <button

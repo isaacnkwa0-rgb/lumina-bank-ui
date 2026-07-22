@@ -1517,14 +1517,14 @@ function Stage10({
   ];
 
   const financeFields = [
-    { label: "Employment", value: state.employmentStatus.replace("_", " ") || "—" },
-    { label: "Income range", value: INCOME_RANGES.find((r) => r.value === state.annualIncomeRange)?.label ?? "—" },
-    { label: "Source of funds", value: state.sourceOfFunds.join(", ") || "—" },
-    { label: "Monthly volume", value: MONTHLY_VOLUMES.find((v) => v.value === state.expectedMonthlyVolume)?.label ?? "—" },
+    { label: "Employment", value: state.employmentStatus.replace("_", " ") || "Not provided" },
+    { label: "Income range", value: INCOME_RANGES.find((r) => r.value === state.annualIncomeRange)?.label ?? "Not provided" },
+    { label: "Source of funds", value: state.sourceOfFunds.join(", ") || "Not provided" },
+    { label: "Monthly volume", value: MONTHLY_VOLUMES.find((v) => v.value === state.expectedMonthlyVolume)?.label ?? "Not provided" },
   ];
 
   const docsFields = [
-    { label: "Document type", value: state.docType.replace(/_/g, " ") || "—" },
+    { label: "Document type", value: state.docType.replace(/_/g, " ") || "Not provided" },
     { label: "Status", value: <span className="text-green-600 flex items-center gap-1"><CheckCircle2 size={12} />Submitted</span> },
   ];
 

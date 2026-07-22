@@ -107,7 +107,7 @@ function AddPayeeSheet({ onClose, onAdded }: { onClose: () => void; onAdded: (b:
               className="w-full px-3 py-2.5 border-2 border-[#E3E3E3] rounded-xl text-sm focus:outline-none focus:border-[#DB0011]"
             >
               {Object.entries(UK_BANKS).map(([code, name]) => (
-                <option key={code} value={code}>{code} — {name}</option>
+                <option key={code} value={code}>{code} - {name}</option>
               ))}
             </select>
           </div>

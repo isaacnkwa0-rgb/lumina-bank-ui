@@ -169,7 +169,7 @@ export default function TransferPinPage() {
             </div>
             <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
               <p className="text-xs text-blue-700 leading-relaxed">
-                <strong>Tips:</strong> Avoid obvious sequences like 123456 or your date of birth. Don't share your PIN with anyone — Lumina Bank staff will never ask for it.
+                <strong>Tips:</strong> Avoid obvious sequences like 123456 or your date of birth. Never share your PIN with anyone. Lumina Bank staff will never ask for it.
               </p>
             </div>
             {error && <p className="text-xs text-[#DB0011] text-center font-medium">{error}</p>}

@@ -16,7 +16,7 @@ const openSans = Open_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Lumina Bank — Online Banking",
+  title: "Lumina Bank | Online Banking",
   description: "Secure online banking with Lumina Bank",
   manifest: "/manifest.json",
   icons: {

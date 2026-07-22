@@ -43,7 +43,7 @@ const FAQS = [
   {
     icon: ArrowLeftRight,
     q: "What are the daily transfer limits?",
-    a: "Daily limits depend on your account tier: Standard — £5,000, Premium — £25,000, Private — £100,000. Limits apply to the combined total of all domestic and international transfers in a 24-hour period.",
+    a: "Daily limits depend on your account tier: Standard £5,000, Premium £25,000, Private £100,000. Limits apply to the combined total of all domestic and international transfers in a 24-hour period.",
   },
   {
     icon: Lock,

@@ -268,9 +268,9 @@ export default function ProfilePage() {
             </button>
           </div>
           <div className="px-4 pb-4 space-y-3.5">
-            <InfoRow icon={User}    label="Full name"    value={user ? `${user.firstName} ${user.lastName}` : "—"} />
+            <InfoRow icon={User}    label="Full name"    value={user ? `${user.firstName} ${user.lastName}` : "Loading..."} />
             <Divider />
-            <InfoRow icon={Mail}    label="Email address" value={user?.email ?? "—"} />
+            <InfoRow icon={Mail}    label="Email address" value={user?.email ?? "Loading..."} />
             <Divider />
             <InfoRow icon={Phone}   label="Phone number"  value={(user as { phone?: string } | null)?.phone ?? "Not set"} />
             <Divider />

@@ -145,7 +145,7 @@ function AccountCardPicker({
           <option value="">{placeholder}</option>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
-              {a.type} — {formatCurrency(Number(a.balance), a.currency)} (••{a.accountNumber.slice(-4)})
+              {a.type} · {formatCurrency(Number(a.balance), a.currency)} (••{a.accountNumber.slice(-4)})
             </option>
           ))}
         </select>
@@ -946,7 +946,7 @@ function InternationalForm({
         <Input
           label={t("transfer.reference")}
           type="text"
-          placeholder="Optional — e.g. Invoice #1234"
+          placeholder="Optional, e.g. Invoice #1234"
           error={errors.description?.message}
           {...register("description")}
         />

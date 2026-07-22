@@ -428,7 +428,7 @@ export default function AnalyticsPage() {
                 <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest">{t("analytics.topMerchants")}</p>
               </div>
               <p className="text-sm font-bold text-[#222] capitalize">
-                {(spending[0]?.category ?? "—").toLowerCase().replace(/_/g, " ")}
+                {(spending[0]?.category ?? "Other").toLowerCase().replace(/_/g, " ")}
               </p>
               <p className="text-xs text-[#AAAAAA] mt-0.5">{formatCurrency(spending[0]?.total ?? 0)}</p>
             </div>

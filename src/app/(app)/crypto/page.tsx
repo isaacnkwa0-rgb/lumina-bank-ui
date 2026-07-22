@@ -294,7 +294,7 @@ function BuyModal({
                 className="w-full h-12 pl-4 pr-10 border-2 border-[#E3E3E3] rounded-2xl text-sm text-[#222] font-medium appearance-none bg-white focus:border-[#222] outline-none">
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.type} ••{a.accountNumber.slice(-4)} — {formatCurrency(Number(a.availableBalance), a.currency)}
+                    {a.type} ••{a.accountNumber.slice(-4)} · {formatCurrency(Number(a.availableBalance), a.currency)}
                   </option>
                 ))}
               </select>
@@ -327,7 +327,7 @@ function BuyModal({
               backgroundColor: canSubmit ? undefined : "#E0E0E0",
               color: canSubmit ? "white" : "#999",
             }}>
-            {loading ? "Submitting order…" : `Submit purchase — ${formatCurrency(total)}`}
+            {loading ? "Submitting order…" : `Submit purchase: ${formatCurrency(total)}`}
           </button>
 
           <p className="text-center text-[10px] text-[#CCCCCC] pb-2">

@@ -358,7 +358,7 @@ function QuoteCard({
           {isActive && (
             <div className="mt-2 flex items-center gap-1.5 text-xs text-green-700 font-medium">
               <BadgeCheck size={13} />
-              Policy active — our team will be in touch to confirm details.
+              Policy active. Our team will be in touch to confirm details.
             </div>
           )}
         </div>
