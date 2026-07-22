@@ -6,16 +6,16 @@ import {
   type AdminTransfer, type AdminUser, type AdminLoan, type AdminDispute,
   type AdminInsuranceQuote, type AdminCard, type AdminTransaction,
   type AdminExchangeRate, type AdminPortfolio, type AdminGoal, type AdminAccount,
-  type AdminCryptoOrder, type AuditLog, type AdminKycUser,
+  type AdminCryptoOrder, type AuditLog, type AdminKycUser, type AdminSupportTicket,
 } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   ShieldCheck, CheckCircle2, Users, ArrowLeftRight, Landmark, AlertCircle,
   ChevronRight, Search, RefreshCw, CreditCard, Receipt, Globe,
-  TrendingUp, Target, Home, ShieldAlert, Bitcoin, ScrollText,
+  TrendingUp, Target, Home, ShieldAlert, Bitcoin, ScrollText, MessageSquare, Send,
 } from "lucide-react";
 
-type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "kyc" | "audit";
+type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "support" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "kyc" | "audit";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -1078,6 +1078,164 @@ function CryptoTab() {
   );
 }
 
+// ── Support Tickets ───────────────────────────────────────────────────────────
+
+function SupportTab() {
+  const [filter, setFilter] = useState<"OPEN" | "IN_PROGRESS" | "ALL">("OPEN");
+  const [items, setItems] = useState<AdminSupportTicket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState("");
+  const [threadTicket, setThreadTicket] = useState<AdminSupportTicket | null>(null);
+  const [threadLoading, setThreadLoading] = useState(false);
+  const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
+  const [resolving, setResolving] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await adminApi.supportTickets({ status: filter === "ALL" ? undefined : filter, limit: 50 } as any);
+      setItems((r.data.data as any).tickets ?? r.data.data);
+    } catch {} finally { setLoading(false); }
+  }, [filter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function openThread(ticket: AdminSupportTicket) {
+    if (expanded === ticket.id) { setExpanded(""); setThreadTicket(null); return; }
+    setExpanded(ticket.id);
+    setThreadLoading(true);
+    try {
+      const r = await adminApi.getSupportTicket(ticket.id);
+      setThreadTicket(r.data.data as AdminSupportTicket);
+    } catch {} finally { setThreadLoading(false); }
+    setReply("");
+  }
+
+  async function sendReply(ticketId: string) {
+    if (!reply.trim()) return;
+    setSending(true);
+    try {
+      await adminApi.replyToTicket(ticketId, reply.trim());
+      const r = await adminApi.getSupportTicket(ticketId);
+      setThreadTicket(r.data.data as AdminSupportTicket);
+      setItems((p) => p.map((t) => t.id === ticketId ? { ...t, status: "IN_PROGRESS" as const } : t));
+      setReply("");
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed to send reply"); }
+    finally { setSending(false); }
+  }
+
+  async function resolve(ticketId: string) {
+    if (!confirm("Mark this ticket as resolved?")) return;
+    setResolving(ticketId);
+    try {
+      await adminApi.resolveSupportTicket(ticketId);
+      setItems((p) => p.map((t) => t.id === ticketId ? { ...t, status: "RESOLVED" as const } : t));
+      if (threadTicket?.id === ticketId) setThreadTicket((p) => p ? { ...p, status: "RESOLVED" } : p);
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setResolving(""); }
+  }
+
+  return (
+    <div>
+      <FilterBar
+        filters={["OPEN", "IN_PROGRESS", "ALL"]}
+        active={filter}
+        onSelect={(f) => setFilter(f as any)}
+        labels={{ OPEN: "Open", IN_PROGRESS: "In Progress", ALL: "All" }}
+      />
+      {loading ? <LoadingRows /> : items.length === 0 ? <Empty icon={MessageSquare} label="No support tickets" /> : (
+        <div className="divide-y divide-[#F0F0F0]">
+          {items.map((t) => (
+            <div key={t.id} className="bg-white">
+              {/* Ticket header row */}
+              <button onClick={() => openThread(t)} className="w-full text-left px-4 py-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <Pill status={t.status} />
+                      {t._count && t._count.messages > 0 && (
+                        <span className="text-[10px] text-[#AAAAAA]">{t._count.messages} msg{t._count.messages !== 1 ? "s" : ""}</span>
+                      )}
+                    </div>
+                    <p className="text-sm font-semibold text-[#333] mt-1">{t.subject}</p>
+                    <UserLine user={t.user} />
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-3">
+                    <p className="text-[10px] text-[#AAAAAA]">{formatDate(t.createdAt)}</p>
+                    <ChevronRight size={14} className={`text-[#CCCCCC] mt-1 ml-auto transition-transform ${expanded === t.id ? "rotate-90" : ""}`} />
+                  </div>
+                </div>
+              </button>
+
+              {/* Thread */}
+              {expanded === t.id && (
+                <div className="border-t border-[#F0F0F0] bg-[#FAFAFA] px-4 py-3 space-y-3">
+                  {threadLoading ? (
+                    <p className="text-xs text-[#AAAAAA] py-4 text-center">Loading messages…</p>
+                  ) : threadTicket?.messages && threadTicket.messages.length > 0 ? (
+                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                      {threadTicket.messages.map((m) => (
+                        <div key={m.id} className={`flex ${m.senderRole === "AGENT" ? "justify-end" : "justify-start"}`}>
+                          <div className={`max-w-[80%] rounded-2xl px-3 py-2 ${m.senderRole === "AGENT" ? "bg-[#1a1a2e] text-white" : "bg-white border border-[#E8E8E8] text-[#333]"}`}>
+                            <p className="text-[10px] font-bold mb-0.5 opacity-60">
+                              {m.senderRole === "AGENT" ? "You (agent)" : threadTicket.user.firstName}
+                            </p>
+                            <p className="text-xs leading-relaxed">{m.body}</p>
+                            <p className="text-[9px] opacity-40 mt-1 text-right">
+                              {new Date(m.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[#AAAAAA] text-center py-2">No messages yet</p>
+                  )}
+
+                  {/* Reply box */}
+                  {t.status !== "RESOLVED" && t.status !== "CLOSED" && (
+                    <div className="flex gap-2 pt-1">
+                      <textarea
+                        value={reply}
+                        onChange={(e) => setReply(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) sendReply(t.id); }}
+                        placeholder="Type a reply… (Ctrl+Enter to send)"
+                        rows={2}
+                        className="flex-1 text-sm bg-white border border-[#E8E8E8] rounded-xl px-3 py-2 resize-none focus:outline-none focus:border-[#1a1a2e] placeholder-[#AAAAAA]"
+                      />
+                      <div className="flex flex-col gap-1.5">
+                        <button
+                          onClick={() => sendReply(t.id)}
+                          disabled={sending || !reply.trim()}
+                          className="flex items-center justify-center h-9 w-9 rounded-xl bg-[#1a1a2e] text-white disabled:opacity-40 hover:bg-[#2a2a4e] transition-colors"
+                        >
+                          <Send size={14} className={sending ? "animate-pulse" : ""} />
+                        </button>
+                        <button
+                          onClick={() => resolve(t.id)}
+                          disabled={!!resolving}
+                          className="flex items-center justify-center h-9 w-9 rounded-xl bg-green-600 text-white disabled:opacity-40 hover:bg-green-700 transition-colors"
+                          title="Mark resolved"
+                        >
+                          <CheckCircle2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {(t.status === "RESOLVED" || t.status === "CLOSED") && (
+                    <p className="text-[10px] text-[#AAAAAA] text-center py-1">This ticket is {t.status.toLowerCase()}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Shared UI ─────────────────────────────────────────────────────────────────
 
 function FilterBar({ filters, active, onSelect, labels }: {
@@ -1354,6 +1512,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "loans",        label: "Loans",        icon: Landmark       },
   { id: "mortgages",    label: "Mortgages",    icon: Home           },
   { id: "disputes",     label: "Disputes",     icon: AlertCircle    },
+  { id: "support",      label: "Support",      icon: MessageSquare  },
   { id: "insurance",    label: "Insurance",    icon: ShieldAlert    },
   { id: "crypto",       label: "Crypto",       icon: Bitcoin        },
   { id: "cards",        label: "Cards",        icon: CreditCard     },
@@ -1398,6 +1557,7 @@ export default function AdminPage() {
         {activeTab === "loans"        && <LoansTab />}
         {activeTab === "mortgages"    && <LoansTab loanType="MORTGAGE" />}
         {activeTab === "disputes"     && <DisputesTab />}
+        {activeTab === "support"      && <SupportTab />}
         {activeTab === "insurance"    && <InsuranceTab />}
         {activeTab === "crypto"       && <CryptoTab />}
         {activeTab === "cards"        && <CardsTab />}
