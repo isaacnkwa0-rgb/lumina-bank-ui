@@ -80,7 +80,7 @@ export function useAuth(): UseAuthReturn {
     setUser(data.user);
     setTokenState(data.accessToken);
     setUserState(data.user);
-    router.push(data.user.role === "ADMIN" ? "/admin" : "/dashboard");
+    router.push(data.user.role === "ADMIN" || data.user.role === "AGENT" ? "/admin" : "/dashboard");
   }, [router]);
 
   return {

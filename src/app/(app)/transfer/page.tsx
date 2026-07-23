@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   CheckCircle2, Clock, ChevronDown, ArrowDownUp,
-  RefreshCw, Send, Globe,
+  RefreshCw, Send, Globe, ShieldCheck, KeyRound,
 } from "lucide-react";
 import {
   accountsApi, transfersApi, beneficiariesApi, authApi,
@@ -329,6 +329,52 @@ function TransferPageInner() {
   );
 }
 
+// ── OTP Modal ────────────────────────────────────────────────────────────────
+
+function OtpModal({ maskedEmail, onConfirm, onCancel, isLoading }: {
+  maskedEmail: string;
+  onConfirm: (code: string) => void;
+  onCancel: () => void;
+  isLoading: boolean;
+}) {
+  const [code, setCode] = useState("");
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-50 mx-auto mb-4">
+          <ShieldCheck size={22} className="text-[#DB0011]" />
+        </div>
+        <h3 className="text-base font-bold text-[#333] text-center mb-1">Security verification</h3>
+        <p className="text-xs text-[#767676] text-center mb-5 leading-relaxed">
+          Enter the 6-digit code sent to<br />
+          <span className="font-semibold text-[#333]">{maskedEmail}</span>
+        </p>
+        <input
+          type="tel"
+          inputMode="numeric"
+          maxLength={6}
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+          placeholder="000000"
+          autoFocus
+          className="w-full text-center text-2xl font-bold tracking-[0.3em] border border-[#E0E0E0] rounded-xl px-4 py-3 outline-none focus:border-[#DB0011] mb-4"
+        />
+        <div className="flex gap-2">
+          <button type="button" onClick={onCancel}
+            className="flex-1 py-3 rounded-xl border border-[#E0E0E0] text-sm font-semibold text-[#767676]">
+            Cancel
+          </button>
+          <button type="button" onClick={() => code.length === 6 && onConfirm(code)}
+            disabled={code.length !== 6 || isLoading}
+            className="flex-1 py-3 rounded-xl bg-[#DB0011] text-white text-sm font-bold disabled:opacity-50">
+            {isLoading ? "Verifying…" : "Confirm"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Own Accounts Form ────────────────────────────────────────────────────────
 
 function OwnAccountsForm({
@@ -348,21 +394,39 @@ function OwnAccountsForm({
 
   const fromAccountId = watch("fromAccountId") ?? "";
   const toAccountId = watch("toAccountId") ?? "";
+  const [otpStep, setOtpStep] = useState<{ formData: OwnForm; maskedEmail: string } | null>(null);
+  const [otpLoading, setOtpLoading] = useState(false);
 
   async function onSubmit(data: OwnForm) {
     onError("");
     try {
-      const res = await transfersApi.internal({ ...data, amount: Number(data.amount) });
+      const r = await authApi.requestTransferOtp();
+      setOtpStep({ formData: data, maskedEmail: r.data.data.maskedEmail });
+    } catch (err: unknown) {
+      onError((err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "Failed to send OTP. Try again.");
+    }
+  }
+
+  async function executeTransfer(otp: string) {
+    if (!otpStep) return;
+    setOtpLoading(true);
+    try {
+      const res = await transfersApi.internal({ ...otpStep.formData, amount: Number(otpStep.formData.amount), transferOtp: otp });
+      setOtpStep(null);
       onSuccess(res.data.data);
     } catch (err: unknown) {
-      onError(
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-          "Transfer failed."
-      );
+      setOtpStep(null);
+      onError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed.");
+    } finally {
+      setOtpLoading(false);
     }
   }
 
   return (
+    <>
+    {otpStep && (
+      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => setOtpStep(null)} isLoading={otpLoading} />
+    )}
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
       <div>
         <p className="text-xs font-semibold text-[#767676] uppercase tracking-wide mb-2 px-0.5">
@@ -408,6 +472,7 @@ function OwnAccountsForm({
         {t("transfer.transferNow")}
       </Button>
     </form>
+    </>
   );
 }
 
@@ -441,6 +506,8 @@ function DomesticForm({
   const [verifiedName, setVerifiedName] = useState("");
   const [pendingData, setPendingData] = useState<DomesticFormValues | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [otpStep, setOtpStep] = useState<{ formData: DomesticFormValues; maskedEmail: string } | null>(null);
+  const [otpLoading, setOtpLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
@@ -508,34 +575,48 @@ function DomesticForm({
       setPendingData(data);
       return;
     }
-    await executeTransfer(data);
+    await requestOtp(data);
   }
 
-  async function executeTransfer(data: DomesticFormValues) {
+  async function requestOtp(data: DomesticFormValues) {
+    setPendingData(null);
     setIsConfirming(true);
     try {
-      const res = await transfersApi.domestic({ ...data, amount: Number(data.amount) });
-      setPendingData(null);
-      onSuccess(res.data.data);
+      const r = await authApi.requestTransferOtp();
+      setOtpStep({ formData: data, maskedEmail: r.data.data.maskedEmail });
     } catch (err: unknown) {
-      setPendingData(null);
-      onError(
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-          "Transfer failed."
-      );
+      onError((err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "Failed to send OTP. Try again.");
     } finally {
       setIsConfirming(false);
     }
   }
 
+  async function executeTransfer(otp: string) {
+    if (!otpStep) return;
+    setOtpLoading(true);
+    try {
+      const res = await transfersApi.domestic({ ...otpStep.formData, amount: Number(otpStep.formData.amount), transferOtp: otp });
+      setOtpStep(null);
+      onSuccess(res.data.data);
+    } catch (err: unknown) {
+      setOtpStep(null);
+      onError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed.");
+    } finally {
+      setOtpLoading(false);
+    }
+  }
+
   return (
     <>
+    {otpStep && (
+      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => setOtpStep(null)} isLoading={otpLoading} />
+    )}
     {pendingData && (
       <ConfirmModal
         amount={Number(pendingData.amount)}
         currency="GBP"
         recipient={pendingData.toAccountName}
-        onConfirm={() => executeTransfer(pendingData)}
+        onConfirm={() => requestOtp(pendingData)}
         onCancel={() => setPendingData(null)}
         isLoading={isConfirming}
       />
@@ -766,6 +847,8 @@ function InternationalForm({
   const { t } = useLanguage();
   const [pendingData, setPendingData] = useState<InternationalFormValues | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [otpStep, setOtpStep] = useState<{ formData: InternationalFormValues; maskedEmail: string } | null>(null);
+  const [otpLoading, setOtpLoading] = useState(false);
 
   const {
     register, handleSubmit, watch,
@@ -800,34 +883,48 @@ function InternationalForm({
       setPendingData(data);
       return;
     }
-    await executeTransfer(data);
+    await requestOtp(data);
   }
 
-  async function executeTransfer(data: InternationalFormValues) {
+  async function requestOtp(data: InternationalFormValues) {
+    setPendingData(null);
     setIsConfirming(true);
     try {
-      const res = await transfersApi.international({ ...data, amount: Number(data.amount) });
-      setPendingData(null);
-      onSuccess(res.data.data);
+      const r = await authApi.requestTransferOtp();
+      setOtpStep({ formData: data, maskedEmail: r.data.data.maskedEmail });
     } catch (err: unknown) {
-      setPendingData(null);
-      onError(
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-          "Transfer failed."
-      );
+      onError((err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "Failed to send OTP. Try again.");
     } finally {
       setIsConfirming(false);
     }
   }
 
+  async function executeTransfer(otp: string) {
+    if (!otpStep) return;
+    setOtpLoading(true);
+    try {
+      const res = await transfersApi.international({ ...otpStep.formData, amount: Number(otpStep.formData.amount), transferOtp: otp });
+      setOtpStep(null);
+      onSuccess(res.data.data);
+    } catch (err: unknown) {
+      setOtpStep(null);
+      onError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed.");
+    } finally {
+      setOtpLoading(false);
+    }
+  }
+
   return (
     <>
+    {otpStep && (
+      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => setOtpStep(null)} isLoading={otpLoading} />
+    )}
     {pendingData && (
       <ConfirmModal
         amount={Number(pendingData.amount)}
         currency="GBP"
         recipient={pendingData.toAccountName}
-        onConfirm={() => executeTransfer(pendingData)}
+        onConfirm={() => requestOtp(pendingData)}
         onCancel={() => setPendingData(null)}
         isLoading={isConfirming}
       />
@@ -1052,8 +1149,6 @@ function SuccessScreen({ result, onReset }: { result: Transfer; onReset: () => v
 }
 
 // ── Confirm Modal ────────────────────────────────────────────────────────────
-
-import { ShieldCheck, KeyRound } from "lucide-react";
 
 type PinStep = "enter" | "verifying" | "done" | "no-pin";
 

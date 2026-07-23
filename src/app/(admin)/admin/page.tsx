@@ -7,15 +7,18 @@ import {
   type AdminInsuranceQuote, type AdminCard, type AdminTransaction,
   type AdminExchangeRate, type AdminPortfolio, type AdminGoal, type AdminAccount,
   type AdminCryptoOrder, type AuditLog, type AdminKycUser, type AdminSupportTicket,
+  type AdminAgent,
 } from "@/lib/api";
+import { getUser } from "@/lib/auth";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   ShieldCheck, CheckCircle2, Users, ArrowLeftRight, Landmark, AlertCircle,
   ChevronRight, Search, RefreshCw, CreditCard, Receipt, Globe,
   TrendingUp, Target, Home, ShieldAlert, Bitcoin, ScrollText, MessageSquare, Send,
+  UserCog, Trash2, Plus,
 } from "lucide-react";
 
-type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "support" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "kyc" | "audit";
+type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "support" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "kyc" | "audit" | "agents";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -1556,26 +1559,137 @@ function AuditLogsTab() {
   );
 }
 
-const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: "transfers",    label: "Transfers",    icon: ArrowLeftRight },
-  { id: "loans",        label: "Loans",        icon: Landmark       },
-  { id: "mortgages",    label: "Mortgages",    icon: Home           },
-  { id: "disputes",     label: "Disputes",     icon: AlertCircle    },
-  { id: "support",      label: "Support",      icon: MessageSquare  },
-  { id: "insurance",    label: "Insurance",    icon: ShieldAlert    },
-  { id: "crypto",       label: "Crypto",       icon: Bitcoin        },
-  { id: "cards",        label: "Cards",        icon: CreditCard     },
-  { id: "transactions", label: "Transactions", icon: Receipt        },
-  { id: "rates",        label: "Rates",        icon: Globe          },
-  { id: "investments",  label: "Investments",  icon: TrendingUp     },
-  { id: "goals",        label: "Goals",        icon: Target         },
-  { id: "users",        label: "Users",        icon: Users          },
-  { id: "kyc",          label: "KYC Review",   icon: ShieldCheck    },
-  { id: "audit",        label: "Audit Log",    icon: ScrollText     },
+// ── Agents ────────────────────────────────────────────────────────────────────
+
+function AgentsTab() {
+  const [agents, setAgents] = useState<AdminAgent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "", avatarUrl: "" });
+  const [saving, setSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { const r = await adminApi.getAgents(); setAgents(r.data.data); }
+    catch {} finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const { avatarUrl, ...rest } = form;
+      await adminApi.createAgent(avatarUrl ? { ...rest, avatarUrl } : rest);
+      setForm({ firstName: "", lastName: "", email: "", password: "", avatarUrl: "" });
+      setShowForm(false);
+      load();
+    } catch (err: unknown) { alert((err as any)?.response?.data?.error?.message || "Failed to create agent"); }
+    finally { setSaving(false); }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Remove this support agent?")) return;
+    setDeleteId(id);
+    try { await adminApi.deleteAgent(id); setAgents((p) => p.filter((a) => a.id !== id)); }
+    catch (err: unknown) { alert((err as any)?.response?.data?.error?.message || "Failed"); }
+    finally { setDeleteId(""); }
+  }
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-bold text-[#333]">Support Agents</h2>
+        <button onClick={() => setShowForm((p) => !p)}
+          className="flex items-center gap-1.5 bg-[#DB0011] text-white text-xs font-bold px-3 py-2 rounded-lg">
+          <Plus size={13} /> Add Agent
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleCreate} className="bg-white rounded-xl border border-[#E8E8E8] p-4 space-y-3">
+          <p className="text-xs font-bold text-[#333] mb-1">New Support Agent</p>
+          <div className="grid grid-cols-2 gap-2">
+            <input required value={form.firstName} onChange={(e) => setForm((p) => ({ ...p, firstName: e.target.value }))}
+              placeholder="First name" className="border border-[#E0E0E0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#DB0011]" />
+            <input required value={form.lastName} onChange={(e) => setForm((p) => ({ ...p, lastName: e.target.value }))}
+              placeholder="Last name" className="border border-[#E0E0E0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#DB0011]" />
+          </div>
+          <input required type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+            placeholder="Email address" className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#DB0011]" />
+          <input required type="password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
+            placeholder="Password (min 8 chars)" minLength={8} className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#DB0011]" />
+          <input value={form.avatarUrl} onChange={(e) => setForm((p) => ({ ...p, avatarUrl: e.target.value }))}
+            placeholder="Avatar URL (optional)" className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#DB0011]" />
+          <div className="flex gap-2 pt-1">
+            <button type="submit" disabled={saving}
+              className="flex-1 bg-[#DB0011] text-white py-2 rounded-lg text-xs font-bold disabled:opacity-50">
+              {saving ? "Creating…" : "Create Agent"}
+            </button>
+            <button type="button" onClick={() => setShowForm(false)}
+              className="flex-1 border border-[#E0E0E0] py-2 rounded-lg text-xs font-semibold text-[#767676]">
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {loading ? <LoadingRows /> : agents.length === 0 ? (
+        <Empty icon={UserCog} label="No support agents yet" />
+      ) : (
+        <div className="divide-y divide-[#F0F0F0] bg-white rounded-xl border border-[#E8E8E8]">
+          {agents.map((a) => (
+            <div key={a.id} className="flex items-center gap-3 px-4 py-3">
+              {a.profile?.avatarUrl ? (
+                <img src={a.profile.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover flex-shrink-0" />
+              ) : (
+                <div className="h-9 w-9 rounded-full bg-[#DB0011] flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-xs font-bold">{a.firstName[0]}{a.lastName[0]}</span>
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-[#333] truncate">{a.firstName} {a.lastName}</p>
+                <p className="text-xs text-[#767676] truncate">{a.email}</p>
+              </div>
+              <Pill status={a.status} />
+              <button onClick={() => handleDelete(a.id)} disabled={deleteId === a.id}
+                className="ml-2 p-1.5 text-[#DB0011] hover:bg-red-50 rounded-lg disabled:opacity-40">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const ALL_TABS: { id: Tab; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
+  { id: "transfers",    label: "Transfers",    icon: ArrowLeftRight, adminOnly: true  },
+  { id: "loans",        label: "Loans",        icon: Landmark,       adminOnly: true  },
+  { id: "mortgages",    label: "Mortgages",    icon: Home,           adminOnly: true  },
+  { id: "disputes",     label: "Disputes",     icon: AlertCircle,    adminOnly: true  },
+  { id: "support",      label: "Support",      icon: MessageSquare                   },
+  { id: "agents",       label: "Agents",       icon: UserCog,        adminOnly: true  },
+  { id: "insurance",    label: "Insurance",    icon: ShieldAlert,    adminOnly: true  },
+  { id: "crypto",       label: "Crypto",       icon: Bitcoin,        adminOnly: true  },
+  { id: "cards",        label: "Cards",        icon: CreditCard,     adminOnly: true  },
+  { id: "transactions", label: "Transactions", icon: Receipt,        adminOnly: true  },
+  { id: "rates",        label: "Rates",        icon: Globe,          adminOnly: true  },
+  { id: "investments",  label: "Investments",  icon: TrendingUp,     adminOnly: true  },
+  { id: "goals",        label: "Goals",        icon: Target,         adminOnly: true  },
+  { id: "users",        label: "Users",        icon: Users,          adminOnly: true  },
+  { id: "kyc",          label: "KYC Review",   icon: ShieldCheck,    adminOnly: true  },
+  { id: "audit",        label: "Audit Log",    icon: ScrollText,     adminOnly: true  },
 ];
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("transfers");
+  const currentUser = getUser();
+  const isAgent = currentUser?.role === "AGENT";
+  const TABS = ALL_TABS.filter((t) => !t.adminOnly || !isAgent);
+  const [activeTab, setActiveTab] = useState<Tab>(isAgent ? "support" : "transfers");
 
   return (
     <div className="max-w-lg mx-auto lg:max-w-none">
@@ -1583,10 +1697,10 @@ export default function AdminPage() {
       <div className="bg-gradient-to-r from-[#1a1a2e] to-[#16213e] text-white">
         <div className="px-4 py-4 flex items-center gap-2">
           <ShieldCheck size={18} className="text-[#DB0011]" />
-          <h1 className="text-base font-semibold">Admin Console</h1>
+          <h1 className="text-base font-semibold">{isAgent ? "Support Console" : "Admin Console"}</h1>
           <span className="ml-auto text-[9px] uppercase tracking-widest text-white/30 font-bold">Internal</span>
         </div>
-        <StatsBar />
+        {!isAgent && <StatsBar />}
       </div>
 
       {/* Scrollable tab nav */}
@@ -1607,6 +1721,7 @@ export default function AdminPage() {
         {activeTab === "mortgages"    && <LoansTab loanType="MORTGAGE" />}
         {activeTab === "disputes"     && <DisputesTab />}
         {activeTab === "support"      && <SupportTab />}
+        {activeTab === "agents"       && <AgentsTab />}
         {activeTab === "insurance"    && <InsuranceTab />}
         {activeTab === "crypto"       && <CryptoTab />}
         {activeTab === "cards"        && <CardsTab />}

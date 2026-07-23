@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { accountsApi, transfersApi, type Account } from "@/lib/api";
+import { accountsApi, transfersApi, authApi, type Account } from "@/lib/api";
 import { useLanguage, type TranslationKey } from "@/lib/i18n";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -752,6 +752,35 @@ const COUNTRY_FILTERS = [
   { code: "🌍",   label: "Global",    flag: "🌐" },
 ];
 
+// ── OTP code input ────────────────────────────────────────────────────────────
+
+function OtpCodeInput({ onConfirm, onCancel, isLoading }: {
+  onConfirm: (code: string) => void;
+  onCancel: () => void;
+  isLoading: boolean;
+}) {
+  const [code, setCode] = useState("");
+  return (
+    <>
+      <input
+        type="tel" inputMode="numeric" maxLength={6} autoFocus
+        value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+        placeholder="000000"
+        className="w-full text-center text-2xl font-bold tracking-[0.3em] border border-[#E0E0E0] rounded-xl px-4 py-3 outline-none focus:border-[#DB0011] mb-4"
+      />
+      <div className="flex gap-2">
+        <button type="button" onClick={onCancel}
+          className="flex-1 py-3 rounded-xl border border-[#E0E0E0] text-sm font-semibold text-[#767676]">Cancel</button>
+        <button type="button" onClick={() => code.length === 6 && onConfirm(code)}
+          disabled={code.length !== 6 || isLoading}
+          className="flex-1 py-3 rounded-xl bg-[#DB0011] text-white text-sm font-bold disabled:opacity-50">
+          {isLoading ? "Verifying…" : "Confirm"}
+        </button>
+      </div>
+    </>
+  );
+}
+
 // ── Payment modal ──────────────────────────────────────────────────────────────
 
 function PaymentModal({
@@ -777,6 +806,8 @@ function PaymentModal({
   );
   const [submitting, setSubmitting]     = useState(false);
   const [error, setError]               = useState("");
+  const [otpStep, setOtpStep]           = useState<{ description: string; maskedEmail: string } | null>(null);
+  const [otpLoading, setOtpLoading]     = useState(false);
 
   const amount = selectedPlan
     ? selectedPlan.amount
@@ -795,24 +826,57 @@ function PaymentModal({
 
     setSubmitting(true);
     try {
+      const r = await authApi.requestTransferOtp();
+      setOtpStep({ description, maskedEmail: r.data.data.maskedEmail });
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      setError(msg || "Failed to send OTP. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function executePay(otp: string) {
+    if (!otpStep) return;
+    setOtpLoading(true);
+    try {
       await transfersApi.domestic({
         fromAccountId,
         toAccountNumber: biller.accountNumber,
         toBankCode: biller.bankCode,
         toAccountName: biller.name,
         amount,
-        description,
+        description: otpStep.description,
+        transferOtp: otp,
       });
+      setOtpStep(null);
       onSuccess();
     } catch (err: unknown) {
+      setOtpStep(null);
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setError(msg || "Payment failed. Please try again.");
     } finally {
-      setSubmitting(false);
+      setOtpLoading(false);
     }
   }
 
   return (
+    <>
+    {otpStep && (
+      <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-50 mx-auto mb-4">
+            <ShieldCheck size={22} className="text-[#DB0011]" />
+          </div>
+          <h3 className="text-base font-bold text-[#333] text-center mb-1">Security verification</h3>
+          <p className="text-xs text-[#767676] text-center mb-5 leading-relaxed">
+            Enter the 6-digit code sent to<br />
+            <span className="font-semibold text-[#333]">{otpStep.maskedEmail}</span>
+          </p>
+          <OtpCodeInput onConfirm={executePay} onCancel={() => setOtpStep(null)} isLoading={otpLoading} />
+        </div>
+      </div>
+    )}
     <div className="fixed inset-0 z-50 flex items-end">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative w-full max-w-lg mx-auto lg:max-w-none bg-white rounded-t-3xl shadow-xl max-h-[90vh] flex flex-col">
@@ -1042,6 +1106,7 @@ function PaymentModal({
         </div>
       </div>
     </div>
+    </>
   );
 }
 

@@ -192,6 +192,7 @@ export const transfersApi = {
     toAccountId: string;
     amount: number;
     description: string;
+    transferOtp: string;
   }) => api.post<ApiResponse<Transfer>>("/transfers/internal", data),
   domestic: (data: {
     fromAccountId: string;
@@ -201,6 +202,7 @@ export const transfersApi = {
     amount: number;
     description: string;
     saveBeneficiary?: boolean;
+    transferOtp: string;
   }) => api.post<ApiResponse<Transfer>>("/transfers/domestic", data),
   international: (data: {
     fromAccountId: string;
@@ -212,6 +214,7 @@ export const transfersApi = {
     toCurrency: string;
     amount: number;
     description: string;
+    transferOtp: string;
   }) => api.post<ApiResponse<Transfer>>("/transfers/international", data),
   quote: (params: { fromCurrency: string; toCurrency: string; amount: number }) =>
     api.get<ApiResponse<FxQuote>>("/transfers/quote", { params }),
@@ -453,6 +456,11 @@ export const adminApi = {
     api.post<ApiResponse<SupportMessage>>(`/admin/support/tickets/${id}/reply`, { body }),
   resolveSupportTicket: (id: string) =>
     api.patch<ApiResponse<SupportTicket>>(`/admin/support/tickets/${id}/resolve`),
+  // Agents
+  getAgents: () => api.get<ApiResponse<AdminAgent[]>>("/admin/agents"),
+  createAgent: (data: { firstName: string; lastName: string; email: string; password: string; avatarUrl?: string }) =>
+    api.post<ApiResponse<AdminAgent>>("/admin/agents", data),
+  deleteAgent: (id: string) => api.delete<ApiResponse<{ id: string }>>(`/admin/agents/${id}`),
 };
 
 export const disputesApi = {
@@ -1136,4 +1144,14 @@ export interface SupportTicket {
   messages: SupportMessage[];
   lastMessage?: SupportMessage | null;
   unreadCount?: number;
+}
+
+export interface AdminAgent {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  status: string;
+  createdAt: string;
+  profile?: { avatarUrl?: string | null } | null;
 }
