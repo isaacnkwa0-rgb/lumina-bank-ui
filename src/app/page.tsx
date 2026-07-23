@@ -23,15 +23,15 @@ export default function LandingPage() {
   ];
 
   const menuLinks = [
-    "menu.currentAccounts",
-    "menu.savings",
-    "menu.creditCards",
-    "menu.loans",
-    "menu.mortgages",
-    "menu.investments",
-    "menu.international",
-    "menu.insurance",
-    "menu.helpSupport",
+    { key: "menu.currentAccounts", href: "/register" },
+    { key: "menu.savings",         href: "/register" },
+    { key: "menu.creditCards",     href: "/register" },
+    { key: "menu.loans",           href: "/register" },
+    { key: "menu.mortgages",       href: "/register" },
+    { key: "menu.investments",     href: "/register" },
+    { key: "menu.international",   href: "/register" },
+    { key: "menu.insurance",       href: "/register" },
+    { key: "menu.helpSupport",     href: "mailto:support@luminabank.online" },
   ] as const;
 
   return (
@@ -80,15 +80,16 @@ export default function LandingPage() {
               </button>
             </div>
             <nav className="flex-1 overflow-y-auto">
-              {menuLinks.map((key) => (
-                <button
+              {menuLinks.map(({ key, href }) => (
+                <Link
                   key={key}
+                  href={href}
                   onClick={() => setMenuOpen(false)}
-                  className="w-full flex items-center justify-between px-4 py-4 text-base text-[#333] border-b border-[#E3E3E3] hover:bg-[#F8F8F8] text-left"
+                  className="flex items-center justify-between px-4 py-4 text-base text-[#333] border-b border-[#E3E3E3] hover:bg-[#F8F8F8]"
                 >
                   {t(key)}
                   <ChevronRight size={18} className="text-[#DB0011]" />
-                </button>
+                </Link>
               ))}
             </nav>
             <div className="p-4 border-t border-[#E3E3E3]">
@@ -214,13 +215,13 @@ export default function LandingPage() {
             </p>
             <div className="space-y-2">
               <Link
-                href="#"
+                href="/forgot-password"
                 className="flex items-center gap-1 text-sm font-semibold text-[#333] hover:text-[#DB0011]"
               >
                 {t("help.digitalReset")} <ChevronRight size={14} className="text-[#DB0011]" />
               </Link>
               <Link
-                href="#"
+                href="/login"
                 className="flex items-center gap-1 text-sm font-semibold text-[#333] hover:text-[#DB0011]"
               >
                 {t("help.managingAccount")} <ChevronRight size={14} className="text-[#DB0011]" />
