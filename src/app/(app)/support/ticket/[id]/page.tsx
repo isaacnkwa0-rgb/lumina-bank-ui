@@ -164,11 +164,27 @@ export default function TicketPage() {
 
         {messages.map((msg) => {
           const isMe = msg.senderRole === "CUSTOMER";
+          const agentName = msg.sender ? `${msg.sender.firstName} ${msg.sender.lastName}` : "Support team";
+          const avatarUrl = msg.sender?.profile?.avatarUrl;
+          const initials = msg.sender
+            ? `${msg.sender.firstName[0] ?? ""}${msg.sender.lastName[0] ?? ""}`.toUpperCase()
+            : "LB";
           return (
             <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[80%] ${isMe ? "items-end" : "items-start"} flex flex-col gap-1`}>
+              {!isMe && (
+                <div className="flex-shrink-0 mr-2 mt-5">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={agentName} className="h-8 w-8 rounded-full object-cover border border-[#E8E8E8]" />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-[#DB0011] flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-white">{initials}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className={`max-w-[75%] ${isMe ? "items-end" : "items-start"} flex flex-col gap-1`}>
                 {!isMe && (
-                  <p className="text-[10px] font-semibold text-[#AAAAAA] px-1">Support team</p>
+                  <p className="text-[10px] font-semibold text-[#555] px-1">{agentName}</p>
                 )}
                 <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
                   isMe

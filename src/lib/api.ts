@@ -1118,6 +1118,11 @@ export interface SupportMessage {
   body: string;
   isRead: boolean;
   createdAt: string;
+  sender?: {
+    firstName: string;
+    lastName: string;
+    profile?: { avatarUrl?: string | null } | null;
+  } | null;
 }
 
 export interface SupportTicket {
