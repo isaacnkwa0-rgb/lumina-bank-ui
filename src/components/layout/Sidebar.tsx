@@ -54,12 +54,6 @@ const navGroups = [
     items: [
       { href: "/analytics",    labelKey: "nav.analytics",        icon: BarChart2 },
       { href: "/rates",        labelKey: "nav.rates",            icon: Globe },
-    ],
-  },
-  {
-    labelKey: "nav.support",
-    items: [
-      { href: "/support",      labelKey: "support.title",        icon: HelpCircle },
       { href: "/disputes",     labelKey: "nav.disputes",         icon: AlertCircle },
     ],
   },
@@ -137,6 +131,23 @@ export function Sidebar() {
           </div>
         ))}
       </nav>
+
+      {/* Support — pinned above bottom actions */}
+      <div className="px-3 pb-2 flex-shrink-0">
+        <Link
+          href="/support"
+          className={cn(
+            "flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors",
+            isActive("/support")
+              ? "bg-[#DB0011] text-white"
+              : "bg-red-50 text-[#DB0011] hover:bg-[#fce8ea]"
+          )}
+        >
+          <HelpCircle size={16} strokeWidth={2} />
+          <span>{t("support.title" as TranslationKey)}</span>
+          {!isActive("/support") && <ChevronRight size={12} className="ml-auto opacity-60" />}
+        </Link>
+      </div>
 
       {/* Bottom actions */}
       <div className="border-t border-[#E3E3E3] p-3 space-y-1 flex-shrink-0">
