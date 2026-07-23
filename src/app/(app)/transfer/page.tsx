@@ -331,13 +331,19 @@ function TransferPageInner() {
 
 // ── OTP Modal ────────────────────────────────────────────────────────────────
 
-function OtpModal({ maskedEmail, onConfirm, onCancel, isLoading }: {
+function OtpModal({ maskedEmail, onConfirm, onCancel, isLoading, error }: {
   maskedEmail: string;
   onConfirm: (code: string) => void;
   onCancel: () => void;
   isLoading: boolean;
+  error?: string;
 }) {
   const [code, setCode] = useState("");
+
+  useEffect(() => {
+    if (error) setCode("");
+  }, [error]);
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
@@ -349,6 +355,11 @@ function OtpModal({ maskedEmail, onConfirm, onCancel, isLoading }: {
           Enter the 6-digit code sent to<br />
           <span className="font-semibold text-[#333]">{maskedEmail}</span>
         </p>
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 mb-4">
+            <p className="text-sm text-[#DB0011] text-center">{error}</p>
+          </div>
+        )}
         <input
           type="tel"
           inputMode="numeric"
@@ -396,11 +407,13 @@ function OwnAccountsForm({
   const toAccountId = watch("toAccountId") ?? "";
   const [otpStep, setOtpStep] = useState<{ formData: OwnForm; maskedEmail: string } | null>(null);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState("");
 
   async function onSubmit(data: OwnForm) {
     onError("");
     try {
       const r = await authApi.requestTransferOtp();
+      setOtpError("");
       setOtpStep({ formData: data, maskedEmail: r.data.data.maskedEmail });
     } catch (err: unknown) {
       onError((err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "Failed to send OTP. Try again.");
@@ -410,13 +423,14 @@ function OwnAccountsForm({
   async function executeTransfer(otp: string) {
     if (!otpStep) return;
     setOtpLoading(true);
+    setOtpError("");
     try {
       const res = await transfersApi.internal({ ...otpStep.formData, amount: Number(otpStep.formData.amount), transferOtp: otp });
       setOtpStep(null);
       onSuccess(res.data.data);
     } catch (err: unknown) {
-      setOtpStep(null);
-      onError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed.");
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed. Please try again.";
+      setOtpError(msg);
     } finally {
       setOtpLoading(false);
     }
@@ -425,7 +439,7 @@ function OwnAccountsForm({
   return (
     <>
     {otpStep && (
-      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => setOtpStep(null)} isLoading={otpLoading} />
+      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => { setOtpStep(null); setOtpError(""); }} isLoading={otpLoading} error={otpError} />
     )}
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
       <div>
@@ -508,6 +522,7 @@ function DomesticForm({
   const [isConfirming, setIsConfirming] = useState(false);
   const [otpStep, setOtpStep] = useState<{ formData: DomesticFormValues; maskedEmail: string } | null>(null);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
@@ -583,6 +598,7 @@ function DomesticForm({
     setIsConfirming(true);
     try {
       const r = await authApi.requestTransferOtp();
+      setOtpError("");
       setOtpStep({ formData: data, maskedEmail: r.data.data.maskedEmail });
     } catch (err: unknown) {
       onError((err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "Failed to send OTP. Try again.");
@@ -594,13 +610,14 @@ function DomesticForm({
   async function executeTransfer(otp: string) {
     if (!otpStep) return;
     setOtpLoading(true);
+    setOtpError("");
     try {
       const res = await transfersApi.domestic({ ...otpStep.formData, amount: Number(otpStep.formData.amount), transferOtp: otp });
       setOtpStep(null);
       onSuccess(res.data.data);
     } catch (err: unknown) {
-      setOtpStep(null);
-      onError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed.");
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed. Please try again.";
+      setOtpError(msg);
     } finally {
       setOtpLoading(false);
     }
@@ -609,7 +626,7 @@ function DomesticForm({
   return (
     <>
     {otpStep && (
-      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => setOtpStep(null)} isLoading={otpLoading} />
+      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => { setOtpStep(null); setOtpError(""); }} isLoading={otpLoading} error={otpError} />
     )}
     {pendingData && (
       <ConfirmModal
@@ -849,6 +866,7 @@ function InternationalForm({
   const [isConfirming, setIsConfirming] = useState(false);
   const [otpStep, setOtpStep] = useState<{ formData: InternationalFormValues; maskedEmail: string } | null>(null);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState("");
 
   const {
     register, handleSubmit, watch,
@@ -891,6 +909,7 @@ function InternationalForm({
     setIsConfirming(true);
     try {
       const r = await authApi.requestTransferOtp();
+      setOtpError("");
       setOtpStep({ formData: data, maskedEmail: r.data.data.maskedEmail });
     } catch (err: unknown) {
       onError((err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "Failed to send OTP. Try again.");
@@ -902,13 +921,14 @@ function InternationalForm({
   async function executeTransfer(otp: string) {
     if (!otpStep) return;
     setOtpLoading(true);
+    setOtpError("");
     try {
       const res = await transfersApi.international({ ...otpStep.formData, amount: Number(otpStep.formData.amount), transferOtp: otp });
       setOtpStep(null);
       onSuccess(res.data.data);
     } catch (err: unknown) {
-      setOtpStep(null);
-      onError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed.");
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed. Please try again.";
+      setOtpError(msg);
     } finally {
       setOtpLoading(false);
     }
@@ -917,7 +937,7 @@ function InternationalForm({
   return (
     <>
     {otpStep && (
-      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => setOtpStep(null)} isLoading={otpLoading} />
+      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => { setOtpStep(null); setOtpError(""); }} isLoading={otpLoading} error={otpError} />
     )}
     {pendingData && (
       <ConfirmModal

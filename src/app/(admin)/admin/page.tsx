@@ -1581,6 +1581,12 @@ function AuditLogsTab() {
 
 // ── Agents ────────────────────────────────────────────────────────────────────
 
+const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/api\/v\d+.*$/, "");
+function resolveAvatarUrl(url: string) {
+  if (!url || url.startsWith("blob:") || url.startsWith("http")) return url;
+  return `${API_ORIGIN}${url}`;
+}
+
 const BLANK_CREATE = { firstName: "", lastName: "", email: "", password: "", avatarUrl: "" };
 const BLANK_EDIT   = { firstName: "", lastName: "", password: "" };
 
@@ -1622,7 +1628,7 @@ function AgentsTab() {
     setEditId(a.id);
     setEditForm({ firstName: a.firstName, lastName: a.lastName, password: "" });
     setEditFile(null);
-    setEditPreview(a.profile?.avatarUrl ?? "");
+    setEditPreview(resolveAvatarUrl(a.profile?.avatarUrl ?? ""));
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -1711,7 +1717,7 @@ function AgentsTab() {
               {/* Agent row */}
               <div className="flex items-center gap-3 px-4 py-3">
                 {a.profile?.avatarUrl ? (
-                  <img src={a.profile.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover flex-shrink-0 border border-[#E8E8E8]" />
+                  <img src={resolveAvatarUrl(a.profile.avatarUrl)} alt="" className="h-10 w-10 rounded-full object-cover flex-shrink-0 border border-[#E8E8E8]" />
                 ) : (
                   <div className="h-10 w-10 rounded-full bg-[#DB0011] flex items-center justify-center flex-shrink-0">
                     <span className="text-white text-sm font-bold">{a.firstName[0]}{a.lastName[0]}</span>
