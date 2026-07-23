@@ -15,7 +15,7 @@ import {
   ShieldCheck, CheckCircle2, Users, ArrowLeftRight, Landmark, AlertCircle,
   ChevronRight, Search, RefreshCw, CreditCard, Receipt, Globe,
   TrendingUp, Target, Home, ShieldAlert, Bitcoin, ScrollText, MessageSquare, Send,
-  UserCog, Trash2, Plus,
+  UserCog, Trash2, Plus, User,
 } from "lucide-react";
 
 type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "support" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "kyc" | "audit" | "agents";
@@ -1582,7 +1582,7 @@ function AuditLogsTab() {
 // ── Agents ────────────────────────────────────────────────────────────────────
 
 const BLANK_CREATE = { firstName: "", lastName: "", email: "", password: "", avatarUrl: "" };
-const BLANK_EDIT   = { firstName: "", lastName: "", avatarUrl: "", password: "" };
+const BLANK_EDIT   = { firstName: "", lastName: "", password: "" };
 
 function AgentsTab() {
   const [agents, setAgents] = useState<AdminAgent[]>([]);
@@ -1592,6 +1592,8 @@ function AgentsTab() {
   const [saving, setSaving] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState(BLANK_EDIT);
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [editPreview, setEditPreview] = useState<string>("");
   const [editSaving, setEditSaving] = useState(false);
   const [deleteId, setDeleteId] = useState("");
 
@@ -1618,7 +1620,16 @@ function AgentsTab() {
 
   function startEdit(a: AdminAgent) {
     setEditId(a.id);
-    setEditForm({ firstName: a.firstName, lastName: a.lastName, avatarUrl: a.profile?.avatarUrl ?? "", password: "" });
+    setEditForm({ firstName: a.firstName, lastName: a.lastName, password: "" });
+    setEditFile(null);
+    setEditPreview(a.profile?.avatarUrl ?? "");
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setEditFile(file);
+    setEditPreview(URL.createObjectURL(file));
   }
 
   async function handleEdit(e: React.FormEvent) {
@@ -1629,11 +1640,15 @@ function AgentsTab() {
       const payload: Record<string, string> = {};
       if (editForm.firstName) payload.firstName = editForm.firstName;
       if (editForm.lastName)  payload.lastName  = editForm.lastName;
-      if (editForm.avatarUrl !== undefined) payload.avatarUrl = editForm.avatarUrl;
       if (editForm.password)  payload.password  = editForm.password;
-      const r = await adminApi.updateAgent(editId, payload);
-      setAgents((p) => p.map((a) => a.id === editId ? (r.data.data ?? a) : a));
+
+      await Promise.all([
+        Object.keys(payload).length ? adminApi.updateAgent(editId, payload) : Promise.resolve(null),
+        editFile ? adminApi.uploadAgentAvatar(editId, editFile) : Promise.resolve(null),
+      ]);
+
       setEditId(null);
+      load();
     } catch (err: unknown) { alert((err as any)?.response?.data?.message || "Failed to update agent"); }
     finally { setEditSaving(false); }
   }
@@ -1727,11 +1742,25 @@ function AgentsTab() {
                     <input value={editForm.lastName} onChange={(e) => setEditForm((p) => ({ ...p, lastName: e.target.value }))}
                       placeholder="Last name" className={inputCls} />
                   </div>
-                  <input value={editForm.avatarUrl} onChange={(e) => setEditForm((p) => ({ ...p, avatarUrl: e.target.value }))}
-                    placeholder="Profile picture URL" className={inputCls} />
-                  {editForm.avatarUrl && (
-                    <img src={editForm.avatarUrl} alt="Preview" className="h-14 w-14 rounded-full object-cover border border-[#E8E8E8]" />
-                  )}
+                  <div>
+                    <p className="text-[10px] text-[#AAAAAA] mb-1.5">Profile picture</p>
+                    <div className="flex items-center gap-3">
+                      {editPreview ? (
+                        <img src={editPreview} alt="Preview" className="h-14 w-14 rounded-full object-cover border border-[#E8E8E8] flex-shrink-0" />
+                      ) : (
+                        <div className="h-14 w-14 rounded-full bg-[#F0F0F0] flex items-center justify-center flex-shrink-0">
+                          <User size={22} className="text-[#CCCCCC]" />
+                        </div>
+                      )}
+                      <label className="flex-1 cursor-pointer">
+                        <div className="border border-dashed border-[#DB0011] rounded-lg px-3 py-2.5 text-center hover:bg-red-50 transition-colors">
+                          <p className="text-xs font-semibold text-[#DB0011]">Choose photo</p>
+                          <p className="text-[10px] text-[#AAAAAA] mt-0.5">JPG, PNG, WebP · max 5 MB</p>
+                        </div>
+                        <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                      </label>
+                    </div>
+                  </div>
                   <input type="password" value={editForm.password} onChange={(e) => setEditForm((p) => ({ ...p, password: e.target.value }))}
                     placeholder="New password (leave blank to keep)" minLength={8} className={inputCls} />
                   <div className="flex gap-2 pt-1">

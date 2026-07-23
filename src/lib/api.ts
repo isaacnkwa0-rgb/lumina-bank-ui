@@ -462,6 +462,13 @@ export const adminApi = {
     api.post<ApiResponse<AdminAgent>>("/admin/agents", data),
   updateAgent: (id: string, data: { firstName?: string; lastName?: string; avatarUrl?: string; password?: string }) =>
     api.patch<ApiResponse<AdminAgent>>(`/admin/agents/${id}`, data),
+  uploadAgentAvatar: (id: string, file: File) => {
+    const fd = new FormData();
+    fd.append("avatar", file);
+    return api.post<ApiResponse<{ avatarUrl: string }>>(`/admin/agents/${id}/avatar`, fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
   deleteAgent: (id: string) => api.delete<ApiResponse<{ id: string }>>(`/admin/agents/${id}`),
 };
 
