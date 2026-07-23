@@ -460,6 +460,8 @@ export const adminApi = {
   getAgents: () => api.get<ApiResponse<AdminAgent[]>>("/admin/agents"),
   createAgent: (data: { firstName: string; lastName: string; email: string; password: string; avatarUrl?: string }) =>
     api.post<ApiResponse<AdminAgent>>("/admin/agents", data),
+  updateAgent: (id: string, data: { firstName?: string; lastName?: string; avatarUrl?: string; password?: string }) =>
+    api.patch<ApiResponse<AdminAgent>>(`/admin/agents/${id}`, data),
   deleteAgent: (id: string) => api.delete<ApiResponse<{ id: string }>>(`/admin/agents/${id}`),
 };
 

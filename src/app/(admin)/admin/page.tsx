@@ -1143,15 +1143,26 @@ function SupportTab() {
   const [sending, setSending] = useState(false);
   const [resolving, setResolving] = useState("");
 
+  const [loadError, setLoadError] = useState("");
+
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError("");
     try {
       const r = await adminApi.supportTickets({ status: filter === "ALL" ? undefined : filter, limit: 50 } as any);
-      setItems((r.data.data as any).tickets ?? r.data.data);
-    } catch {} finally { setLoading(false); }
+      setItems((r.data.data as any).tickets ?? r.data.data ?? []);
+    } catch (e: unknown) {
+      setLoadError((e as any)?.response?.data?.message || "Failed to load tickets");
+    } finally { setLoading(false); }
   }, [filter]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Auto-refresh every 30 s so agents see new tickets without reloading
+  useEffect(() => {
+    const id = setInterval(load, 30_000);
+    return () => clearInterval(id);
+  }, [load]);
 
   async function openThread(ticket: AdminSupportTicket) {
     if (expanded === ticket.id) { setExpanded(""); setThreadTicket(null); return; }
@@ -1190,12 +1201,21 @@ function SupportTab() {
 
   return (
     <div>
+      <div className="flex items-center justify-between px-4 pt-3 pb-1">
+        <span className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest">Support tickets</span>
+        <button onClick={load} className="flex items-center gap-1 text-xs text-[#DB0011] font-semibold hover:opacity-70">
+          <RefreshCw size={11} /> Refresh
+        </button>
+      </div>
       <FilterBar
         filters={["OPEN", "IN_PROGRESS", "ALL"]}
         active={filter}
         onSelect={(f) => setFilter(f as any)}
         labels={{ OPEN: "Open", IN_PROGRESS: "In Progress", ALL: "All" }}
       />
+      {loadError && (
+        <div className="mx-4 mt-3 px-4 py-3 rounded-lg bg-red-50 border border-red-100 text-xs text-red-700">{loadError}</div>
+      )}
       {loading ? <LoadingRows /> : items.length === 0 ? <Empty icon={MessageSquare} label="No support tickets" /> : (
         <div className="divide-y divide-[#F0F0F0]">
           {items.map((t) => (
@@ -1561,12 +1581,18 @@ function AuditLogsTab() {
 
 // ── Agents ────────────────────────────────────────────────────────────────────
 
+const BLANK_CREATE = { firstName: "", lastName: "", email: "", password: "", avatarUrl: "" };
+const BLANK_EDIT   = { firstName: "", lastName: "", avatarUrl: "", password: "" };
+
 function AgentsTab() {
   const [agents, setAgents] = useState<AdminAgent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "", avatarUrl: "" });
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState(BLANK_CREATE);
   const [saving, setSaving] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState(BLANK_EDIT);
+  const [editSaving, setEditSaving] = useState(false);
   const [deleteId, setDeleteId] = useState("");
 
   const load = useCallback(async () => {
@@ -1581,54 +1607,79 @@ function AgentsTab() {
     e.preventDefault();
     setSaving(true);
     try {
-      const { avatarUrl, ...rest } = form;
+      const { avatarUrl, ...rest } = createForm;
       await adminApi.createAgent(avatarUrl ? { ...rest, avatarUrl } : rest);
-      setForm({ firstName: "", lastName: "", email: "", password: "", avatarUrl: "" });
-      setShowForm(false);
+      setCreateForm(BLANK_CREATE);
+      setShowCreate(false);
       load();
-    } catch (err: unknown) { alert((err as any)?.response?.data?.error?.message || "Failed to create agent"); }
+    } catch (err: unknown) { alert((err as any)?.response?.data?.message || "Failed to create agent"); }
     finally { setSaving(false); }
+  }
+
+  function startEdit(a: AdminAgent) {
+    setEditId(a.id);
+    setEditForm({ firstName: a.firstName, lastName: a.lastName, avatarUrl: a.profile?.avatarUrl ?? "", password: "" });
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editId) return;
+    setEditSaving(true);
+    try {
+      const payload: Record<string, string> = {};
+      if (editForm.firstName) payload.firstName = editForm.firstName;
+      if (editForm.lastName)  payload.lastName  = editForm.lastName;
+      if (editForm.avatarUrl !== undefined) payload.avatarUrl = editForm.avatarUrl;
+      if (editForm.password)  payload.password  = editForm.password;
+      const r = await adminApi.updateAgent(editId, payload);
+      setAgents((p) => p.map((a) => a.id === editId ? (r.data.data ?? a) : a));
+      setEditId(null);
+    } catch (err: unknown) { alert((err as any)?.response?.data?.message || "Failed to update agent"); }
+    finally { setEditSaving(false); }
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Remove this support agent?")) return;
     setDeleteId(id);
     try { await adminApi.deleteAgent(id); setAgents((p) => p.filter((a) => a.id !== id)); }
-    catch (err: unknown) { alert((err as any)?.response?.data?.error?.message || "Failed"); }
+    catch (err: unknown) { alert((err as any)?.response?.data?.message || "Failed"); }
     finally { setDeleteId(""); }
   }
+
+  const inputCls = "w-full border border-[#E0E0E0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#DB0011]";
 
   return (
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold text-[#333]">Support Agents</h2>
-        <button onClick={() => setShowForm((p) => !p)}
+        <button onClick={() => setShowCreate((p) => !p)}
           className="flex items-center gap-1.5 bg-[#DB0011] text-white text-xs font-bold px-3 py-2 rounded-lg">
           <Plus size={13} /> Add Agent
         </button>
       </div>
 
-      {showForm && (
+      {/* Create form */}
+      {showCreate && (
         <form onSubmit={handleCreate} className="bg-white rounded-xl border border-[#E8E8E8] p-4 space-y-3">
           <p className="text-xs font-bold text-[#333] mb-1">New Support Agent</p>
           <div className="grid grid-cols-2 gap-2">
-            <input required value={form.firstName} onChange={(e) => setForm((p) => ({ ...p, firstName: e.target.value }))}
-              placeholder="First name" className="border border-[#E0E0E0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#DB0011]" />
-            <input required value={form.lastName} onChange={(e) => setForm((p) => ({ ...p, lastName: e.target.value }))}
-              placeholder="Last name" className="border border-[#E0E0E0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#DB0011]" />
+            <input required value={createForm.firstName} onChange={(e) => setCreateForm((p) => ({ ...p, firstName: e.target.value }))}
+              placeholder="First name" className={inputCls} />
+            <input required value={createForm.lastName} onChange={(e) => setCreateForm((p) => ({ ...p, lastName: e.target.value }))}
+              placeholder="Last name" className={inputCls} />
           </div>
-          <input required type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-            placeholder="Email address" className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#DB0011]" />
-          <input required type="password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-            placeholder="Password (min 8 chars)" minLength={8} className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#DB0011]" />
-          <input value={form.avatarUrl} onChange={(e) => setForm((p) => ({ ...p, avatarUrl: e.target.value }))}
-            placeholder="Avatar URL (optional)" className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#DB0011]" />
+          <input required type="email" value={createForm.email} onChange={(e) => setCreateForm((p) => ({ ...p, email: e.target.value }))}
+            placeholder="Email address" className={inputCls} />
+          <input required type="password" value={createForm.password} onChange={(e) => setCreateForm((p) => ({ ...p, password: e.target.value }))}
+            placeholder="Password (min 8 chars)" minLength={8} className={inputCls} />
+          <input value={createForm.avatarUrl} onChange={(e) => setCreateForm((p) => ({ ...p, avatarUrl: e.target.value }))}
+            placeholder="Profile picture URL (optional)" className={inputCls} />
           <div className="flex gap-2 pt-1">
             <button type="submit" disabled={saving}
               className="flex-1 bg-[#DB0011] text-white py-2 rounded-lg text-xs font-bold disabled:opacity-50">
               {saving ? "Creating…" : "Create Agent"}
             </button>
-            <button type="button" onClick={() => setShowForm(false)}
+            <button type="button" onClick={() => setShowCreate(false)}
               className="flex-1 border border-[#E0E0E0] py-2 rounded-lg text-xs font-semibold text-[#767676]">
               Cancel
             </button>
@@ -1639,25 +1690,62 @@ function AgentsTab() {
       {loading ? <LoadingRows /> : agents.length === 0 ? (
         <Empty icon={UserCog} label="No support agents yet" />
       ) : (
-        <div className="divide-y divide-[#F0F0F0] bg-white rounded-xl border border-[#E8E8E8]">
+        <div className="space-y-2">
           {agents.map((a) => (
-            <div key={a.id} className="flex items-center gap-3 px-4 py-3">
-              {a.profile?.avatarUrl ? (
-                <img src={a.profile.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover flex-shrink-0" />
-              ) : (
-                <div className="h-9 w-9 rounded-full bg-[#DB0011] flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-xs font-bold">{a.firstName[0]}{a.lastName[0]}</span>
+            <div key={a.id} className="bg-white rounded-xl border border-[#E8E8E8] overflow-hidden">
+              {/* Agent row */}
+              <div className="flex items-center gap-3 px-4 py-3">
+                {a.profile?.avatarUrl ? (
+                  <img src={a.profile.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover flex-shrink-0 border border-[#E8E8E8]" />
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-[#DB0011] flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-sm font-bold">{a.firstName[0]}{a.lastName[0]}</span>
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-[#333] truncate">{a.firstName} {a.lastName}</p>
+                  <p className="text-xs text-[#767676] truncate">{a.email}</p>
                 </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-[#333] truncate">{a.firstName} {a.lastName}</p>
-                <p className="text-xs text-[#767676] truncate">{a.email}</p>
+                <Pill status={a.status} />
+                <button onClick={() => editId === a.id ? setEditId(null) : startEdit(a)}
+                  className="ml-1 p-1.5 text-[#555] hover:bg-[#F5F5F5] rounded-lg text-xs font-semibold">
+                  {editId === a.id ? "✕" : "Edit"}
+                </button>
+                <button onClick={() => handleDelete(a.id)} disabled={deleteId === a.id}
+                  className="p-1.5 text-[#DB0011] hover:bg-red-50 rounded-lg disabled:opacity-40">
+                  <Trash2 size={14} />
+                </button>
               </div>
-              <Pill status={a.status} />
-              <button onClick={() => handleDelete(a.id)} disabled={deleteId === a.id}
-                className="ml-2 p-1.5 text-[#DB0011] hover:bg-red-50 rounded-lg disabled:opacity-40">
-                <Trash2 size={14} />
-              </button>
+
+              {/* Inline edit form */}
+              {editId === a.id && (
+                <form onSubmit={handleEdit} className="border-t border-[#F0F0F0] bg-[#FAFAFA] px-4 py-4 space-y-3">
+                  <p className="text-xs font-bold text-[#555]">Edit agent details</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input value={editForm.firstName} onChange={(e) => setEditForm((p) => ({ ...p, firstName: e.target.value }))}
+                      placeholder="First name" className={inputCls} />
+                    <input value={editForm.lastName} onChange={(e) => setEditForm((p) => ({ ...p, lastName: e.target.value }))}
+                      placeholder="Last name" className={inputCls} />
+                  </div>
+                  <input value={editForm.avatarUrl} onChange={(e) => setEditForm((p) => ({ ...p, avatarUrl: e.target.value }))}
+                    placeholder="Profile picture URL" className={inputCls} />
+                  {editForm.avatarUrl && (
+                    <img src={editForm.avatarUrl} alt="Preview" className="h-14 w-14 rounded-full object-cover border border-[#E8E8E8]" />
+                  )}
+                  <input type="password" value={editForm.password} onChange={(e) => setEditForm((p) => ({ ...p, password: e.target.value }))}
+                    placeholder="New password (leave blank to keep)" minLength={8} className={inputCls} />
+                  <div className="flex gap-2 pt-1">
+                    <button type="submit" disabled={editSaving}
+                      className="flex-1 bg-[#DB0011] text-white py-2 rounded-lg text-xs font-bold disabled:opacity-50">
+                      {editSaving ? "Saving…" : "Save changes"}
+                    </button>
+                    <button type="button" onClick={() => setEditId(null)}
+                      className="flex-1 border border-[#E0E0E0] py-2 rounded-lg text-xs font-semibold text-[#767676]">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           ))}
         </div>

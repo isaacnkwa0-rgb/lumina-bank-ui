@@ -167,6 +167,7 @@ const menuItems = [
   { href: "/investments", label: "Investments" },
   { href: "/goals", label: "Savings Goals" },
   { href: "/disputes", label: "My Disputes" },
+  { href: "/support", label: "Help & Support" },
   { href: "/notifications", label: "Notifications" },
   { href: "/profile", label: "Profile & Settings" },
 ];

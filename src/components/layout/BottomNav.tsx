@@ -16,7 +16,6 @@ const mainNav = [
   { href: "/accounts",  labelKey: "nav.accounts", icon: Landmark },
   { href: "/transfer",  labelKey: "nav.transfer", icon: ArrowLeftRight },
   { href: "/cards",     labelKey: "nav.cards",    icon: CreditCard },
-  { href: "/support",   labelKey: "support.title", icon: HelpCircle },
 ] as const;
 
 const moreItems = [
