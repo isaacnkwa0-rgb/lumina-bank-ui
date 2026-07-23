@@ -729,6 +729,8 @@ function UserRow({ u, onUpdate, onDelete }: {
   const [kycExpanded, setKycExpanded] = useState(false);
   const [kycDocs, setKycDocs] = useState<{ idFront: string; idBack: string } | null>(null);
   const [kycDocsLoading, setKycDocsLoading] = useState(false);
+  const [fundForm, setFundForm] = useState<{ accountId: string; amount: string; desc: string } | null>(null);
+  const [fundLoading, setFundLoading] = useState(false);
 
   async function act(fn: () => Promise<void>) {
     setActionId("x");
@@ -896,31 +898,78 @@ function UserRow({ u, onUpdate, onDelete }: {
           ) : (
             <div className="space-y-2">
               {accounts.map((a) => (
-                <div key={a.id} className="bg-[#F8F8F8] rounded-xl px-3 py-2.5 flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs font-semibold text-[#333]">{a.type} · {a.accountNumber}</p>
-                      <Pill status={a.status} />
+                <div key={a.id} className="bg-[#F8F8F8] rounded-xl overflow-hidden">
+                  <div className="px-3 py-2.5 flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-semibold text-[#333]">{a.type} · {a.accountNumber}</p>
+                        <Pill status={a.status} />
+                      </div>
+                      <p className="text-[10px] text-[#AAAAAA]">{formatCurrency(Number(a.balance), a.currency)}</p>
                     </div>
-                    <p className="text-[10px] text-[#AAAAAA]">{formatCurrency(Number(a.balance), a.currency)}</p>
+                    <div className="flex gap-1.5">
+                      {a.status === "ACTIVE" && (
+                        <Btn color="amber" label="Freeze" loading={false}
+                          onClick={() => act(async () => { await adminApi.freezeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "FROZEN", isFrozen: true } : ac)); })} />
+                      )}
+                      {a.status === "FROZEN" && (
+                        <Btn color="green" label="Unfreeze" loading={false}
+                          onClick={() => act(async () => { await adminApi.unfreezeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "ACTIVE", isFrozen: false } : ac)); })} />
+                      )}
+                      {a.status !== "CLOSED" && (
+                        <>
+                          <Btn color="green" label="Fund" loading={false}
+                            onClick={() => setFundForm(fundForm?.accountId === a.id ? null : { accountId: a.id, amount: "", desc: "" })} />
+                          <Btn color="red-outline" label="Close" loading={false}
+                            onClick={() => {
+                              if (!confirm(`Close account ${a.accountNumber}? Balance must be £0.`)) return;
+                              act(async () => { await adminApi.closeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "CLOSED" } : ac)); });
+                            }} />
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-1.5">
-                    {a.status === "ACTIVE" && (
-                      <Btn color="amber" label="Freeze" loading={false}
-                        onClick={() => act(async () => { await adminApi.freezeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "FROZEN", isFrozen: true } : ac)); })} />
-                    )}
-                    {a.status === "FROZEN" && (
-                      <Btn color="green" label="Unfreeze" loading={false}
-                        onClick={() => act(async () => { await adminApi.unfreezeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "ACTIVE", isFrozen: false } : ac)); })} />
-                    )}
-                    {a.status !== "CLOSED" && (
-                      <Btn color="red-outline" label="Close" loading={false}
-                        onClick={() => {
-                          if (!confirm(`Close account ${a.accountNumber}? Balance must be £0.`)) return;
-                          act(async () => { await adminApi.closeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "CLOSED" } : ac)); });
-                        }} />
-                    )}
-                  </div>
+                  {fundForm?.accountId === a.id && (
+                    <div className="px-3 pb-3 border-t border-[#E8E8E8] pt-3 space-y-2 bg-white">
+                      <p className="text-[10px] font-bold text-[#333] uppercase tracking-wide">Credit account</p>
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="Amount"
+                        value={fundForm.amount}
+                        onChange={(e) => setFundForm((f) => f ? { ...f, amount: e.target.value } : f)}
+                        className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Description (optional)"
+                        value={fundForm.desc}
+                        onChange={(e) => setFundForm((f) => f ? { ...f, desc: e.target.value } : f)}
+                        className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          disabled={fundLoading || !fundForm.amount || Number(fundForm.amount) <= 0}
+                          onClick={async () => {
+                            setFundLoading(true);
+                            try {
+                              const r = await adminApi.fundAccount(u.id, a.id, Number(fundForm.amount), fundForm.desc || undefined);
+                              const updated = r.data.data;
+                              setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, balance: updated.balance, availableBalance: updated.availableBalance } : ac));
+                              setFundForm(null);
+                            } catch (e: unknown) {
+                              alert((e as any)?.response?.data?.message || "Failed to fund account");
+                            } finally { setFundLoading(false); }
+                          }}
+                          className="px-3 py-1.5 bg-[#DB0011] text-white text-xs font-semibold rounded-lg disabled:opacity-50"
+                        >
+                          {fundLoading ? "…" : "Credit"}
+                        </button>
+                        <button onClick={() => setFundForm(null)} className="px-3 py-1.5 text-xs text-[#767676] hover:text-[#333]">Cancel</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

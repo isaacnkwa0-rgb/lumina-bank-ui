@@ -386,6 +386,8 @@ export const adminApi = {
     api.patch<ApiResponse<AdminAccount>>(`/admin/accounts/${accountId}/unfreeze`),
   closeAccount: (accountId: string) =>
     api.patch<ApiResponse<AdminAccount>>(`/admin/accounts/${accountId}/close`),
+  fundAccount: (userId: string, accountId: string, amount: number, description?: string) =>
+    api.post<ApiResponse<AdminAccount>>(`/admin/users/${userId}/accounts/${accountId}/fund`, { amount, description }),
   getKycSubmissions: (status?: string) =>
     api.get<ApiResponse<AdminKycUser[]>>('/admin/kyc', { params: status ? { status } : undefined }),
   approveKyc: (userId: string) =>
