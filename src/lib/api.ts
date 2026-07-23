@@ -1001,7 +1001,6 @@ export interface AdminAccount {
   currency: string;
   balance: string;
   availableBalance: string;
-  isFrozen: boolean;
 }
 
 export interface AdminInsuranceQuote extends InsuranceQuote {

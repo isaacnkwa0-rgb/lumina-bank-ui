@@ -910,11 +910,11 @@ function UserRow({ u, onUpdate, onDelete }: {
                     <div className="flex gap-1.5">
                       {a.status === "ACTIVE" && (
                         <Btn color="amber" label="Freeze" loading={false}
-                          onClick={() => act(async () => { await adminApi.freezeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "FROZEN", isFrozen: true } : ac)); })} />
+                          onClick={() => act(async () => { await adminApi.freezeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "FROZEN" } : ac)); })} />
                       )}
                       {a.status === "FROZEN" && (
                         <Btn color="green" label="Unfreeze" loading={false}
-                          onClick={() => act(async () => { await adminApi.unfreezeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "ACTIVE", isFrozen: false } : ac)); })} />
+                          onClick={() => act(async () => { await adminApi.unfreezeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "ACTIVE" } : ac)); })} />
                       )}
                       {a.status !== "CLOSED" && (
                         <>
