@@ -7,7 +7,7 @@ import {
   type AdminInsuranceQuote, type AdminCard, type AdminTransaction,
   type AdminExchangeRate, type AdminPortfolio, type AdminGoal, type AdminAccount,
   type AdminCryptoOrder, type AuditLog, type AdminKycUser, type AdminSupportTicket,
-  type AdminAgent, type AdminUserDetail,
+  type AdminAgent, type AdminUserDetail, type AdminNotification,
 } from "@/lib/api";
 import { getUser } from "@/lib/auth";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -15,10 +15,10 @@ import {
   ShieldCheck, CheckCircle2, Users, ArrowLeftRight, Landmark, AlertCircle,
   ChevronRight, Search, RefreshCw, CreditCard, Receipt, Globe,
   TrendingUp, Target, Home, ShieldAlert, Bitcoin, ScrollText, MessageSquare, Send,
-  UserCog, Trash2, Plus, User, Mail,
+  UserCog, Trash2, Plus, User, Mail, Bell, BellOff, MailOpen,
 } from "lucide-react";
 
-type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "support" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "kyc" | "audit" | "agents" | "mailer";
+type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "support" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "kyc" | "audit" | "agents" | "mailer" | "notifications";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -1855,6 +1855,168 @@ function AgentsTab() {
   );
 }
 
+// ── Notifications Tab ─────────────────────────────────────────────────────────
+
+const NOTIF_TYPE_META: Record<AdminNotification["type"], { label: string; color: string }> = {
+  NEW_REGISTRATION: { label: "Registration",    color: "bg-blue-100 text-blue-700"   },
+  KYC_SUBMITTED:    { label: "KYC",             color: "bg-amber-100 text-amber-700" },
+  LOAN_APPLICATION: { label: "Loan",            color: "bg-purple-100 text-purple-700" },
+  DISPUTE_FILED:    { label: "Dispute",         color: "bg-red-100 text-red-700"     },
+  INSURANCE_QUOTE:  { label: "Insurance",       color: "bg-teal-100 text-teal-700"   },
+  CRYPTO_ORDER:     { label: "Crypto",          color: "bg-orange-100 text-orange-700" },
+};
+
+function NotificationsTab() {
+  const [items, setItems]             = useState<AdminNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [page, setPage]               = useState(1);
+  const [totalPages, setTotalPages]   = useState(1);
+  const [filterUnread, setFilterUnread] = useState(false);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState("");
+
+  const load = useCallback(async (p: number, unreadOnly: boolean) => {
+    setLoading(true);
+    setError("");
+    try {
+      const r = await adminApi.getNotifications({ page: p, limit: 20, unread: unreadOnly || undefined });
+      setItems(r.data.data.items);
+      setUnreadCount(r.data.data.unreadCount);
+      setTotalPages(r.data.data.pagination.totalPages);
+    } catch { setError("Failed to load notifications"); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(page, filterUnread); }, [load, page, filterUnread]);
+
+  async function markRead(id: string) {
+    await adminApi.markNotificationRead(id).catch(() => {});
+    setItems((p) => p.map((n) => n.id === id ? { ...n, isRead: true } : n));
+    setUnreadCount((c) => Math.max(0, c - 1));
+  }
+
+  async function markUnread(id: string) {
+    await adminApi.markNotificationUnread(id).catch(() => {});
+    setItems((p) => p.map((n) => n.id === id ? { ...n, isRead: false } : n));
+    setUnreadCount((c) => c + 1);
+  }
+
+  async function remove(id: string) {
+    await adminApi.deleteNotification(id).catch(() => {});
+    setItems((p) => p.filter((n) => n.id !== id));
+  }
+
+  async function markAllRead() {
+    await adminApi.markAllNotificationsRead().catch(() => {});
+    setItems((p) => p.map((n) => ({ ...n, isRead: true })));
+    setUnreadCount(0);
+  }
+
+  async function deleteAll() {
+    if (!confirm("Delete all notifications? This cannot be undone.")) return;
+    await adminApi.deleteAllNotifications().catch(() => {});
+    setItems([]);
+    setUnreadCount(0);
+  }
+
+  return (
+    <div className="p-4 max-w-2xl mx-auto">
+      {/* Header bar */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-[#333]">Notifications</p>
+          {unreadCount > 0 && (
+            <span className="bg-[#DB0011] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{unreadCount}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setFilterUnread((v) => !v); setPage(1); }}
+            className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border transition-colors ${filterUnread ? "bg-[#DB0011] text-white border-[#DB0011]" : "text-[#AAAAAA] border-[#E3E3E3] hover:border-[#DB0011] hover:text-[#DB0011]"}`}
+          >
+            Unread only
+          </button>
+          {unreadCount > 0 && (
+            <button onClick={markAllRead} className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border border-[#E3E3E3] text-[#AAAAAA] hover:border-[#333] hover:text-[#333] transition-colors">
+              Mark all read
+            </button>
+          )}
+          <button onClick={deleteAll} className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border border-[#E3E3E3] text-[#AAAAAA] hover:border-[#DB0011] hover:text-[#DB0011] transition-colors">
+            Clear all
+          </button>
+          <button onClick={() => load(page, filterUnread)} className="text-[#AAAAAA] hover:text-[#333]"><RefreshCw size={13} /></button>
+        </div>
+      </div>
+
+      {loading && <p className="text-sm text-[#AAAAAA] text-center py-8">Loading…</p>}
+      {error   && <p className="text-sm text-[#DB0011] text-center py-4">{error}</p>}
+
+      {!loading && items.length === 0 && (
+        <div className="text-center py-12">
+          <Bell size={28} className="text-[#E3E3E3] mx-auto mb-2" />
+          <p className="text-sm text-[#AAAAAA]">{filterUnread ? "No unread notifications" : "No notifications yet"}</p>
+        </div>
+      )}
+
+      {!loading && items.length > 0 && (
+        <div className="bg-white border border-[#E8E8E8] rounded-xl overflow-hidden divide-y divide-[#F0F0F0]">
+          {items.map((n) => {
+            const meta = NOTIF_TYPE_META[n.type];
+            return (
+              <div key={n.id} className={`px-4 py-3 flex gap-3 items-start ${n.isRead ? "" : "bg-red-50/40"}`}>
+                {/* Unread dot */}
+                <div className="pt-1.5 flex-shrink-0">
+                  {!n.isRead
+                    ? <span className="block w-2 h-2 rounded-full bg-[#DB0011]" />
+                    : <span className="block w-2 h-2 rounded-full bg-transparent" />}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${meta.color}`}>{meta.label}</span>
+                    <span className="text-[10px] text-[#AAAAAA]">{formatDate(n.createdAt)}</span>
+                  </div>
+                  <p className="text-sm font-semibold text-[#333] leading-snug">{n.title}</p>
+                  <p className="text-xs text-[#767676] mt-0.5 leading-relaxed">{n.message}</p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 flex-shrink-0 pt-0.5">
+                  {n.isRead ? (
+                    <button onClick={() => markUnread(n.id)} title="Mark unread" className="text-[#AAAAAA] hover:text-[#333] p-1">
+                      <BellOff size={13} />
+                    </button>
+                  ) : (
+                    <button onClick={() => markRead(n.id)} title="Mark read" className="text-[#AAAAAA] hover:text-[#333] p-1">
+                      <MailOpen size={13} />
+                    </button>
+                  )}
+                  <button onClick={() => remove(n.id)} title="Delete" className="text-[#AAAAAA] hover:text-[#DB0011] p-1">
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 mt-4">
+          <button disabled={page === 1} onClick={() => setPage((p) => p - 1)}
+            className="text-xs font-bold text-[#AAAAAA] disabled:opacity-30 hover:text-[#333]">← Prev</button>
+          <span className="text-xs text-[#AAAAAA]">{page} / {totalPages}</span>
+          <button disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}
+            className="text-xs font-bold text-[#AAAAAA] disabled:opacity-30 hover:text-[#333]">Next →</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Mailer Tab ────────────────────────────────────────────────────────────────
+
 type MailRecipientType = "ALL" | "SINGLE" | "SELECTED" | "KYC_PENDING" | "KYC_VERIFIED" | "KYC_REJECTED" | "TIER_STANDARD" | "TIER_PREMIUM" | "TIER_ELITE" | "TIER_PRIVATE" | "TIER_BUSINESS" | "MARKETING_CONSENT" | "SUSPENDED";
 
 const RECIPIENT_GROUPS: { label: string; options: { value: MailRecipientType; label: string }[] }[] = [
@@ -2132,7 +2294,8 @@ const ALL_TABS: { id: Tab; label: string; icon: React.ElementType; adminOnly?: b
   { id: "users",        label: "Users",        icon: Users,          adminOnly: true  },
   { id: "kyc",          label: "KYC Review",   icon: ShieldCheck,    adminOnly: true  },
   { id: "audit",        label: "Audit Log",    icon: ScrollText,     adminOnly: true  },
-  { id: "mailer",       label: "Mailer",       icon: Mail,           adminOnly: true  },
+  { id: "mailer",        label: "Mailer",        icon: Mail,           adminOnly: true  },
+  { id: "notifications", label: "Notifications", icon: Bell,           adminOnly: true  },
 ];
 
 export default function AdminPage() {
@@ -2182,7 +2345,8 @@ export default function AdminPage() {
         {activeTab === "users"        && <UsersTab />}
         {activeTab === "kyc"          && <KycTab />}
         {activeTab === "audit"        && <AuditLogsTab />}
-        {activeTab === "mailer"       && <MailerTab />}
+        {activeTab === "mailer"        && <MailerTab />}
+        {activeTab === "notifications" && <NotificationsTab />}
       </div>
     </div>
   );

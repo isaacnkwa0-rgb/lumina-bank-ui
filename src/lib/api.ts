@@ -478,6 +478,21 @@ export const adminApi = {
     userIds?: string[];
   }) =>
     api.post<ApiResponse<{ total: number; sent: number; failed: number }>>("/admin/mail/send", data),
+  // Notifications
+  getNotifications: (params?: { page?: number; limit?: number; type?: string; unread?: boolean }) =>
+    api.get<ApiResponse<{ items: AdminNotification[]; unreadCount: number; pagination: PaginationMeta }>>("/admin/notifications", { params }),
+  getNotificationUnreadCount: () =>
+    api.get<ApiResponse<{ unreadCount: number }>>("/admin/notifications/unread-count"),
+  markNotificationRead: (id: string) =>
+    api.patch<ApiResponse<AdminNotification>>(`/admin/notifications/${id}/read`),
+  markNotificationUnread: (id: string) =>
+    api.patch<ApiResponse<AdminNotification>>(`/admin/notifications/${id}/unread`),
+  markAllNotificationsRead: () =>
+    api.patch<ApiResponse<{ updated: number }>>("/admin/notifications/read-all"),
+  deleteNotification: (id: string) =>
+    api.delete<ApiResponse<{ id: string; deleted: boolean }>>(`/admin/notifications/${id}`),
+  deleteAllNotifications: () =>
+    api.delete<ApiResponse<{ deleted: number }>>("/admin/notifications"),
 };
 
 export const disputesApi = {
@@ -1193,4 +1208,23 @@ export interface AdminAgent {
   status: string;
   createdAt: string;
   profile?: { avatarUrl?: string | null } | null;
+}
+
+export interface AdminNotification {
+  id: string;
+  type: 'NEW_REGISTRATION' | 'KYC_SUBMITTED' | 'LOAN_APPLICATION' | 'DISPUTE_FILED' | 'INSURANCE_QUOTE' | 'CRYPTO_ORDER';
+  title: string;
+  message: string;
+  metadata: Record<string, unknown> | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
 }
