@@ -2303,6 +2303,19 @@ export default function AdminPage() {
   const isAgent = currentUser?.role === "AGENT";
   const TABS = ALL_TABS.filter((t) => !t.adminOnly || !isAgent);
   const [activeTab, setActiveTab] = useState<Tab>(isAgent ? "support" : "transfers");
+  const [notifUnread, setNotifUnread] = useState(0);
+
+  useEffect(() => {
+    if (isAgent) return;
+    adminApi.getNotificationUnreadCount()
+      .then((r) => setNotifUnread(r.data.data.unreadCount))
+      .catch(() => {});
+  }, [isAgent]);
+
+  function handleTabClick(id: Tab) {
+    setActiveTab(id);
+    if (id === "notifications") setNotifUnread(0);
+  }
 
   return (
     <div className="max-w-lg mx-auto lg:max-w-none">
@@ -2319,9 +2332,16 @@ export default function AdminPage() {
       {/* Scrollable tab nav */}
       <div className="bg-white border-b border-[#E8E8E8] flex overflow-x-auto scrollbar-hide">
         {TABS.map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setActiveTab(id)}
+          <button key={id} onClick={() => handleTabClick(id)}
             className={`flex-shrink-0 flex flex-col items-center gap-0.5 px-4 py-2.5 border-b-2 transition-colors ${activeTab === id ? "border-[#DB0011] text-[#DB0011]" : "border-transparent text-[#AAAAAA]"}`}>
-            <Icon size={15} />
+            <span className="relative">
+              <Icon size={15} />
+              {id === "notifications" && notifUnread > 0 && (
+                <span className="absolute -top-1 -right-1.5 bg-[#DB0011] text-white text-[8px] font-bold leading-none px-1 py-px rounded-full min-w-[14px] text-center">
+                  {notifUnread > 99 ? "99+" : notifUnread}
+                </span>
+              )}
+            </span>
             <span className="text-[9px] font-bold uppercase tracking-wide whitespace-nowrap">{label}</span>
           </button>
         ))}
