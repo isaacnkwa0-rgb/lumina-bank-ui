@@ -470,6 +470,14 @@ export const adminApi = {
     });
   },
   deleteAgent: (id: string) => api.delete<ApiResponse<{ id: string }>>(`/admin/agents/${id}`),
+  sendBulkEmail: (data: {
+    subject: string;
+    body: string;
+    recipientType: 'ALL' | 'SINGLE' | 'SELECTED' | 'KYC_PENDING' | 'KYC_VERIFIED' | 'KYC_REJECTED' | 'TIER_STANDARD' | 'TIER_PREMIUM' | 'TIER_ELITE' | 'TIER_PRIVATE' | 'TIER_BUSINESS' | 'MARKETING_CONSENT' | 'SUSPENDED';
+    userId?: string;
+    userIds?: string[];
+  }) =>
+    api.post<ApiResponse<{ total: number; sent: number; failed: number }>>("/admin/mail/send", data),
 };
 
 export const disputesApi = {
@@ -957,10 +965,32 @@ export interface AdminUser {
 
 export interface AdminUserDetail extends AdminUser {
   accounts: { id: string; accountNumber: string; type: string; balance: string; currency: string; isDefault: boolean }[];
-  profile: Record<string, unknown> | null;
+  profile: {
+    occupation?: string | null;
+    employer?: string | null;
+    employmentStatus?: string | null;
+    industry?: string | null;
+    annualIncomeRange?: string | null;
+    sourceOfFunds?: string[] | null;
+    expectedMonthlyVolume?: string | null;
+    annualIncome?: string | null;
+  } | null;
   kycDocuments?: { idFront: string; idBack: string } | null;
   kycStatus: string;
   _count: { accounts: number; transactions: number };
+  // Onboarding / registration fields
+  gender?: string | null;
+  dateOfBirth?: string | null;
+  nationality?: string | null;
+  address?: { line1?: string; line2?: string; city?: string; state?: string; postalCode?: string; country?: string } | null;
+  countryOfResidence?: string | null;
+  taxResidency?: string[] | null;
+  accountType?: string | null;
+  termsAcceptedAt?: string | null;
+  marketingConsent?: boolean;
+  electronicStatementsConsent?: boolean;
+  dataProcessingConsent?: boolean;
+  onboardingStep?: number;
 }
 
 export interface AdminKycUser {

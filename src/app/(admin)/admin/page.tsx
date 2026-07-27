@@ -7,7 +7,7 @@ import {
   type AdminInsuranceQuote, type AdminCard, type AdminTransaction,
   type AdminExchangeRate, type AdminPortfolio, type AdminGoal, type AdminAccount,
   type AdminCryptoOrder, type AuditLog, type AdminKycUser, type AdminSupportTicket,
-  type AdminAgent,
+  type AdminAgent, type AdminUserDetail,
 } from "@/lib/api";
 import { getUser } from "@/lib/auth";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -15,10 +15,10 @@ import {
   ShieldCheck, CheckCircle2, Users, ArrowLeftRight, Landmark, AlertCircle,
   ChevronRight, Search, RefreshCw, CreditCard, Receipt, Globe,
   TrendingUp, Target, Home, ShieldAlert, Bitcoin, ScrollText, MessageSquare, Send,
-  UserCog, Trash2, Plus, User,
+  UserCog, Trash2, Plus, User, Mail,
 } from "lucide-react";
 
-type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "support" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "kyc" | "audit" | "agents";
+type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "support" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "kyc" | "audit" | "agents" | "mailer";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -732,6 +732,8 @@ function UserRow({ u, onUpdate, onDelete }: {
   const [kycExpanded, setKycExpanded] = useState(false);
   const [kycDocs, setKycDocs] = useState<{ idFront: string; idBack: string } | null>(null);
   const [kycDocsLoading, setKycDocsLoading] = useState(false);
+  const [regExpanded, setRegExpanded] = useState(false);
+  const [regDetails, setRegDetails] = useState<AdminUserDetail | null>(null);
   const [fundForm, setFundForm] = useState<{ accountId: string; amount: string; desc: string } | null>(null);
   const [fundLoading, setFundLoading] = useState(false);
 
@@ -755,12 +757,17 @@ function UserRow({ u, onUpdate, onDelete }: {
   }
 
   async function loadKycDocs() {
-    if (kycDocs) { setKycExpanded((p) => !p); return; }
+    if (kycDocs || regDetails) {
+      setKycExpanded((p) => !p);
+      return;
+    }
     setKycExpanded(true);
     setKycDocsLoading(true);
     try {
       const r = await adminApi.getUser(u.id);
-      setKycDocs((r.data.data as any).kycDocuments ?? null);
+      const detail = r.data.data as AdminUserDetail;
+      setKycDocs(detail.kycDocuments ?? null);
+      setRegDetails(detail);
     } catch {
       setKycDocs(null);
     } finally { setKycDocsLoading(false); }
@@ -829,30 +836,30 @@ function UserRow({ u, onUpdate, onDelete }: {
                 <div className="space-y-3">
                   <div>
                     <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-1.5">ID Front</p>
-                    {kycDocs.idFront.match(/\.(jpg|jpeg|png)$/i) ? (
+                    {kycDocs.idFront.match(/\.(jpg|jpeg|png|webp)$/i) || kycDocs.idFront.includes("cloudinary") ? (
                       <img
-                        src={`/${kycDocs.idFront}`}
+                        src={kycDocs.idFront}
                         alt="ID Front"
                         className="max-w-full rounded-lg border border-[#E3E3E3]"
                         onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                       />
                     ) : (
-                      <a href={`/${kycDocs.idFront}`} target="_blank" rel="noreferrer" className="text-xs text-[#DB0011] underline">
+                      <a href={kycDocs.idFront} target="_blank" rel="noreferrer" className="text-xs text-[#DB0011] underline">
                         View ID Front (PDF)
                       </a>
                     )}
                   </div>
                   <div>
                     <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-1.5">ID Back</p>
-                    {kycDocs.idBack.match(/\.(jpg|jpeg|png)$/i) ? (
+                    {kycDocs.idBack.match(/\.(jpg|jpeg|png|webp)$/i) || kycDocs.idBack.includes("cloudinary") ? (
                       <img
-                        src={`/${kycDocs.idBack}`}
+                        src={kycDocs.idBack}
                         alt="ID Back"
                         className="max-w-full rounded-lg border border-[#E3E3E3]"
                         onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                       />
                     ) : (
-                      <a href={`/${kycDocs.idBack}`} target="_blank" rel="noreferrer" className="text-xs text-[#DB0011] underline">
+                      <a href={kycDocs.idBack} target="_blank" rel="noreferrer" className="text-xs text-[#DB0011] underline">
                         View ID Back (PDF)
                       </a>
                     )}
@@ -876,6 +883,65 @@ function UserRow({ u, onUpdate, onDelete }: {
           )}
         </div>
       )}
+
+      {/* Registration & Onboarding Details */}
+      <div className="mb-2">
+        <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-1.5">Registration Details</p>
+        <button
+          onClick={async () => {
+            if (!regDetails) {
+              setKycDocsLoading(true);
+              try {
+                const r = await adminApi.getUser(u.id);
+                const detail = r.data.data as AdminUserDetail;
+                setKycDocs(detail.kycDocuments ?? null);
+                setRegDetails(detail);
+              } catch {} finally { setKycDocsLoading(false); }
+            }
+            setRegExpanded((p) => !p);
+          }}
+          className="text-[10px] text-[#1a1a2e] font-semibold underline mb-2"
+        >
+          {regExpanded ? "Hide details ▲" : "View details ▼"}
+        </button>
+        {regExpanded && regDetails && (
+          <div className="bg-[#F8F8F8] rounded-xl p-3 text-[11px] text-[#444] space-y-1.5">
+            <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-2">Personal</p>
+            {regDetails.dateOfBirth && <p><span className="text-[#AAAAAA]">DOB:</span> {new Date(regDetails.dateOfBirth).toLocaleDateString("en-GB")}</p>}
+            {regDetails.gender && <p><span className="text-[#AAAAAA]">Gender:</span> {regDetails.gender}</p>}
+            {regDetails.nationality && <p><span className="text-[#AAAAAA]">Nationality:</span> {regDetails.nationality}</p>}
+            {regDetails.countryOfResidence && <p><span className="text-[#AAAAAA]">Country of residence:</span> {regDetails.countryOfResidence}</p>}
+            {regDetails.taxResidency && regDetails.taxResidency.length > 0 && <p><span className="text-[#AAAAAA]">Tax residency:</span> {regDetails.taxResidency.join(", ")}</p>}
+            {regDetails.address && (
+              <p><span className="text-[#AAAAAA]">Address:</span> {[regDetails.address.line1, regDetails.address.line2, regDetails.address.city, regDetails.address.state, regDetails.address.postalCode, regDetails.address.country].filter(Boolean).join(", ")}</p>
+            )}
+            <div className="h-px bg-[#E3E3E3] my-1.5" />
+            <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-1">Account & Onboarding</p>
+            {regDetails.accountType && <p><span className="text-[#AAAAAA]">Account type:</span> {regDetails.accountType}</p>}
+            {regDetails.onboardingStep !== undefined && <p><span className="text-[#AAAAAA]">Onboarding step:</span> {regDetails.onboardingStep}</p>}
+            {regDetails.termsAcceptedAt && <p><span className="text-[#AAAAAA]">Terms accepted:</span> {new Date(regDetails.termsAcceptedAt).toLocaleDateString("en-GB")}</p>}
+            <div className="flex gap-4">
+              <p><span className="text-[#AAAAAA]">Marketing:</span> {regDetails.marketingConsent ? "Yes" : "No"}</p>
+              <p><span className="text-[#AAAAAA]">E-statements:</span> {regDetails.electronicStatementsConsent ? "Yes" : "No"}</p>
+              <p><span className="text-[#AAAAAA]">Data processing:</span> {regDetails.dataProcessingConsent ? "Yes" : "No"}</p>
+            </div>
+            {regDetails.profile && (
+              <>
+                <div className="h-px bg-[#E3E3E3] my-1.5" />
+                <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-1">Financial Profile</p>
+                {regDetails.profile.employmentStatus && <p><span className="text-[#AAAAAA]">Employment:</span> {regDetails.profile.employmentStatus}</p>}
+                {regDetails.profile.occupation && <p><span className="text-[#AAAAAA]">Occupation:</span> {regDetails.profile.occupation}</p>}
+                {regDetails.profile.employer && <p><span className="text-[#AAAAAA]">Employer:</span> {regDetails.profile.employer}</p>}
+                {regDetails.profile.industry && <p><span className="text-[#AAAAAA]">Industry:</span> {regDetails.profile.industry}</p>}
+                {regDetails.profile.annualIncomeRange && <p><span className="text-[#AAAAAA]">Income range:</span> {regDetails.profile.annualIncomeRange}</p>}
+                {regDetails.profile.annualIncome && <p><span className="text-[#AAAAAA]">Annual income:</span> {regDetails.profile.annualIncome}</p>}
+                {regDetails.profile.sourceOfFunds && regDetails.profile.sourceOfFunds.length > 0 && <p><span className="text-[#AAAAAA]">Source of funds:</span> {regDetails.profile.sourceOfFunds.join(", ")}</p>}
+                {regDetails.profile.expectedMonthlyVolume && <p><span className="text-[#AAAAAA]">Monthly volume:</span> {regDetails.profile.expectedMonthlyVolume}</p>}
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Tier management */}
       <div>
@@ -1390,14 +1456,14 @@ function KycTab() {
   }
 
   function DocImage({ src, alt }: { src: string; alt: string }) {
-    return src.match(/\.(jpg|jpeg|png)$/i) ? (
+    return src.match(/\.(jpg|jpeg|png|webp)$/i) || src.includes("cloudinary") ? (
       <img
-        src={`/${src}`}
+        src={src}
         alt={alt}
         className="max-w-full max-h-72 object-contain rounded-lg border border-[#E3E3E3] bg-white"
       />
     ) : (
-      <a href={`/${src}`} target="_blank" rel="noreferrer" className="text-xs text-[#DB0011] underline">
+      <a href={src} target="_blank" rel="noreferrer" className="text-xs text-[#DB0011] underline">
         Open {alt} (PDF)
       </a>
     );
@@ -1444,11 +1510,11 @@ function KycTab() {
                     {u.kycDocuments ? (
                       <>
                         <div>
-                          <p className="text-[9px] text-[#AAAAAA] uppercase font-bold tracking-widest mb-2">ID — Front</p>
+                          <p className="text-[9px] text-[#AAAAAA] uppercase font-bold tracking-widest mb-2">ID: Front</p>
                           <DocImage src={u.kycDocuments.idFront} alt="ID Front" />
                         </div>
                         <div>
-                          <p className="text-[9px] text-[#AAAAAA] uppercase font-bold tracking-widest mb-2">ID — Back</p>
+                          <p className="text-[9px] text-[#AAAAAA] uppercase font-bold tracking-widest mb-2">ID: Back</p>
                           <DocImage src={u.kycDocuments.idBack} alt="ID Back" />
                         </div>
                       </>
@@ -1789,6 +1855,266 @@ function AgentsTab() {
   );
 }
 
+type MailRecipientType = "ALL" | "SINGLE" | "SELECTED" | "KYC_PENDING" | "KYC_VERIFIED" | "KYC_REJECTED" | "TIER_STANDARD" | "TIER_PREMIUM" | "TIER_ELITE" | "TIER_PRIVATE" | "TIER_BUSINESS" | "MARKETING_CONSENT" | "SUSPENDED";
+
+const RECIPIENT_GROUPS: { label: string; options: { value: MailRecipientType; label: string }[] }[] = [
+  {
+    label: "Audience",
+    options: [
+      { value: "ALL",      label: "All active customers" },
+      { value: "SINGLE",   label: "Single customer" },
+      { value: "SELECTED", label: "Selected customers" },
+    ],
+  },
+  {
+    label: "KYC Status",
+    options: [
+      { value: "KYC_PENDING",  label: "KYC pending" },
+      { value: "KYC_VERIFIED", label: "KYC verified" },
+      { value: "KYC_REJECTED", label: "KYC rejected" },
+    ],
+  },
+  {
+    label: "Account Tier",
+    options: [
+      { value: "TIER_STANDARD", label: "Standard tier" },
+      { value: "TIER_PREMIUM",  label: "Premium tier" },
+      { value: "TIER_ELITE",    label: "Elite tier" },
+      { value: "TIER_PRIVATE",  label: "Private tier" },
+      { value: "TIER_BUSINESS", label: "Business tier" },
+    ],
+  },
+  {
+    label: "Other",
+    options: [
+      { value: "MARKETING_CONSENT", label: "Marketing consent opted-in" },
+      { value: "SUSPENDED",         label: "Suspended accounts" },
+    ],
+  },
+];
+
+const RECIPIENT_LABELS: Record<MailRecipientType, string> = {
+  ALL: "all active customers",
+  SINGLE: "1 customer",
+  SELECTED: "{n} selected customer(s)",
+  KYC_PENDING: "all KYC-pending customers",
+  KYC_VERIFIED: "all KYC-verified customers",
+  KYC_REJECTED: "all KYC-rejected customers",
+  TIER_STANDARD: "all Standard tier customers",
+  TIER_PREMIUM: "all Premium tier customers",
+  TIER_ELITE: "all Elite tier customers",
+  TIER_PRIVATE: "all Private tier customers",
+  TIER_BUSINESS: "all Business tier customers",
+  MARKETING_CONSENT: "all marketing-consent customers",
+  SUSPENDED: "all suspended accounts",
+};
+
+function MailerTab() {
+  const [recipientType, setRecipientType] = useState<MailRecipientType>("ALL");
+  const [userSearch, setUserSearch] = useState("");
+  const [userResults, setUserResults] = useState<AdminUser[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<AdminUser[]>([]);
+  const [singleUser, setSingleUser] = useState<AdminUser | null>(null);
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ total: number; sent: number; failed: number } | null>(null);
+  const [error, setError] = useState("");
+
+  function handleTypeChange(t: MailRecipientType) {
+    setRecipientType(t);
+    setSelectedUsers([]);
+    setSingleUser(null);
+    setUserResults([]);
+    setUserSearch("");
+    setError("");
+    setResult(null);
+  }
+
+  async function searchUsers(q: string) {
+    if (!q.trim()) { setUserResults([]); return; }
+    try {
+      const r = await adminApi.users({ search: q, limit: 10 });
+      const exclude = recipientType === "SINGLE"
+        ? (singleUser ? [singleUser.id] : [])
+        : selectedUsers.map((s) => s.id);
+      setUserResults(r.data.data.users.filter((u) => !exclude.includes(u.id)));
+    } catch {}
+  }
+
+  async function handleSend() {
+    if (!subject.trim() || !body.trim()) { setError("Subject and message body are required."); return; }
+    if (recipientType === "SINGLE" && !singleUser) { setError("Select a recipient."); return; }
+    if (recipientType === "SELECTED" && selectedUsers.length === 0) { setError("Select at least one recipient."); return; }
+
+    const label = RECIPIENT_LABELS[recipientType].replace("{n}", String(selectedUsers.length));
+    if (!confirm(`This will send an email to ${label}. Continue?`)) return;
+
+    setSending(true);
+    setError("");
+    setResult(null);
+    try {
+      const r = await adminApi.sendBulkEmail({
+        subject,
+        body,
+        recipientType,
+        userId:  recipientType === "SINGLE"   ? singleUser!.id                      : undefined,
+        userIds: recipientType === "SELECTED" ? selectedUsers.map((u) => u.id)      : undefined,
+      });
+      setResult(r.data.data);
+      setSubject("");
+      setBody("");
+      setSelectedUsers([]);
+      setSingleUser(null);
+    } catch (e: unknown) {
+      setError((e as any)?.response?.data?.error?.message || "Failed to send");
+    } finally { setSending(false); }
+  }
+
+  const showUserSearch = recipientType === "SINGLE" || recipientType === "SELECTED";
+
+  return (
+    <div className="p-4 max-w-2xl mx-auto">
+      <div className="bg-white border border-[#E8E8E8] rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-[#E8E8E8]">
+          <p className="text-sm font-semibold text-[#333]">Send Email to Customers</p>
+          <p className="text-xs text-[#AAAAAA] mt-0.5">Compose and send a branded Lumina Bank email to a targeted group of customers.</p>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+          {/* Recipient type */}
+          <div>
+            <p className="text-[10px] text-[#AAAAAA] uppercase font-bold mb-2">Recipients</p>
+            <select
+              value={recipientType}
+              onChange={(e) => handleTypeChange(e.target.value as MailRecipientType)}
+              className="w-full border border-[#E3E3E3] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#DB0011] bg-white text-[#333]"
+            >
+              {RECIPIENT_GROUPS.map((g) => (
+                <optgroup key={g.label} label={g.label}>
+                  {g.options.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+
+          {/* User search — single or multi */}
+          {showUserSearch && (
+            <div>
+              <p className="text-[10px] text-[#AAAAAA] uppercase font-bold mb-2">
+                {recipientType === "SINGLE" ? "Customer" : "Add Customers"}
+              </p>
+
+              {/* Single — show selected pill or search */}
+              {recipientType === "SINGLE" && singleUser ? (
+                <div className="flex items-center justify-between border border-[#E3E3E3] rounded-lg px-3 py-2">
+                  <div>
+                    <span className="text-sm font-medium text-[#333]">{singleUser.firstName} {singleUser.lastName}</span>
+                    <span className="text-xs text-[#AAAAAA] ml-2">{singleUser.email}</span>
+                  </div>
+                  <button onClick={() => { setSingleUser(null); setUserSearch(""); }} className="text-[#AAAAAA] hover:text-[#DB0011] text-sm">×</button>
+                </div>
+              ) : (
+                <>
+                  <div className="relative mb-2">
+                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#AAAAAA]" />
+                    <input
+                      type="text"
+                      placeholder="Search by name or email..."
+                      value={userSearch}
+                      onChange={(e) => { setUserSearch(e.target.value); searchUsers(e.target.value); }}
+                      className="w-full pl-8 pr-3 py-2 border border-[#E3E3E3] rounded-lg text-sm focus:outline-none focus:border-[#DB0011]"
+                    />
+                  </div>
+                  {userResults.length > 0 && (
+                    <div className="border border-[#E3E3E3] rounded-lg divide-y divide-[#F0F0F0] mb-2 max-h-48 overflow-y-auto">
+                      {userResults.map((u) => (
+                        <button
+                          key={u.id}
+                          onClick={() => {
+                            if (recipientType === "SINGLE") {
+                              setSingleUser(u); setUserResults([]); setUserSearch("");
+                            } else {
+                              setSelectedUsers((p) => [...p, u]);
+                              setUserResults((p) => p.filter((r) => r.id !== u.id));
+                              setUserSearch("");
+                            }
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-[#F8F8F8] text-sm"
+                        >
+                          <span className="font-medium text-[#333]">{u.firstName} {u.lastName}</span>
+                          <span className="text-[#AAAAAA] ml-2 text-xs">{u.email}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Multi selected chips */}
+              {recipientType === "SELECTED" && selectedUsers.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {selectedUsers.map((u) => (
+                    <span key={u.id} className="inline-flex items-center gap-1 bg-red-50 border border-red-200 text-[#DB0011] text-xs px-2 py-0.5 rounded-full">
+                      {u.firstName} {u.lastName}
+                      <button onClick={() => setSelectedUsers((p) => p.filter((s) => s.id !== u.id))} className="hover:text-[#8B000A]">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Subject */}
+          <div>
+            <p className="text-[10px] text-[#AAAAAA] uppercase font-bold mb-2">Subject</p>
+            <input
+              type="text"
+              placeholder="Email subject..."
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="w-full border border-[#E3E3E3] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#DB0011]"
+            />
+          </div>
+
+          {/* Body */}
+          <div>
+            <p className="text-[10px] text-[#AAAAAA] uppercase font-bold mb-2">Message</p>
+            <textarea
+              rows={8}
+              placeholder="Write your message here. Use blank lines to separate paragraphs."
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              className="w-full border border-[#E3E3E3] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#DB0011] resize-y font-sans"
+            />
+            <p className="text-[10px] text-[#AAAAAA] mt-1">Plain text only. Wrapped in the Lumina Bank branded email template with personalised greeting.</p>
+          </div>
+
+          {error && <p className="text-sm text-[#DB0011]">{error}</p>}
+
+          {result && (
+            <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+              <p className="text-sm font-semibold text-green-800">Email sent successfully</p>
+              <p className="text-xs text-green-700 mt-0.5">{result.sent} sent · {result.failed} failed · {result.total} total recipients</p>
+            </div>
+          )}
+
+          <button
+            onClick={handleSend}
+            disabled={sending}
+            className="flex items-center gap-2 bg-[#DB0011] text-white text-sm font-bold px-5 py-2.5 rounded-lg hover:bg-[#b8000e] disabled:opacity-50 transition-colors"
+          >
+            <Send size={14} />
+            {sending ? "Sending…" : "Send Email"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const ALL_TABS: { id: Tab; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
   { id: "transfers",    label: "Transfers",    icon: ArrowLeftRight, adminOnly: true  },
   { id: "loans",        label: "Loans",        icon: Landmark,       adminOnly: true  },
@@ -1806,6 +2132,7 @@ const ALL_TABS: { id: Tab; label: string; icon: React.ElementType; adminOnly?: b
   { id: "users",        label: "Users",        icon: Users,          adminOnly: true  },
   { id: "kyc",          label: "KYC Review",   icon: ShieldCheck,    adminOnly: true  },
   { id: "audit",        label: "Audit Log",    icon: ScrollText,     adminOnly: true  },
+  { id: "mailer",       label: "Mailer",       icon: Mail,           adminOnly: true  },
 ];
 
 export default function AdminPage() {
@@ -1855,6 +2182,7 @@ export default function AdminPage() {
         {activeTab === "users"        && <UsersTab />}
         {activeTab === "kyc"          && <KycTab />}
         {activeTab === "audit"        && <AuditLogsTab />}
+        {activeTab === "mailer"       && <MailerTab />}
       </div>
     </div>
   );
