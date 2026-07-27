@@ -2278,6 +2278,7 @@ function MailerTab() {
 }
 
 const ALL_TABS: { id: Tab; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
+  { id: "notifications", label: "Notifications", icon: Bell,           adminOnly: true  },
   { id: "transfers",    label: "Transfers",    icon: ArrowLeftRight, adminOnly: true  },
   { id: "loans",        label: "Loans",        icon: Landmark,       adminOnly: true  },
   { id: "mortgages",    label: "Mortgages",    icon: Home,           adminOnly: true  },
@@ -2294,15 +2295,14 @@ const ALL_TABS: { id: Tab; label: string; icon: React.ElementType; adminOnly?: b
   { id: "users",        label: "Users",        icon: Users,          adminOnly: true  },
   { id: "kyc",          label: "KYC Review",   icon: ShieldCheck,    adminOnly: true  },
   { id: "audit",        label: "Audit Log",    icon: ScrollText,     adminOnly: true  },
-  { id: "mailer",        label: "Mailer",        icon: Mail,           adminOnly: true  },
-  { id: "notifications", label: "Notifications", icon: Bell,           adminOnly: true  },
+  { id: "mailer",       label: "Mailer",       icon: Mail,           adminOnly: true  },
 ];
 
 export default function AdminPage() {
   const currentUser = getUser();
   const isAgent = currentUser?.role === "AGENT";
   const TABS = ALL_TABS.filter((t) => !t.adminOnly || !isAgent);
-  const [activeTab, setActiveTab] = useState<Tab>(isAgent ? "support" : "transfers");
+  const [activeTab, setActiveTab] = useState<Tab>(isAgent ? "support" : "notifications");
   const [notifUnread, setNotifUnread] = useState(0);
 
   useEffect(() => {
