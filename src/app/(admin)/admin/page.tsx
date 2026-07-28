@@ -1858,12 +1858,20 @@ function AgentsTab() {
 // ── Notifications Tab ─────────────────────────────────────────────────────────
 
 const NOTIF_TYPE_META: Record<AdminNotification["type"], { label: string; color: string }> = {
-  NEW_REGISTRATION: { label: "Registration",    color: "bg-blue-100 text-blue-700"   },
-  KYC_SUBMITTED:    { label: "KYC",             color: "bg-amber-100 text-amber-700" },
-  LOAN_APPLICATION: { label: "Loan",            color: "bg-purple-100 text-purple-700" },
-  DISPUTE_FILED:    { label: "Dispute",         color: "bg-red-100 text-red-700"     },
-  INSURANCE_QUOTE:  { label: "Insurance",       color: "bg-teal-100 text-teal-700"   },
-  CRYPTO_ORDER:     { label: "Crypto",          color: "bg-orange-100 text-orange-700" },
+  NEW_REGISTRATION:      { label: "Registration",    color: "bg-blue-100 text-blue-700"     },
+  KYC_SUBMITTED:         { label: "KYC",             color: "bg-amber-100 text-amber-700"   },
+  LOAN_APPLICATION:      { label: "Loan",            color: "bg-purple-100 text-purple-700" },
+  DISPUTE_FILED:         { label: "Dispute",         color: "bg-red-100 text-red-700"       },
+  INSURANCE_QUOTE:       { label: "Insurance",       color: "bg-teal-100 text-teal-700"     },
+  CRYPTO_ORDER:          { label: "Crypto",          color: "bg-orange-100 text-orange-700" },
+  LARGE_TRANSFER:        { label: "Large Transfer",  color: "bg-rose-100 text-rose-700"     },
+  INTERNATIONAL_TRANSFER:{ label: "Intl Transfer",   color: "bg-indigo-100 text-indigo-700" },
+  ACCOUNT_LOCKED:        { label: "Locked",          color: "bg-red-100 text-red-800"       },
+  PASSWORD_CHANGED:      { label: "Password",        color: "bg-yellow-100 text-yellow-700" },
+  SITE_VISITOR:          { label: "Visitor",         color: "bg-sky-100 text-sky-700"       },
+  NEW_SUPPORT_TICKET:    { label: "Support Ticket",  color: "bg-violet-100 text-violet-700" },
+  SUPPORT_MESSAGE:       { label: "Support Reply",   color: "bg-fuchsia-100 text-fuchsia-700"},
+  LARGE_DEPOSIT:         { label: "Large Deposit",   color: "bg-green-100 text-green-700"   },
 };
 
 function NotificationsTab() {

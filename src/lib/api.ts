@@ -1212,7 +1212,21 @@ export interface AdminAgent {
 
 export interface AdminNotification {
   id: string;
-  type: 'NEW_REGISTRATION' | 'KYC_SUBMITTED' | 'LOAN_APPLICATION' | 'DISPUTE_FILED' | 'INSURANCE_QUOTE' | 'CRYPTO_ORDER';
+  type:
+    | 'NEW_REGISTRATION'
+    | 'KYC_SUBMITTED'
+    | 'LOAN_APPLICATION'
+    | 'DISPUTE_FILED'
+    | 'INSURANCE_QUOTE'
+    | 'CRYPTO_ORDER'
+    | 'LARGE_TRANSFER'
+    | 'INTERNATIONAL_TRANSFER'
+    | 'ACCOUNT_LOCKED'
+    | 'PASSWORD_CHANGED'
+    | 'SITE_VISITOR'
+    | 'NEW_SUPPORT_TICKET'
+    | 'SUPPORT_MESSAGE'
+    | 'LARGE_DEPOSIT';
   title: string;
   message: string;
   metadata: Record<string, unknown> | null;
