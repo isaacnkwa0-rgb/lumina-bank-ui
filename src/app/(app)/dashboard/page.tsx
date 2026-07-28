@@ -152,22 +152,30 @@ export default function DashboardPage() {
             {t("dashboard.viewAll")} <ChevronRight size={14} />
           </Link>
         </div>
-        <div className="overflow-x-auto">
-          <div className="flex p-4 gap-3 w-max">
-            {loading
-              ? Array.from({ length: 2 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="skeleton rounded-sm w-[180px] h-[90px] flex-shrink-0"
-                  />
-                ))
-              : accounts.map((acc) => (
-                  <Link key={acc.id} href={`/accounts/${acc.id}`}>
-                    <AccountMiniCard account={acc} />
-                  </Link>
-                ))}
+        {loading ? (
+          <div className="grid grid-cols-2 gap-3 p-4">
+            <div className="skeleton rounded-sm h-[90px]" />
+            <div className="skeleton rounded-sm h-[90px]" />
           </div>
-        </div>
+        ) : (
+          <div
+            className={`grid gap-3 p-4 ${
+              accounts.length === 1
+                ? "grid-cols-1"
+                : accounts.length === 2
+                ? "grid-cols-2"
+                : accounts.length === 3
+                ? "grid-cols-3"
+                : "grid-cols-2"
+            }`}
+          >
+            {accounts.map((acc) => (
+              <Link key={acc.id} href={`/accounts/${acc.id}`} className="block">
+                <AccountMiniCard account={acc} />
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Recent transactions */}
@@ -289,7 +297,7 @@ function AccountMiniCard({ account }: { account: Account }) {
 
   return (
     <div
-      className={`bg-gradient-to-br ${gradient} rounded-sm p-4 text-white w-[180px] flex-shrink-0`}
+      className={`bg-gradient-to-br ${gradient} rounded-sm p-4 text-white h-[90px] w-full`}
     >
       <p className="text-[10px] font-medium opacity-70 uppercase tracking-wide mb-2">
         {account.type}
