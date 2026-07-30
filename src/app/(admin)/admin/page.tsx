@@ -736,6 +736,14 @@ function UserRow({ u, onUpdate, onDelete }: {
   const [regDetails, setRegDetails] = useState<AdminUserDetail | null>(null);
   const [fundForm, setFundForm] = useState<{ accountId: string; amount: string; desc: string } | null>(null);
   const [fundLoading, setFundLoading] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    firstName: "", lastName: "", phone: "", gender: "", dateOfBirth: "",
+    nationality: "", countryOfResidence: "", occupation: "", employer: "",
+    annualIncome: "", preferredCurrency: "", accountType: "",
+    addrLine1: "", addrLine2: "", addrCity: "", addrState: "", addrPostcode: "", addrCountry: "",
+  });
 
   async function act(fn: () => Promise<void>) {
     setActionId("x");
@@ -773,6 +781,65 @@ function UserRow({ u, onUpdate, onDelete }: {
     } finally { setKycDocsLoading(false); }
   }
 
+  async function openEdit() {
+    let detail = regDetails;
+    if (!detail) {
+      try {
+        const r = await adminApi.getUser(u.id);
+        detail = r.data.data as AdminUserDetail;
+        setRegDetails(detail);
+      } catch {}
+    }
+    setEditForm({
+      firstName: u.firstName ?? "",
+      lastName: u.lastName ?? "",
+      phone: u.phone ?? "",
+      gender: detail?.gender ?? "",
+      dateOfBirth: detail?.dateOfBirth ? detail.dateOfBirth.slice(0, 10) : "",
+      nationality: detail?.nationality ?? "",
+      countryOfResidence: detail?.countryOfResidence ?? "",
+      occupation: detail?.profile?.occupation ?? "",
+      employer: detail?.profile?.employer ?? "",
+      annualIncome: detail?.profile?.annualIncome ?? "",
+      preferredCurrency: "",
+      accountType: detail?.accountType ?? "",
+      addrLine1: detail?.address?.line1 ?? "",
+      addrLine2: detail?.address?.line2 ?? "",
+      addrCity: detail?.address?.city ?? "",
+      addrState: detail?.address?.state ?? "",
+      addrPostcode: detail?.address?.postalCode ?? "",
+      addrCountry: detail?.address?.country ?? "",
+    });
+    setEditOpen(true);
+  }
+
+  async function saveEdit() {
+    setEditSaving(true);
+    try {
+      const payload: Parameters<typeof adminApi.updateUserProfile>[1] = {};
+      if (editForm.firstName.trim()) payload.firstName = editForm.firstName.trim();
+      if (editForm.lastName.trim()) payload.lastName = editForm.lastName.trim();
+      if (editForm.phone.trim()) payload.phone = editForm.phone.trim();
+      if (editForm.gender) payload.gender = editForm.gender;
+      if (editForm.dateOfBirth) payload.dateOfBirth = editForm.dateOfBirth;
+      if (editForm.nationality.trim()) payload.nationality = editForm.nationality.trim();
+      if (editForm.countryOfResidence.trim()) payload.countryOfResidence = editForm.countryOfResidence.trim();
+      if (editForm.occupation.trim()) payload.occupation = editForm.occupation.trim();
+      if (editForm.employer.trim()) payload.employer = editForm.employer.trim();
+      if (editForm.annualIncome.trim()) payload.annualIncome = Number(editForm.annualIncome);
+      if (editForm.preferredCurrency.trim()) payload.preferredCurrency = editForm.preferredCurrency.trim();
+      if (editForm.accountType) payload.accountType = editForm.accountType;
+      const addr = { line1: editForm.addrLine1, line2: editForm.addrLine2, city: editForm.addrCity, state: editForm.addrState, postalCode: editForm.addrPostcode, country: editForm.addrCountry };
+      if (Object.values(addr).some(v => v.trim())) payload.address = addr;
+      await adminApi.updateUserProfile(u.id, payload);
+      onUpdate(u.id, { firstName: payload.firstName ?? u.firstName, lastName: payload.lastName ?? u.lastName, phone: payload.phone ?? u.phone });
+      setEditOpen(false);
+      alert("Profile updated. User has been notified by email.");
+    } catch (e: unknown) {
+      alert((e as any)?.response?.data?.error?.message || "Failed to update profile");
+    } finally { setEditSaving(false); }
+  }
+
   return (
     <div className="bg-white px-4 py-4">
       {/* Header row */}
@@ -807,6 +874,7 @@ function UserRow({ u, onUpdate, onDelete }: {
           )}
           <Btn color="amber" label="Reset Lockout" loading={actionId === "x"} onClick={() => act(async () => { await adminApi.resetLockout(u.id); alert("Lockout cleared"); })} />
           <Btn color="blue" label="Verify Email" loading={actionId === "x"} onClick={() => act(async () => { await adminApi.verifyUserEmail(u.id); alert("Email marked as verified"); })} />
+          <Btn color="navy" label="Edit Profile" loading={actionId === "x"} onClick={openEdit} />
           <Btn color="red-outline" label="Delete User" loading={actionId === "x"} onClick={() => {
             if (!confirm(`Permanently delete ${u.firstName} ${u.lastName}? This cannot be undone.`)) return;
             act(async () => { await adminApi.deleteUser(u.id); onDelete(u.id); });
@@ -1043,6 +1111,145 @@ function UserRow({ u, onUpdate, onDelete }: {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Edit Profile Modal */}
+      {editOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white px-5 pt-5 pb-3 border-b border-[#F0F0F0] flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-[#DB0011] uppercase tracking-wider">Edit Profile</p>
+                <p className="text-sm font-semibold text-[#333]">{u.firstName} {u.lastName}</p>
+              </div>
+              <button onClick={() => setEditOpen(false)} className="text-[#AAAAAA] hover:text-[#333] text-xl leading-none">✕</button>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              {/* Name */}
+              <div>
+                <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-2">Name</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-[#767676]">First name</label>
+                    <input value={editForm.firstName} onChange={e => setEditForm(f => ({ ...f, firstName: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Last name</label>
+                    <input value={editForm.lastName} onChange={e => setEditForm(f => ({ ...f, lastName: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  </div>
+                </div>
+              </div>
+              {/* Contact */}
+              <div>
+                <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-2">Contact</p>
+                <label className="text-[10px] text-[#767676]">Phone</label>
+                <input value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
+                  placeholder="+447911123456"
+                  className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+              </div>
+              {/* Personal */}
+              <div>
+                <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-2">Personal</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Gender</label>
+                    <select value={editForm.gender} onChange={e => setEditForm(f => ({ ...f, gender: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011] bg-white">
+                      <option value="">— select —</option>
+                      <option value="MALE">Male</option>
+                      <option value="FEMALE">Female</option>
+                      <option value="OTHER">Other</option>
+                      <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Date of birth</label>
+                    <input type="date" value={editForm.dateOfBirth} onChange={e => setEditForm(f => ({ ...f, dateOfBirth: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Nationality</label>
+                    <input value={editForm.nationality} onChange={e => setEditForm(f => ({ ...f, nationality: e.target.value }))}
+                      placeholder="GB"
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Country of residence</label>
+                    <input value={editForm.countryOfResidence} onChange={e => setEditForm(f => ({ ...f, countryOfResidence: e.target.value }))}
+                      placeholder="GB"
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  </div>
+                </div>
+              </div>
+              {/* Address */}
+              <div>
+                <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-2">Address</p>
+                <div className="space-y-2">
+                  <input value={editForm.addrLine1} onChange={e => setEditForm(f => ({ ...f, addrLine1: e.target.value }))}
+                    placeholder="Line 1" className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  <input value={editForm.addrLine2} onChange={e => setEditForm(f => ({ ...f, addrLine2: e.target.value }))}
+                    placeholder="Line 2 (optional)" className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input value={editForm.addrCity} onChange={e => setEditForm(f => ({ ...f, addrCity: e.target.value }))}
+                      placeholder="City" className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                    <input value={editForm.addrPostcode} onChange={e => setEditForm(f => ({ ...f, addrPostcode: e.target.value }))}
+                      placeholder="Postcode" className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                    <input value={editForm.addrState} onChange={e => setEditForm(f => ({ ...f, addrState: e.target.value }))}
+                      placeholder="State / county" className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                    <input value={editForm.addrCountry} onChange={e => setEditForm(f => ({ ...f, addrCountry: e.target.value }))}
+                      placeholder="Country" className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  </div>
+                </div>
+              </div>
+              {/* Financial */}
+              <div>
+                <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-2">Financial & Employment</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Occupation</label>
+                    <input value={editForm.occupation} onChange={e => setEditForm(f => ({ ...f, occupation: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Employer</label>
+                    <input value={editForm.employer} onChange={e => setEditForm(f => ({ ...f, employer: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Annual income (£)</label>
+                    <input type="number" value={editForm.annualIncome} onChange={e => setEditForm(f => ({ ...f, annualIncome: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Preferred currency</label>
+                    <input value={editForm.preferredCurrency} onChange={e => setEditForm(f => ({ ...f, preferredCurrency: e.target.value }))}
+                      placeholder="GBP" className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-[10px] text-[#767676]">Account type</label>
+                    <select value={editForm.accountType} onChange={e => setEditForm(f => ({ ...f, accountType: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011] bg-white">
+                      <option value="">— select —</option>
+                      <option value="PERSONAL">Personal</option>
+                      <option value="BUSINESS">Business</option>
+                      <option value="STUDENT">Student</option>
+                      <option value="JOINT">Joint</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="sticky bottom-0 bg-white px-5 py-4 border-t border-[#F0F0F0] flex gap-2">
+              <button onClick={saveEdit} disabled={editSaving}
+                className="flex-1 bg-[#DB0011] text-white text-xs font-bold py-2.5 rounded-xl hover:bg-[#b8000e] disabled:opacity-50 transition-colors">
+                {editSaving ? "Saving…" : "Save changes"}
+              </button>
+              <button onClick={() => setEditOpen(false)} className="px-4 text-xs text-[#767676] hover:text-[#333]">Cancel</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

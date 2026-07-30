@@ -381,6 +381,13 @@ export const adminApi = {
     api.patch<ApiResponse<{ id: string; unlocked: boolean }>>(`/admin/users/${id}/reset-lockout`),
   verifyUserEmail: (id: string) =>
     api.patch<ApiResponse<{ id: string; isEmailVerified: boolean }>>(`/admin/users/${id}/verify-email`),
+  updateUserProfile: (id: string, data: {
+    firstName?: string; lastName?: string; phone?: string; gender?: string;
+    dateOfBirth?: string; nationality?: string; countryOfResidence?: string;
+    address?: { line1?: string; line2?: string; city?: string; state?: string; postalCode?: string; country?: string };
+    occupation?: string; employer?: string; annualIncome?: number;
+    preferredCurrency?: string; accountType?: string;
+  }) => api.patch<ApiResponse<{ id: string; changes: number }>>(`/admin/users/${id}/profile`, data),
   getUserAccounts: (userId: string) =>
     api.get<ApiResponse<AdminAccount[]>>(`/admin/users/${userId}/accounts`),
   freezeAccount: (accountId: string) =>
