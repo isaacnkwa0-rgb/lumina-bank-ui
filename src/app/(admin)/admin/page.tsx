@@ -768,12 +768,14 @@ function UserRow({ u, onUpdate, onDelete }: {
   const [fundLoading, setFundLoading] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
-  const [editForm, setEditForm] = useState({
+  const BLANK_FORM = {
     firstName: "", lastName: "", phone: "", gender: "", dateOfBirth: "",
     nationality: "", countryOfResidence: "", occupation: "", employer: "",
     annualIncome: "", preferredCurrency: "", accountType: "",
     addrLine1: "", addrLine2: "", addrCity: "", addrState: "", addrPostcode: "", addrCountry: "",
-  });
+  };
+  const [editForm, setEditForm] = useState(BLANK_FORM);
+  const [editInitial, setEditInitial] = useState(BLANK_FORM);
 
   async function act(fn: () => Promise<void>) {
     setActionId("x");
@@ -820,7 +822,7 @@ function UserRow({ u, onUpdate, onDelete }: {
         setRegDetails(detail);
       } catch {}
     }
-    setEditForm({
+    const initial = {
       firstName: u.firstName ?? "",
       lastName: u.lastName ?? "",
       phone: u.phone ?? "",
@@ -839,28 +841,32 @@ function UserRow({ u, onUpdate, onDelete }: {
       addrState: detail?.address?.state ?? "",
       addrPostcode: detail?.address?.postalCode ?? "",
       addrCountry: detail?.address?.country ?? "",
-    });
+    };
+    setEditInitial(initial);
+    setEditForm(initial);
     setEditOpen(true);
   }
 
   async function saveEdit() {
     setEditSaving(true);
     try {
+      const changed = <K extends keyof typeof editForm>(key: K) => editForm[key] !== editInitial[key];
       const payload: Parameters<typeof adminApi.updateUserProfile>[1] = {};
-      if (editForm.firstName.trim()) payload.firstName = editForm.firstName.trim();
-      if (editForm.lastName.trim()) payload.lastName = editForm.lastName.trim();
-      if (editForm.phone.trim()) payload.phone = editForm.phone.trim();
-      if (editForm.gender) payload.gender = editForm.gender;
-      if (editForm.dateOfBirth) payload.dateOfBirth = editForm.dateOfBirth;
-      if (editForm.nationality.trim()) payload.nationality = editForm.nationality.trim();
-      if (editForm.countryOfResidence.trim()) payload.countryOfResidence = editForm.countryOfResidence.trim();
-      if (editForm.occupation.trim()) payload.occupation = editForm.occupation.trim();
-      if (editForm.employer.trim()) payload.employer = editForm.employer.trim();
-      if (editForm.annualIncome.trim()) payload.annualIncome = Number(editForm.annualIncome);
-      if (editForm.preferredCurrency.trim()) payload.preferredCurrency = editForm.preferredCurrency.trim();
-      if (editForm.accountType) payload.accountType = editForm.accountType;
-      const addr = { line1: editForm.addrLine1, line2: editForm.addrLine2, city: editForm.addrCity, state: editForm.addrState, postalCode: editForm.addrPostcode, country: editForm.addrCountry };
-      if (Object.values(addr).some(v => v.trim())) payload.address = addr;
+      if (changed("firstName") && editForm.firstName.trim()) payload.firstName = editForm.firstName.trim();
+      if (changed("lastName") && editForm.lastName.trim()) payload.lastName = editForm.lastName.trim();
+      if (changed("phone")) payload.phone = editForm.phone.trim();
+      if (changed("gender")) payload.gender = editForm.gender;
+      if (changed("dateOfBirth")) payload.dateOfBirth = editForm.dateOfBirth;
+      if (changed("nationality")) payload.nationality = editForm.nationality;
+      if (changed("countryOfResidence")) payload.countryOfResidence = editForm.countryOfResidence;
+      if (changed("occupation")) payload.occupation = editForm.occupation.trim();
+      if (changed("employer")) payload.employer = editForm.employer.trim();
+      if (changed("annualIncome") && editForm.annualIncome.trim()) payload.annualIncome = Number(editForm.annualIncome);
+      if (changed("preferredCurrency")) payload.preferredCurrency = editForm.preferredCurrency;
+      if (changed("accountType")) payload.accountType = editForm.accountType;
+      const addrChanged = (["addrLine1","addrLine2","addrCity","addrState","addrPostcode","addrCountry"] as const).some(changed);
+      if (addrChanged) payload.address = { line1: editForm.addrLine1, line2: editForm.addrLine2, city: editForm.addrCity, state: editForm.addrState, postalCode: editForm.addrPostcode, country: editForm.addrCountry };
+      if (Object.keys(payload).length === 0) { setEditOpen(false); return; }
       await adminApi.updateUserProfile(u.id, payload);
       onUpdate(u.id, { firstName: payload.firstName ?? u.firstName, lastName: payload.lastName ?? u.lastName, phone: payload.phone ?? u.phone });
       setEditOpen(false);
