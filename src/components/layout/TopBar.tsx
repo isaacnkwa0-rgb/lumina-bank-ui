@@ -2,17 +2,78 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Bell, Menu, X, LogOut, User } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  Bell, X, LogOut, Settings, Home, Landmark, ArrowLeftRight,
+  CreditCard, Receipt, BarChart3, Percent, Target, TrendingUp,
+  Bitcoin, ShieldCheck, Building2, Users, Banknote, AlertTriangle,
+  Repeat2, HelpCircle, ChevronRight,
+} from "lucide-react";
 import { notificationsApi } from "@/lib/api";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { cn } from "@/lib/utils";
+
+const menuGroups = [
+  {
+    label: "Overview",
+    items: [
+      { href: "/dashboard",     label: "Home",             icon: Home },
+      { href: "/accounts",      label: "Accounts",         icon: Landmark },
+      { href: "/transactions",  label: "Transactions",     icon: Receipt },
+      { href: "/notifications", label: "Notifications",    icon: Bell },
+    ],
+  },
+  {
+    label: "Move Money",
+    items: [
+      { href: "/transfer",        label: "Transfer",         icon: ArrowLeftRight },
+      { href: "/standing-orders", label: "Standing Orders",  icon: Repeat2 },
+      { href: "/direct-debits",   label: "Direct Debits",    icon: Repeat2 },
+      { href: "/beneficiaries",   label: "Beneficiaries",    icon: Users },
+    ],
+  },
+  {
+    label: "Cards & Credit",
+    items: [
+      { href: "/cards",    label: "Cards",    icon: CreditCard },
+      { href: "/loans",    label: "Loans",    icon: Banknote },
+      { href: "/mortgage", label: "Mortgage", icon: Building2 },
+    ],
+  },
+  {
+    label: "Grow",
+    items: [
+      { href: "/investments", label: "Investments",   icon: TrendingUp },
+      { href: "/goals",       label: "Savings Goals", icon: Target },
+      { href: "/crypto",      label: "Crypto",        icon: Bitcoin },
+      { href: "/insurance",   label: "Insurance",     icon: ShieldCheck },
+    ],
+  },
+  {
+    label: "Tools",
+    items: [
+      { href: "/analytics", label: "Analytics",       icon: BarChart3 },
+      { href: "/rates",     label: "Exchange Rates",  icon: Percent },
+      { href: "/disputes",  label: "Disputes",        icon: AlertTriangle },
+    ],
+  },
+];
+
+function DiamondLogo({ white = false }: { white?: boolean }) {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2L22 12L12 22L2 12L12 2Z" fill={white ? "white" : "#DB0011"} />
+      <path d="M12 6L18 12L12 18L6 12L12 6Z" fill={white ? "rgba(255,255,255,0.3)" : "rgba(219,0,17,0.35)"} />
+    </svg>
+  );
+}
 
 export function TopBar() {
   const { user, logout } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     notificationsApi
@@ -21,125 +82,171 @@ export function TopBar() {
       .catch(() => {});
   }, []);
 
+  const initials = user
+    ? `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase()
+    : "LB";
+
+  function navigate(href: string) {
+    setMenuOpen(false);
+    router.push(href);
+  }
+
+  function isActive(href: string) {
+    if (href === "/dashboard") return pathname === "/dashboard";
+    return pathname.startsWith(href);
+  }
+
   return (
     <>
-      <header className="lg:hidden sticky top-0 z-40 bg-white border-b border-[#E3E3E3] h-14 flex items-center px-4">
-        {/* Hamburger */}
-        <button
-          onClick={() => setMenuOpen(true)}
-          className="p-1 -ml-1 text-[#333333] hover:text-[#DB0011] transition-colors"
-          aria-label="Open menu"
-        >
-          <Menu size={22} />
-        </button>
+      <header className="lg:hidden sticky top-0 z-40 bg-white border-b border-[#EEEEEE] h-[60px] flex items-center px-4 gap-3 shadow-sm">
 
-        {/* Logo + Name */}
-        <Link href="/dashboard" className="flex-1 flex items-center justify-center gap-2 hover:opacity-80 transition-opacity">
-          <DiamondLogo />
-          <span className="font-semibold text-[#333333] text-base tracking-tight">
-            Lumina Bank
-          </span>
+        {/* Logo */}
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2 flex-1 min-w-0"
+        >
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#DB0011] to-[#8B000A] flex items-center justify-center flex-shrink-0">
+            <DiamondLogo white />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[13px] font-bold text-[#1A1A1A] leading-tight tracking-wide">Lumina Bank</p>
+            {user && (
+              <p className="text-[10px] text-[#AAAAAA] leading-none truncate">
+                {getGreeting()}, {user.firstName}
+              </p>
+            )}
+          </div>
         </Link>
 
         {/* Right actions */}
-        <div className="flex items-center gap-2">
-          {/* Language switcher */}
-          <LanguageSwitcher compact />
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {/* Notification bell */}
           <Link
             href="/notifications"
-            className="relative p-1 text-[#333333] hover:text-[#DB0011] transition-colors"
+            className="relative h-9 w-9 flex items-center justify-center rounded-xl bg-[#F5F5F5] text-[#555555] hover:bg-[#EEEEEE] transition-colors"
             aria-label="Notifications"
           >
-            <Bell size={22} />
+            <Bell size={17} strokeWidth={1.8} />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-[#DB0011] text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center leading-none">
+              <span className="absolute -top-0.5 -right-0.5 bg-[#DB0011] text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center leading-none">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </Link>
 
+          {/* User avatar — opens slide-out */}
           <button
-            onClick={() => { router.push("/profile"); router.refresh(); }}
-            className="p-1 text-[#333333] hover:text-[#DB0011] transition-colors"
-            aria-label="Profile"
+            onClick={() => setMenuOpen(true)}
+            className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#DB0011] to-[#8B000A] flex items-center justify-center flex-shrink-0 shadow-sm"
+            aria-label="Open menu"
           >
-            <User size={22} />
-          </button>
-
-          <button
-            onClick={logout}
-            className="flex items-center gap-1 bg-[#DB0011] text-white text-xs font-medium px-3 h-8 rounded-sm hover:bg-[#b8000e] transition-colors"
-            aria-label="Log off"
-          >
-            <LogOut size={13} />
-            <span className="hidden sm:inline">Log off</span>
+            <span className="text-white text-[11px] font-bold">{initials}</span>
           </button>
         </div>
       </header>
 
       {/* Slide-out menu */}
       {menuOpen && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-50 flex">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setMenuOpen(false)}
           />
+
           {/* Panel */}
-          <div className="absolute top-0 left-0 bottom-0 w-72 bg-white flex flex-col shadow-xl">
-            <div className="bg-[#DB0011] px-4 py-5 flex items-center justify-between">
-              <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <DiamondLogo white />
-                <span className="text-white font-semibold text-base">Lumina Bank</span>
-              </Link>
-              <button
-                onClick={() => setMenuOpen(false)}
-                className="text-white/80 hover:text-white"
-              >
-                <X size={20} />
-              </button>
+          <div className="absolute top-0 right-0 bottom-0 w-[280px] bg-white flex flex-col shadow-2xl">
+
+            {/* Header */}
+            <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-12 pb-5">
+              <div className="flex items-center justify-between mb-4">
+                <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-2">
+                  <DiamondLogo white />
+                  <span className="text-white font-bold text-sm tracking-wide">Lumina Bank</span>
+                </Link>
+                <button
+                  onClick={() => setMenuOpen(false)}
+                  className="h-7 w-7 flex items-center justify-center rounded-full bg-white/20 text-white"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+
+              {user && (
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-[13px] font-bold">{initials}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-white font-semibold text-sm truncate">{user.firstName} {user.lastName}</p>
+                    <p className="text-white/60 text-[10px] truncate">{user.email}</p>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {user && (
-              <div className="px-4 py-4 border-b border-[#E3E3E3] flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-[#DB0011] flex items-center justify-center flex-shrink-0">
-                  <GenderAvatar gender={user.gender} size={22} />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-[#333333]">
-                    {user.firstName} {user.lastName}
+            {/* Nav */}
+            <nav className="flex-1 overflow-y-auto px-3 py-3" style={{ scrollbarWidth: "none" }}>
+              {menuGroups.map((group) => (
+                <div key={group.label} className="mb-3">
+                  <p className="px-2 pt-2 pb-1 text-[9px] font-bold text-[#BBBBBB] uppercase tracking-[0.18em]">
+                    {group.label}
                   </p>
-                  <p className="text-xs text-[#767676]">{user.email}</p>
+                  {group.items.map(({ href, label, icon: Icon }) => {
+                    const active = isActive(href);
+                    return (
+                      <button
+                        key={href}
+                        onClick={() => navigate(href)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-2 py-2 rounded-xl text-[13px] transition-all duration-150 text-left",
+                          active
+                            ? "bg-red-50 text-[#DB0011] font-semibold"
+                            : "text-[#555555] hover:bg-[#F8F8F8]"
+                        )}
+                      >
+                        <div className={cn(
+                          "h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0",
+                          active ? "bg-[#DB0011]" : "bg-[#F2F2F2]"
+                        )}>
+                          <Icon size={13} strokeWidth={active ? 2.5 : 1.8} className={active ? "text-white" : "text-[#888888]"} />
+                        </div>
+                        <span className="flex-1">{label}</span>
+                        {active && <ChevronRight size={11} className="text-[#DB0011] opacity-60" />}
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
-            )}
-
-            <nav className="flex-1 overflow-y-auto py-2">
-              {menuItems.map((item) => (
-                <button
-                  key={item.href}
-                  onClick={() => {
-                    router.push(item.href);
-                    router.refresh();
-                    setMenuOpen(false);
-                  }}
-                  className="w-full flex items-center justify-between px-4 py-3.5 text-sm text-[#333333] hover:bg-[#F8F8F8] border-b border-[#E3E3E3]/50"
-                >
-                  <span>{item.label}</span>
-                  <span className="text-[#DB0011] font-bold">›</span>
-                </button>
               ))}
             </nav>
 
-            <div className="p-4 border-t border-[#E3E3E3]">
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  logout();
-                }}
-                className="w-full flex items-center gap-2 text-sm text-[#DB0011] font-medium py-2"
+            {/* Bottom actions */}
+            <div className="border-t border-[#EEEEEE] px-3 py-3 space-y-1 flex-shrink-0">
+              <Link
+                href="/support"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-red-50 text-[#DB0011] text-[13px] font-semibold"
               >
-                <LogOut size={16} />
+                <HelpCircle size={15} strokeWidth={2} />
+                Help & Support
+                <ChevronRight size={11} className="ml-auto opacity-50" />
+              </Link>
+              <button
+                onClick={() => navigate("/profile")}
+                className="w-full flex items-center gap-3 px-2 py-2 rounded-xl text-[13px] text-[#555555] hover:bg-[#F8F8F8] transition-colors"
+              >
+                <div className="h-7 w-7 rounded-lg bg-[#F2F2F2] flex items-center justify-center">
+                  <Settings size={13} strokeWidth={1.8} className="text-[#888888]" />
+                </div>
+                Profile & Settings
+              </button>
+              <button
+                onClick={() => { setMenuOpen(false); logout(); }}
+                className="w-full flex items-center gap-3 px-2 py-2 rounded-xl text-[13px] text-[#DB0011] hover:bg-red-50 transition-colors"
+              >
+                <div className="h-7 w-7 rounded-lg bg-[#FFF0F0] flex items-center justify-center">
+                  <LogOut size={13} strokeWidth={1.8} className="text-[#DB0011]" />
+                </div>
                 Log off
               </button>
             </div>
@@ -150,71 +257,9 @@ export function TopBar() {
   );
 }
 
-const menuItems = [
-  { href: "/dashboard", label: "Home" },
-  { href: "/accounts", label: "Accounts" },
-  { href: "/transfer", label: "Transfer" },
-  { href: "/standing-orders", label: "Standing Orders" },
-  { href: "/direct-debits", label: "Direct Debits" },
-  { href: "/pay", label: "Bill Payments" },
-  { href: "/topup", label: "Add Money" },
-  { href: "/beneficiaries", label: "Saved Payees" },
-  { href: "/cards", label: "Cards" },
-  { href: "/analytics", label: "Spending Analytics" },
-  { href: "/rates", label: "Exchange Rates" },
-  { href: "/loans", label: "Loans" },
-  { href: "/mortgage", label: "Mortgage" },
-  { href: "/investments", label: "Investments" },
-  { href: "/goals", label: "Savings Goals" },
-  { href: "/disputes", label: "My Disputes" },
-  { href: "/support", label: "Help & Support" },
-  { href: "/notifications", label: "Notifications" },
-  { href: "/profile", label: "Profile & Settings" },
-];
-
-function GenderAvatar({ gender, size = 20 }: { gender?: string; size?: number }) {
-  if (gender === "MALE") {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        {/* Head */}
-        <circle cx="12" cy="7" r="4" fill="white" />
-        {/* Shoulders */}
-        <path d="M4 22c0-4.4 3.6-8 8-8s8 3.6 8 8" fill="white" />
-      </svg>
-    );
-  }
-  if (gender === "FEMALE") {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        {/* Head */}
-        <circle cx="12" cy="7" r="4" fill="white" />
-        {/* Hair */}
-        <path d="M8 5.5C8 3.5 9.8 2 12 2s4 1.5 4 3.5" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        {/* Shoulders with slight curve */}
-        <path d="M5 22c0-3.9 3.1-7 7-7s7 3.1 7 7" fill="white" />
-      </svg>
-    );
-  }
-  // OTHER or undefined — generic person
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="8" r="4" fill="white" />
-      <path d="M4 22c0-4.4 3.6-8 8-8s8 3.6 8 8" fill="white" />
-    </svg>
-  );
-}
-
-function DiamondLogo({ white = false }: { white?: boolean }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M12 2L22 12L12 22L2 12L12 2Z"
-        fill={white ? "white" : "#DB0011"}
-      />
-      <path
-        d="M12 6L18 12L12 18L6 12L12 6Z"
-        fill={white ? "rgba(255,255,255,0.3)" : "rgba(219,0,17,0.35)"}
-      />
-    </svg>
-  );
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
 }
