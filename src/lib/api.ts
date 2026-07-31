@@ -866,6 +866,7 @@ export interface Notification {
   body: string;
   isRead: boolean;
   createdAt: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Rate {
