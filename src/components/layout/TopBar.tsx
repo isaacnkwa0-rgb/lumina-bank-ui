@@ -7,7 +7,7 @@ import {
   Bell, X, LogOut, Settings, Home, Landmark, ArrowLeftRight,
   CreditCard, Receipt, BarChart3, Percent, Target, TrendingUp,
   Bitcoin, ShieldCheck, Building2, Users, Banknote, AlertTriangle,
-  Repeat2, HelpCircle, ChevronRight,
+  Repeat2, HelpCircle, ChevronRight, Menu,
 } from "lucide-react";
 import { notificationsApi } from "@/lib/api";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -100,7 +100,16 @@ export function TopBar() {
     <>
       <header className="lg:hidden sticky top-0 z-40 bg-white border-b border-[#EEEEEE] h-[60px] flex items-center px-4 gap-3 shadow-sm">
 
-        {/* Logo */}
+        {/* Hamburger — opens left nav drawer */}
+        <button
+          onClick={() => setMenuOpen(true)}
+          className="h-9 w-9 flex items-center justify-center rounded-xl bg-[#F5F5F5] text-[#555555] hover:bg-[#EEEEEE] transition-colors flex-shrink-0"
+          aria-label="Open menu"
+        >
+          <Menu size={18} strokeWidth={1.8} />
+        </button>
+
+        {/* Logo — centred */}
         <Link
           href="/dashboard"
           className="flex items-center gap-2 flex-1 min-w-0"
@@ -134,18 +143,18 @@ export function TopBar() {
             )}
           </Link>
 
-          {/* User avatar — opens slide-out */}
-          <button
-            onClick={() => setMenuOpen(true)}
+          {/* Avatar — goes to profile */}
+          <Link
+            href="/profile"
             className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#DB0011] to-[#8B000A] flex items-center justify-center flex-shrink-0 shadow-sm"
-            aria-label="Open menu"
+            aria-label="Profile"
           >
             <span className="text-white text-[11px] font-bold">{initials}</span>
-          </button>
+          </Link>
         </div>
       </header>
 
-      {/* Slide-out menu */}
+      {/* Left slide-out nav drawer */}
       {menuOpen && (
         <div className="fixed inset-0 z-50 flex">
           {/* Backdrop */}
@@ -154,8 +163,8 @@ export function TopBar() {
             onClick={() => setMenuOpen(false)}
           />
 
-          {/* Panel */}
-          <div className="absolute top-0 right-0 bottom-0 w-[280px] bg-white flex flex-col shadow-2xl">
+          {/* Panel — slides from LEFT */}
+          <div className="absolute top-0 left-0 bottom-0 w-[280px] bg-white flex flex-col shadow-2xl">
 
             {/* Header */}
             <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-12 pb-5">
