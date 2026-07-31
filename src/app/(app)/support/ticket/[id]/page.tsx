@@ -199,18 +199,6 @@ export default function TicketPage() {
           );
         })}
 
-        {/* Waiting indicator */}
-        {!isClosed && messages.length > 0 && messages[messages.length - 1]?.senderRole === "CUSTOMER" && (
-          <div className="flex justify-start">
-            <div className="bg-white border border-[#E8E8E8] rounded-2xl rounded-bl-md px-4 py-2.5 shadow-sm">
-              <div className="flex items-center gap-1.5">
-                <div className="h-1.5 w-1.5 rounded-full bg-[#AAAAAA] animate-bounce" style={{ animationDelay: "0ms" }} />
-                <div className="h-1.5 w-1.5 rounded-full bg-[#AAAAAA] animate-bounce" style={{ animationDelay: "150ms" }} />
-                <div className="h-1.5 w-1.5 rounded-full bg-[#AAAAAA] animate-bounce" style={{ animationDelay: "300ms" }} />
-              </div>
-            </div>
-          </div>
-        )}
 
         <div ref={bottomRef} />
       </div>
