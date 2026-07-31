@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   adminApi,
   type AdminTransfer, type AdminUser, type AdminLoan, type AdminDispute,
@@ -1461,6 +1461,7 @@ function SupportTab() {
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
   const [resolving, setResolving] = useState("");
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [loadError, setLoadError] = useState("");
 
@@ -1589,7 +1590,13 @@ function SupportTab() {
                     <div className="flex gap-2 pt-1">
                       <textarea
                         value={reply}
-                        onChange={(e) => setReply(e.target.value)}
+                        onChange={(e) => {
+                          setReply(e.target.value);
+                          if (e.target.value.trim() && !typingTimerRef.current) {
+                            adminApi.signalTyping(t.id).catch(() => {});
+                            typingTimerRef.current = setTimeout(() => { typingTimerRef.current = null; }, 2000);
+                          }
+                        }}
                         onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) sendReply(t.id); }}
                         placeholder="Type a reply… (Ctrl+Enter to send)"
                         rows={2}

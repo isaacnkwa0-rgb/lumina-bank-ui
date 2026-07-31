@@ -461,6 +461,8 @@ export const adminApi = {
     api.get<ApiResponse<AdminSupportTicket>>(`/admin/support/tickets/${id}`),
   replyToTicket: (id: string, body: string) =>
     api.post<ApiResponse<SupportMessage>>(`/admin/support/tickets/${id}/reply`, { body }),
+  signalTyping: (id: string) =>
+    api.post(`/admin/support/tickets/${id}/typing`),
   resolveSupportTicket: (id: string) =>
     api.patch<ApiResponse<SupportTicket>>(`/admin/support/tickets/${id}/resolve`),
   // Agents
@@ -518,6 +520,7 @@ export const supportApi = {
   postMessage: (id: string, body: string) =>
     api.post<ApiResponse<SupportMessage>>(`/support/tickets/${id}/messages`, { body }),
   closeTicket: (id: string) => api.patch<ApiResponse<SupportTicket>>(`/support/tickets/${id}/close`),
+  getTyping: (id: string) => api.get<ApiResponse<{ typing: boolean }>>(`/support/tickets/${id}/typing`),
 };
 
 export const insuranceApi = {

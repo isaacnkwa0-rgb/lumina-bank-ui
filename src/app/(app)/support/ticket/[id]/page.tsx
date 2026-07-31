@@ -31,6 +31,7 @@ export default function TicketPage() {
   const [sending, setSending] = useState(false);
   const [closing, setClosing] = useState(false);
   const [error, setError] = useState("");
+  const [agentTyping, setAgentTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const isClosed = ticket?.status === "CLOSED" || ticket?.status === "RESOLVED";
 
@@ -52,17 +53,29 @@ export default function TicketPage() {
     fetchTicket();
   }, [fetchTicket]);
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages or typing indicator changes
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, agentTyping]);
 
-  // Poll every 5 seconds when ticket is open
+  // Poll messages every 5 seconds when ticket is open
   useEffect(() => {
     if (isClosed) return;
     const interval = setInterval(() => fetchTicket(true), 5000);
     return () => clearInterval(interval);
   }, [isClosed, fetchTicket]);
+
+  // Poll typing state every 2 seconds
+  useEffect(() => {
+    if (isClosed) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await supportApi.getTyping(id);
+        setAgentTyping((res.data.data as { typing: boolean }).typing);
+      } catch { /* ignore */ }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [id, isClosed]);
 
   async function handleSend() {
     const text = input.trim();
@@ -199,6 +212,18 @@ export default function TicketPage() {
           );
         })}
 
+
+        {agentTyping && (
+          <div className="flex justify-start">
+            <div className="bg-white border border-[#E8E8E8] rounded-2xl rounded-bl-md px-4 py-2.5 shadow-sm">
+              <div className="flex items-center gap-1.5">
+                <div className="h-1.5 w-1.5 rounded-full bg-[#AAAAAA] animate-bounce" style={{ animationDelay: "0ms" }} />
+                <div className="h-1.5 w-1.5 rounded-full bg-[#AAAAAA] animate-bounce" style={{ animationDelay: "150ms" }} />
+                <div className="h-1.5 w-1.5 rounded-full bg-[#AAAAAA] animate-bounce" style={{ animationDelay: "300ms" }} />
+              </div>
+            </div>
+          </div>
+        )}
 
         <div ref={bottomRef} />
       </div>
