@@ -114,7 +114,7 @@ export function Sidebar() {
       )}
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5 scrollbar-hide">
+      <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5" style={{ scrollbarWidth: "none" }}>
         {navGroups.map((group) => (
           <div key={group.labelKey} className="mb-2">
             <p className="px-3 pt-3 pb-1 text-[9px] font-bold text-[#30303E] uppercase tracking-[0.18em]">

@@ -26,7 +26,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       {/* Desktop sidebar */}
       <Sidebar />
 
-      <div className="flex flex-col min-h-screen bg-[#F8F8F8] lg:ml-60">
+      <div className="flex flex-col min-h-screen bg-[#F8F8F8] lg:ml-64">
         {/* TopBar — mobile only (lg: hidden) */}
         <TopBar />
         <KycBanner />
