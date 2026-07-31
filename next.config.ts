@@ -3,6 +3,11 @@ import type { NextConfig } from "next";
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "images.unsplash.com" },
+    ],
+  },
   async rewrites() {
     return [
       {
@@ -12,6 +17,10 @@ const nextConfig: NextConfig = {
       {
         source: "/uploads/:path*",
         destination: `${BACKEND_URL}/uploads/:path*`,
+      },
+      {
+        source: "/ping",
+        destination: `${BACKEND_URL}/ping`,
       },
     ];
   },

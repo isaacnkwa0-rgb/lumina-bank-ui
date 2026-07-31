@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Open_Sans } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { VisitorPing } from "@/components/VisitorPing";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -66,6 +67,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${openSans.variable}`}>
       <body className="font-sans antialiased bg-white text-[#333333]">
         <Providers>{children}</Providers>
+        <VisitorPing />
       </body>
     </html>
   );
