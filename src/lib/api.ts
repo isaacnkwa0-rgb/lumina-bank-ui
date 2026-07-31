@@ -169,6 +169,8 @@ export const accountsApi = {
   get: (id: string) => api.get<ApiResponse<Account>>(`/accounts/${id}`),
   create: (data: { type: string; currency?: string }) =>
     api.post<ApiResponse<Account>>("/accounts", data),
+  statement: (id: string, params?: { dateFrom?: string; dateTo?: string }) =>
+    api.get<ApiResponse<Transaction[]>>(`/accounts/${id}/statement`, { params }),
 };
 
 export const transactionsApi = {
