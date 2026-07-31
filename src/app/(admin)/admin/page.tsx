@@ -20,6 +20,36 @@ import {
 
 type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "support" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "kyc" | "audit" | "agents" | "mailer" | "notifications";
 
+const COUNTRIES = [
+  { code: "GB", name: "United Kingdom" }, { code: "US", name: "United States" },
+  { code: "CA", name: "Canada" }, { code: "AU", name: "Australia" },
+  { code: "DE", name: "Germany" }, { code: "FR", name: "France" },
+  { code: "ES", name: "Spain" }, { code: "PT", name: "Portugal" },
+  { code: "IT", name: "Italy" }, { code: "NL", name: "Netherlands" },
+  { code: "BE", name: "Belgium" }, { code: "CH", name: "Switzerland" },
+  { code: "AT", name: "Austria" }, { code: "SE", name: "Sweden" },
+  { code: "NO", name: "Norway" }, { code: "DK", name: "Denmark" },
+  { code: "FI", name: "Finland" }, { code: "IE", name: "Ireland" },
+  { code: "NZ", name: "New Zealand" }, { code: "JP", name: "Japan" },
+  { code: "KR", name: "South Korea" }, { code: "SG", name: "Singapore" },
+  { code: "AE", name: "United Arab Emirates" }, { code: "SA", name: "Saudi Arabia" },
+  { code: "IN", name: "India" }, { code: "BR", name: "Brazil" },
+  { code: "MX", name: "Mexico" }, { code: "PL", name: "Poland" },
+  { code: "CZ", name: "Czech Republic" }, { code: "TR", name: "Turkey" },
+  { code: "HK", name: "Hong Kong" }, { code: "PH", name: "Philippines" },
+  { code: "NG", name: "Nigeria" }, { code: "GH", name: "Ghana" },
+  { code: "KE", name: "Kenya" }, { code: "ZA", name: "South Africa" },
+  { code: "EG", name: "Egypt" }, { code: "MA", name: "Morocco" },
+  { code: "TZ", name: "Tanzania" }, { code: "UG", name: "Uganda" },
+  { code: "ZW", name: "Zimbabwe" }, { code: "CM", name: "Cameroon" },
+  { code: "CN", name: "China" }, { code: "PK", name: "Pakistan" },
+  { code: "BD", name: "Bangladesh" }, { code: "LK", name: "Sri Lanka" },
+  { code: "MY", name: "Malaysia" }, { code: "ID", name: "Indonesia" },
+  { code: "TH", name: "Thailand" }, { code: "VN", name: "Vietnam" },
+];
+
+const CURRENCIES = ["GBP", "USD", "EUR", "CHF", "JPY", "AED", "CAD", "AUD", "PLN", "SGD", "NGN", "GHS", "KES", "ZAR", "INR", "PKR", "CNY", "MYR", "THB"];
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 function statusColor(status: string) {
@@ -1172,15 +1202,19 @@ function UserRow({ u, onUpdate, onDelete }: {
                   </div>
                   <div>
                     <label className="text-[10px] text-[#767676]">Nationality</label>
-                    <input value={editForm.nationality} onChange={e => setEditForm(f => ({ ...f, nationality: e.target.value }))}
-                      placeholder="GB"
-                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                    <select value={editForm.nationality} onChange={e => setEditForm(f => ({ ...f, nationality: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011] bg-white">
+                      <option value="">— select —</option>
+                      {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label className="text-[10px] text-[#767676]">Country of residence</label>
-                    <input value={editForm.countryOfResidence} onChange={e => setEditForm(f => ({ ...f, countryOfResidence: e.target.value }))}
-                      placeholder="GB"
-                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                    <select value={editForm.countryOfResidence} onChange={e => setEditForm(f => ({ ...f, countryOfResidence: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011] bg-white">
+                      <option value="">— select —</option>
+                      {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -1199,8 +1233,11 @@ function UserRow({ u, onUpdate, onDelete }: {
                       placeholder="Postcode" className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
                     <input value={editForm.addrState} onChange={e => setEditForm(f => ({ ...f, addrState: e.target.value }))}
                       placeholder="State / county" className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
-                    <input value={editForm.addrCountry} onChange={e => setEditForm(f => ({ ...f, addrCountry: e.target.value }))}
-                      placeholder="Country" className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                    <select value={editForm.addrCountry} onChange={e => setEditForm(f => ({ ...f, addrCountry: e.target.value }))}
+                      className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011] bg-white">
+                      <option value="">— Country —</option>
+                      {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -1225,8 +1262,11 @@ function UserRow({ u, onUpdate, onDelete }: {
                   </div>
                   <div>
                     <label className="text-[10px] text-[#767676]">Preferred currency</label>
-                    <input value={editForm.preferredCurrency} onChange={e => setEditForm(f => ({ ...f, preferredCurrency: e.target.value }))}
-                      placeholder="GBP" className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                    <select value={editForm.preferredCurrency} onChange={e => setEditForm(f => ({ ...f, preferredCurrency: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011] bg-white">
+                      <option value="">— select —</option>
+                      {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
                   </div>
                   <div className="col-span-2">
                     <label className="text-[10px] text-[#767676]">Account type</label>
