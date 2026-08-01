@@ -10,12 +10,16 @@ export async function GET(req: NextRequest) {
     ?? req.headers.get('x-forwarded-for')?.split(',')[0].trim()
     ?? '';
 
-  fetch(`${BACKEND_URL}/visit`, {
+  const page = req.nextUrl.searchParams.get('page') ?? '';
+
+  const backendUrl = new URL(`${BACKEND_URL}/visit`);
+  if (page) backendUrl.searchParams.set('page', page);
+
+  fetch(backendUrl.toString(), {
     method: 'GET',
     headers: {
       'X-Client-IP': realIp,
       'User-Agent': req.headers.get('user-agent') ?? '',
-      'Referer': req.headers.get('referer') ?? '',
     },
   }).catch(() => {});
 
