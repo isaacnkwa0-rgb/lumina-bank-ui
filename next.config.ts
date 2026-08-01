@@ -19,8 +19,8 @@ const nextConfig: NextConfig = {
         destination: `${BACKEND_URL}/uploads/:path*`,
       },
       {
-        source: "/ping",
-        destination: `${BACKEND_URL}/ping`,
+        source: "/visit",
+        destination: `${BACKEND_URL}/visit`,
       },
     ];
   },
