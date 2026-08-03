@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { HelpCircle } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
@@ -18,7 +19,16 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             Lumina Bank
           </span>
         </Link>
-        <LanguageSwitcher compact />
+        <div className="flex items-center gap-3">
+          <LanguageSwitcher compact />
+          <a
+            href="mailto:support@luminabank.online"
+            className="flex items-center gap-1.5 text-sm text-[#767676] hover:text-[#DB0011] transition-colors"
+          >
+            <HelpCircle size={15} />
+            <span className="hidden sm:inline">Help</span>
+          </a>
+        </div>
       </header>
 
       {/* Content */}

@@ -138,7 +138,7 @@ function ContributeSheet({
                   className="w-full h-12 pl-4 pr-10 border-2 border-[#E3E3E3] rounded-2xl text-sm text-[#222] font-medium appearance-none bg-white focus:border-[#DB0011] outline-none">
                   {accounts.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.type} ••{a.accountNumber.slice(-4)} — {formatCurrency(Number(a.availableBalance), a.currency)}
+                      {a.type} ••{a.accountNumber.slice(-4)} · {formatCurrency(Number(a.availableBalance), a.currency)}
                     </option>
                   ))}
                 </select>

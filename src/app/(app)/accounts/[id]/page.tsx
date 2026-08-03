@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, Search, Filter, Copy, Check } from "lucide-react";
+import { ChevronLeft, Search, Filter, Copy, Check, Download } from "lucide-react";
 import { accountsApi, transactionsApi, type Account, type Transaction } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 import { formatCurrency, maskAccountNumber, formatDate } from "@/lib/utils";
@@ -33,6 +33,7 @@ export default function AccountDetailPage() {
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     accountsApi
@@ -74,6 +75,94 @@ export default function AccountDetailPage() {
     fetchTransactions(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, category, startDate, endDate]);
+
+  async function downloadStatement() {
+    if (!account) return;
+    setDownloading(true);
+    try {
+      const res = await accountsApi.statement(id, {
+        dateFrom: startDate || undefined,
+        dateTo: endDate || undefined,
+      });
+      const txs: Transaction[] = res.data.data;
+      const dateLabel = startDate && endDate
+        ? `${startDate} to ${endDate}`
+        : startDate ? `from ${startDate}` : endDate ? `to ${endDate}` : "All transactions";
+      const rows = txs.map((tx) => {
+        const credit = tx.type === "CREDIT" ? `+${formatCurrency(Number(tx.amount), account.currency)}` : "";
+        const debit  = tx.type === "DEBIT"  ? `-${formatCurrency(Number(tx.amount), account.currency)}` : "";
+        return `<tr>
+          <td>${new Date(tx.createdAt).toLocaleDateString("en-GB")}</td>
+          <td>${tx.merchantName || tx.description || "—"}</td>
+          <td style="color:#16a34a;font-weight:600">${credit}</td>
+          <td style="color:#DB0011;font-weight:600">${debit}</td>
+          <td>${tx.category || "—"}</td>
+        </tr>`;
+      }).join("");
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+        <title>Account Statement – Lumina Bank</title>
+        <style>
+          *{margin:0;padding:0;box-sizing:border-box}
+          body{font-family:'Segoe UI',Arial,sans-serif;color:#111;background:#fff;padding:40px}
+          .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid #DB0011}
+          .logo{display:flex;align-items:center;gap:12px}
+          .diamond{width:36px;height:36px}
+          .bank-name{font-size:20px;font-weight:800;color:#DB0011;letter-spacing:.5px}
+          .bank-sub{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:2px}
+          .meta p{font-size:12px;color:#555;text-align:right;margin-bottom:2px}
+          .meta strong{color:#111}
+          .section{margin:24px 0 8px;font-size:10px;font-weight:700;text-transform:uppercase;color:#888;letter-spacing:1.5px}
+          .account-card{background:#f8f8f8;border-left:4px solid #DB0011;padding:14px 18px;margin-bottom:24px;border-radius:4px}
+          .account-card p{font-size:12px;color:#555;margin-bottom:3px}
+          .account-card .balance{font-size:22px;font-weight:800;color:#111;margin-top:4px}
+          table{width:100%;border-collapse:collapse;font-size:12px}
+          th{background:#0D0D14;color:#fff;padding:10px 12px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px}
+          td{padding:9px 12px;border-bottom:1px solid #f0f0f0;color:#333}
+          tr:nth-child(even) td{background:#fafafa}
+          .footer{margin-top:32px;padding-top:16px;border-top:1px solid #eee;font-size:10px;color:#aaa;text-align:center}
+          @media print{body{padding:20px}button{display:none}}
+        </style>
+      </head><body>
+        <div class="header">
+          <div class="logo">
+            <svg class="diamond" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L22 12L12 22L2 12L12 2Z" fill="#DB0011"/>
+              <path d="M12 6L18 12L12 18L6 12L12 6Z" fill="rgba(219,0,17,0.3)"/>
+            </svg>
+            <div>
+              <div class="bank-name">Lumina Bank</div>
+              <div class="bank-sub">Account Statement</div>
+            </div>
+          </div>
+          <div class="meta">
+            <p>Generated: <strong>${new Date().toLocaleDateString("en-GB", { day:"numeric",month:"long",year:"numeric" })}</strong></p>
+            <p>Period: <strong>${dateLabel}</strong></p>
+          </div>
+        </div>
+        <div class="account-card">
+          <p>Account type: <strong>${account.type}</strong> &nbsp;·&nbsp; ${account.currency}</p>
+          <p>Account number: <strong>${account.accountNumber}</strong>${account.sortCode ? ` &nbsp;·&nbsp; Sort code: <strong>${account.sortCode}</strong>` : ""}</p>
+          <p>IBAN: <strong>${account.iban}</strong></p>
+          <div class="balance">${formatCurrency(Number(account.balance), account.currency)}</div>
+        </div>
+        <p class="section">Transactions (${txs.length})</p>
+        <table>
+          <thead><tr><th>Date</th><th>Description</th><th>Credit</th><th>Debit</th><th>Category</th></tr></thead>
+          <tbody>${rows || "<tr><td colspan='5' style='text-align:center;color:#aaa;padding:24px'>No transactions found</td></tr>"}</tbody>
+        </table>
+        <div class="footer">
+          Lumina Bank · luminabank.online · This statement is auto-generated and does not require a signature.<br/>
+          For queries contact support@luminabank.online
+        </div>
+      </body></html>`;
+      const win = window.open("", "_blank");
+      if (win) { win.document.write(html); win.document.close(); win.focus(); win.print(); }
+    } catch {
+      alert("Could not download statement. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   // Group transactions by date
   const grouped = transactions.reduce<Record<string, Transaction[]>>((acc, tx) => {
@@ -131,6 +220,14 @@ export default function AccountDetailPage() {
                   {maskAccountNumber(account.accountNumber)}
                 </p>
               </div>
+              <button
+                onClick={downloadStatement}
+                disabled={downloading}
+                className="flex items-center gap-1.5 bg-white/15 border border-white/25 text-white text-xs font-semibold px-3 py-1.5 rounded-full hover:bg-white/25 transition-colors disabled:opacity-50"
+              >
+                <Download size={12} />
+                {downloading ? "Preparing…" : "Statement"}
+              </button>
             </div>
             <p className="text-3xl font-bold">
               {formatCurrency(Number(account.balance), account.currency)}

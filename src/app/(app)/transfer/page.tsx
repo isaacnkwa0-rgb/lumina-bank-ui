@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   CheckCircle2, Clock, ChevronDown, ArrowDownUp,
-  RefreshCw, Send, Globe,
+  RefreshCw, Send, Globe, ShieldCheck, KeyRound,
 } from "lucide-react";
 import {
   accountsApi, transfersApi, beneficiariesApi, authApi,
@@ -145,7 +145,7 @@ function AccountCardPicker({
           <option value="">{placeholder}</option>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
-              {a.type} — {formatCurrency(Number(a.balance), a.currency)} (••{a.accountNumber.slice(-4)})
+              {a.type} · {formatCurrency(Number(a.balance), a.currency)} (••{a.accountNumber.slice(-4)})
             </option>
           ))}
         </select>
@@ -329,6 +329,63 @@ function TransferPageInner() {
   );
 }
 
+// ── OTP Modal ────────────────────────────────────────────────────────────────
+
+function OtpModal({ maskedEmail, onConfirm, onCancel, isLoading, error }: {
+  maskedEmail: string;
+  onConfirm: (code: string) => void;
+  onCancel: () => void;
+  isLoading: boolean;
+  error?: string;
+}) {
+  const [code, setCode] = useState("");
+
+  useEffect(() => {
+    if (error) setCode("");
+  }, [error]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-50 mx-auto mb-4">
+          <ShieldCheck size={22} className="text-[#DB0011]" />
+        </div>
+        <h3 className="text-base font-bold text-[#333] text-center mb-1">Security verification</h3>
+        <p className="text-xs text-[#767676] text-center mb-5 leading-relaxed">
+          Enter the 6-digit code sent to<br />
+          <span className="font-semibold text-[#333]">{maskedEmail}</span>
+        </p>
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 mb-4">
+            <p className="text-sm text-[#DB0011] text-center">{error}</p>
+          </div>
+        )}
+        <input
+          type="tel"
+          inputMode="numeric"
+          maxLength={6}
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+          placeholder="000000"
+          autoFocus
+          className="w-full text-center text-2xl font-bold tracking-[0.3em] border border-[#E0E0E0] rounded-xl px-4 py-3 outline-none focus:border-[#DB0011] mb-4"
+        />
+        <div className="flex gap-2">
+          <button type="button" onClick={onCancel}
+            className="flex-1 py-3 rounded-xl border border-[#E0E0E0] text-sm font-semibold text-[#767676]">
+            Cancel
+          </button>
+          <button type="button" onClick={() => code.length === 6 && onConfirm(code)}
+            disabled={code.length !== 6 || isLoading}
+            className="flex-1 py-3 rounded-xl bg-[#DB0011] text-white text-sm font-bold disabled:opacity-50">
+            {isLoading ? "Verifying…" : "Confirm"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Own Accounts Form ────────────────────────────────────────────────────────
 
 function OwnAccountsForm({
@@ -348,21 +405,42 @@ function OwnAccountsForm({
 
   const fromAccountId = watch("fromAccountId") ?? "";
   const toAccountId = watch("toAccountId") ?? "";
+  const [otpStep, setOtpStep] = useState<{ formData: OwnForm; maskedEmail: string } | null>(null);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState("");
 
   async function onSubmit(data: OwnForm) {
     onError("");
     try {
-      const res = await transfersApi.internal({ ...data, amount: Number(data.amount) });
+      const r = await authApi.requestTransferOtp();
+      setOtpError("");
+      setOtpStep({ formData: data, maskedEmail: r.data.data.maskedEmail });
+    } catch (err: unknown) {
+      onError((err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "Failed to send OTP. Try again.");
+    }
+  }
+
+  async function executeTransfer(otp: string) {
+    if (!otpStep) return;
+    setOtpLoading(true);
+    setOtpError("");
+    try {
+      const res = await transfersApi.internal({ ...otpStep.formData, amount: Number(otpStep.formData.amount), transferOtp: otp });
+      setOtpStep(null);
       onSuccess(res.data.data);
     } catch (err: unknown) {
-      onError(
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-          "Transfer failed."
-      );
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed. Please try again.";
+      setOtpError(msg);
+    } finally {
+      setOtpLoading(false);
     }
   }
 
   return (
+    <>
+    {otpStep && (
+      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => { setOtpStep(null); setOtpError(""); }} isLoading={otpLoading} error={otpError} />
+    )}
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
       <div>
         <p className="text-xs font-semibold text-[#767676] uppercase tracking-wide mb-2 px-0.5">
@@ -408,6 +486,7 @@ function OwnAccountsForm({
         {t("transfer.transferNow")}
       </Button>
     </form>
+    </>
   );
 }
 
@@ -441,6 +520,9 @@ function DomesticForm({
   const [verifiedName, setVerifiedName] = useState("");
   const [pendingData, setPendingData] = useState<DomesticFormValues | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [otpStep, setOtpStep] = useState<{ formData: DomesticFormValues; maskedEmail: string } | null>(null);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
@@ -508,34 +590,50 @@ function DomesticForm({
       setPendingData(data);
       return;
     }
-    await executeTransfer(data);
+    await requestOtp(data);
   }
 
-  async function executeTransfer(data: DomesticFormValues) {
+  async function requestOtp(data: DomesticFormValues) {
+    setPendingData(null);
     setIsConfirming(true);
     try {
-      const res = await transfersApi.domestic({ ...data, amount: Number(data.amount) });
-      setPendingData(null);
-      onSuccess(res.data.data);
+      const r = await authApi.requestTransferOtp();
+      setOtpError("");
+      setOtpStep({ formData: data, maskedEmail: r.data.data.maskedEmail });
     } catch (err: unknown) {
-      setPendingData(null);
-      onError(
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-          "Transfer failed."
-      );
+      onError((err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "Failed to send OTP. Try again.");
     } finally {
       setIsConfirming(false);
     }
   }
 
+  async function executeTransfer(otp: string) {
+    if (!otpStep) return;
+    setOtpLoading(true);
+    setOtpError("");
+    try {
+      const res = await transfersApi.domestic({ ...otpStep.formData, amount: Number(otpStep.formData.amount), transferOtp: otp });
+      setOtpStep(null);
+      onSuccess(res.data.data);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed. Please try again.";
+      setOtpError(msg);
+    } finally {
+      setOtpLoading(false);
+    }
+  }
+
   return (
     <>
+    {otpStep && (
+      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => { setOtpStep(null); setOtpError(""); }} isLoading={otpLoading} error={otpError} />
+    )}
     {pendingData && (
       <ConfirmModal
         amount={Number(pendingData.amount)}
         currency="GBP"
         recipient={pendingData.toAccountName}
-        onConfirm={() => executeTransfer(pendingData)}
+        onConfirm={() => requestOtp(pendingData)}
         onCancel={() => setPendingData(null)}
         isLoading={isConfirming}
       />
@@ -766,6 +864,9 @@ function InternationalForm({
   const { t } = useLanguage();
   const [pendingData, setPendingData] = useState<InternationalFormValues | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [otpStep, setOtpStep] = useState<{ formData: InternationalFormValues; maskedEmail: string } | null>(null);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState("");
 
   const {
     register, handleSubmit, watch,
@@ -800,34 +901,50 @@ function InternationalForm({
       setPendingData(data);
       return;
     }
-    await executeTransfer(data);
+    await requestOtp(data);
   }
 
-  async function executeTransfer(data: InternationalFormValues) {
+  async function requestOtp(data: InternationalFormValues) {
+    setPendingData(null);
     setIsConfirming(true);
     try {
-      const res = await transfersApi.international({ ...data, amount: Number(data.amount) });
-      setPendingData(null);
-      onSuccess(res.data.data);
+      const r = await authApi.requestTransferOtp();
+      setOtpError("");
+      setOtpStep({ formData: data, maskedEmail: r.data.data.maskedEmail });
     } catch (err: unknown) {
-      setPendingData(null);
-      onError(
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-          "Transfer failed."
-      );
+      onError((err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "Failed to send OTP. Try again.");
     } finally {
       setIsConfirming(false);
     }
   }
 
+  async function executeTransfer(otp: string) {
+    if (!otpStep) return;
+    setOtpLoading(true);
+    setOtpError("");
+    try {
+      const res = await transfersApi.international({ ...otpStep.formData, amount: Number(otpStep.formData.amount), transferOtp: otp });
+      setOtpStep(null);
+      onSuccess(res.data.data);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed. Please try again.";
+      setOtpError(msg);
+    } finally {
+      setOtpLoading(false);
+    }
+  }
+
   return (
     <>
+    {otpStep && (
+      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => { setOtpStep(null); setOtpError(""); }} isLoading={otpLoading} error={otpError} />
+    )}
     {pendingData && (
       <ConfirmModal
         amount={Number(pendingData.amount)}
         currency="GBP"
         recipient={pendingData.toAccountName}
-        onConfirm={() => executeTransfer(pendingData)}
+        onConfirm={() => requestOtp(pendingData)}
         onCancel={() => setPendingData(null)}
         isLoading={isConfirming}
       />
@@ -946,7 +1063,7 @@ function InternationalForm({
         <Input
           label={t("transfer.reference")}
           type="text"
-          placeholder="Optional — e.g. Invoice #1234"
+          placeholder="Optional, e.g. Invoice #1234"
           error={errors.description?.message}
           {...register("description")}
         />
@@ -1053,7 +1170,7 @@ function SuccessScreen({ result, onReset }: { result: Transfer; onReset: () => v
 
 // ── Confirm Modal ────────────────────────────────────────────────────────────
 
-const REAUTH_THRESHOLD = 500;
+type PinStep = "enter" | "verifying" | "done" | "no-pin";
 
 function ConfirmModal({
   amount,
@@ -1070,97 +1187,239 @@ function ConfirmModal({
   onCancel: () => void;
   isLoading: boolean;
 }) {
-  const { t } = useLanguage();
-  const requiresReauth = amount >= REAUTH_THRESHOLD;
-  const [password, setPassword] = useState("");
-  const [verifying, setVerifying] = useState(false);
-  const [authError, setAuthError] = useState("");
-  const [verified, setVerified] = useState(!requiresReauth);
+  const [step, setStep] = useState<PinStep>("enter");
+  const [digits, setDigits] = useState(["", "", "", "", "", ""]);
+  const [pinError, setPinError] = useState("");
+  const [shake, setShake] = useState(false);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  async function handleVerify() {
-    if (!password) return;
-    setAuthError(""); setVerifying(true);
-    try {
-      await authApi.verifyPassword(password);
-      setVerified(true);
-    } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setAuthError(msg || "Incorrect password.");
-    } finally { setVerifying(false); }
+  const pin = digits.join("");
+
+  // Check if user has PIN set on mount
+  useEffect(() => {
+    authApi.getTransferPinStatus().then((r) => {
+      if (!r.data.data.hasPin) setStep("no-pin");
+      else setTimeout(() => inputRefs.current[0]?.focus(), 50);
+    }).catch(() => {});
+  }, []);
+
+  function handleDigit(idx: number, val: string) {
+    const ch = val.replace(/\D/g, "").slice(-1);
+    const next = [...digits];
+    next[idx] = ch;
+    setDigits(next);
+    setPinError("");
+    if (ch && idx < 5) inputRefs.current[idx + 1]?.focus();
+    else if (ch && idx === 5) {
+      // Auto-submit when last digit entered
+      setTimeout(() => verifyPin(next.join("")), 80);
+    }
   }
 
+  function handleKeyDown(idx: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Backspace") {
+      if (digits[idx]) {
+        const next = [...digits]; next[idx] = ""; setDigits(next);
+      } else if (idx > 0) {
+        inputRefs.current[idx - 1]?.focus();
+      }
+    }
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    const text = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!text) return;
+    e.preventDefault();
+    const next = text.split("").concat(Array(6).fill("")).slice(0, 6);
+    setDigits(next);
+    if (text.length === 6) setTimeout(() => verifyPin(text), 80);
+    else inputRefs.current[Math.min(text.length, 5)]?.focus();
+  }
+
+  async function verifyPin(code?: string) {
+    const p = code ?? pin;
+    if (p.length !== 6) return;
+    setStep("verifying");
+    setPinError("");
+    try {
+      await authApi.verifyTransferPin(p);
+      setStep("done");
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setPinError(msg || "Incorrect PIN. Please try again.");
+      setDigits(["", "", "", "", "", ""]);
+      setStep("enter");
+      setShake(true);
+      setTimeout(() => { setShake(false); inputRefs.current[0]?.focus(); }, 600);
+    }
+  }
+
+  const isVerifying = step === "verifying";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-8">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-[#E3E3E3]">
-          <p className="text-sm font-bold text-[#333333]">{t("transfer.confirmTitle")}</p>
-          <p className="text-xs text-[#767676] mt-0.5">{t("transfer.confirmDesc")}</p>
-        </div>
-        <div className="px-5 py-4 space-y-3">
-          <div className="flex justify-between">
-            <span className="text-sm text-[#767676]">{t("transfer.amount")}</span>
-            <span className="text-sm font-bold text-[#333333]">{formatCurrency(amount, currency)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-sm text-[#767676]">{t("transfer.to")}</span>
-            <span className="text-sm font-semibold text-[#333333] max-w-[60%] text-right truncate">{recipient}</span>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 px-0 sm:px-4">
+      <div className="w-full sm:max-w-sm bg-white sm:rounded-2xl shadow-2xl overflow-hidden">
 
-          {/* Password re-auth for large transfers */}
-          {requiresReauth && !verified && (
-            <div className="space-y-2 pt-1">
-              <p className="text-xs font-bold text-[#555] uppercase tracking-wide">
-                {t("transfer.passwordRequired")}
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => { setPassword(e.target.value); setAuthError(""); }}
-                  onKeyDown={(e) => e.key === "Enter" && handleVerify()}
-                  placeholder={t("transfer.password")}
-                  className="flex-1 px-3 py-2 border-2 border-[#E3E3E3] rounded-xl text-sm focus:outline-none focus:border-[#DB0011]"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={handleVerify}
-                  disabled={verifying || !password}
-                  className="px-3 py-2 bg-[#DB0011] text-white text-xs font-bold rounded-xl disabled:opacity-50 hover:bg-[#b8000e] transition-colors"
-                >
-                  {verifying ? <Loader2 size={13} className="animate-spin" /> : t("transfer.verifyBtn")}
-                </button>
+        {/* Header */}
+        <div className="bg-[#1a1a2e] px-5 py-4 flex items-center gap-3">
+          <div className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+            <ShieldCheck size={18} className="text-white" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white leading-tight">Authorise payment</p>
+            <p className="text-[11px] text-white/50 mt-0.5">Lumina Bank · Secure transfer</p>
+          </div>
+        </div>
+
+        {/* Payment summary */}
+        <div className="bg-[#f8f8f8] border-b border-[#ebebeb] px-5 py-3.5 flex items-center justify-between">
+          <div>
+            <p className="text-[10px] text-[#AAAAAA] uppercase font-bold tracking-widest">Paying</p>
+            <p className="text-sm font-semibold text-[#222] mt-0.5 truncate max-w-[180px]">{recipient}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] text-[#AAAAAA] uppercase font-bold tracking-widest">Amount</p>
+            <p className="text-lg font-bold text-[#DB0011] mt-0.5">{formatCurrency(amount, currency)}</p>
+          </div>
+        </div>
+
+        <div className="px-5 py-6">
+
+          {/* No PIN set */}
+          {step === "no-pin" && (
+            <div className="text-center space-y-4">
+              <div className="h-14 w-14 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto">
+                <KeyRound size={24} className="text-amber-600" />
               </div>
-              {authError && <p className="text-xs text-[#DB0011]">{authError}</p>}
+              <div>
+                <p className="text-sm font-bold text-[#222]">Transfer PIN not set up</p>
+                <p className="text-xs text-[#767676] mt-1.5 leading-relaxed">
+                  You need a 6-digit transfer PIN to authorise payments.<br />Set one up in your profile security settings.
+                </p>
+              </div>
+              <button type="button" onClick={onCancel}
+                className="w-full py-2.5 border border-[#E3E3E3] rounded-xl text-sm font-semibold text-[#767676]">
+                Close
+              </button>
             </div>
           )}
 
-          {requiresReauth && verified && (
-            <div className="flex items-center gap-2 text-xs text-green-700 font-semibold">
-              <CheckCircle2 size={14} className="text-green-600" />
-              {t("transfer.identityConfirmed")}
+          {/* PIN entry */}
+          {(step === "enter" || step === "verifying") && (
+            <div className="space-y-5">
+              <div className="text-center">
+                <div className="h-12 w-12 rounded-full bg-[#1a1a2e]/5 border border-[#1a1a2e]/10 flex items-center justify-center mx-auto mb-3">
+                  <KeyRound size={20} className="text-[#1a1a2e]" />
+                </div>
+                <p className="text-sm font-bold text-[#222]">Enter your transfer PIN</p>
+                <p className="text-xs text-[#767676] mt-1">Your 6-digit security PIN</p>
+              </div>
+
+              {/* PIN dots */}
+              <div
+                className={`flex gap-3 justify-center transition-transform ${shake ? "animate-[shake_0.4s_ease-in-out]" : ""}`}
+                onPaste={handlePaste}
+                style={shake ? { animation: "shake 0.4s ease-in-out" } : {}}
+              >
+                {digits.map((d, i) => (
+                  <div key={i} className="relative">
+                    <input
+                      ref={(el) => { inputRefs.current[i] = el; }}
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={d}
+                      onChange={(e) => handleDigit(i, e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(i, e)}
+                      disabled={isVerifying}
+                      className="sr-only"
+                    />
+                    <div
+                      onClick={() => inputRefs.current[i]?.focus()}
+                      className={`h-14 w-11 rounded-xl border-2 flex items-center justify-center cursor-text transition-all
+                        ${d ? "border-[#1a1a2e] bg-[#1a1a2e]" : "border-[#E3E3E3] bg-white"}
+                        ${!d && digits.filter(Boolean).length === i ? "border-[#DB0011]" : ""}
+                        ${isVerifying ? "opacity-50" : ""}`}
+                    >
+                      {d && <div className="h-3 w-3 rounded-full bg-white" />}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Keyboard for mobile */}
+              <div className="grid grid-cols-3 gap-2">
+                {["1","2","3","4","5","6","7","8","9","","0","⌫"].map((k, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    disabled={isVerifying || k === ""}
+                    onClick={() => {
+                      if (k === "⌫") {
+                        const lastFilled = [...digits].reverse().findIndex(d => d !== "");
+                        if (lastFilled === -1) return;
+                        const idx = 5 - lastFilled;
+                        const next = [...digits]; next[idx] = ""; setDigits(next);
+                        setPinError("");
+                        inputRefs.current[idx]?.focus();
+                      } else {
+                        const nextEmpty = digits.findIndex(d => d === "");
+                        if (nextEmpty === -1) return;
+                        handleDigit(nextEmpty, k);
+                      }
+                    }}
+                    className={`py-4 rounded-xl text-lg font-semibold transition-colors
+                      ${k === "" ? "invisible" : ""}
+                      ${k === "⌫" ? "text-[#DB0011] bg-red-50 hover:bg-red-100" : "bg-[#f5f5f5] text-[#222] hover:bg-[#ebebeb] active:bg-[#e0e0e0]"}
+                      disabled:opacity-40`}
+                  >
+                    {k}
+                  </button>
+                ))}
+              </div>
+
+              {pinError && (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                  <AlertCircle size={13} className="text-[#DB0011] flex-shrink-0" />
+                  <p className="text-xs text-[#DB0011] font-medium">{pinError}</p>
+                </div>
+              )}
+
+              {isVerifying && (
+                <div className="flex items-center justify-center gap-2 text-xs text-[#767676]">
+                  <Loader2 size={13} className="animate-spin" /> Checking PIN…
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Verified — ready to send */}
+          {step === "done" && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="h-14 w-14 rounded-full bg-green-50 border border-green-200 flex items-center justify-center mx-auto mb-3">
+                  <CheckCircle2 size={26} className="text-green-600" />
+                </div>
+                <p className="text-sm font-bold text-[#222]">PIN accepted</p>
+                <p className="text-xs text-[#767676] mt-1">Your payment is authorised and ready to send.</p>
+              </div>
+              <button type="button" onClick={onConfirm} disabled={isLoading}
+                className="w-full py-3.5 bg-[#DB0011] text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-[#b8000e] transition-colors">
+                {isLoading ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
+                {isLoading ? "Sending…" : `Send ${formatCurrency(amount, currency)}`}
+              </button>
             </div>
           )}
         </div>
-        <div className="px-5 pb-5 flex gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isLoading}
-            className="flex-1 py-2.5 border border-[#E3E3E3] rounded-xl text-sm font-semibold text-[#767676] hover:border-[#BBBBBB] transition-colors disabled:opacity-50"
-          >
-            {t("transfer.cancelBtn")}
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={isLoading || !verified}
-            className="flex-1 py-2.5 bg-[#DB0011] rounded-xl text-sm font-bold text-white hover:bg-[#B0000E] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {isLoading && <Loader2 size={14} className="animate-spin" />}
-            {isLoading ? t("transfer.sending") : t("transfer.confirmSend")}
-          </button>
-        </div>
+
+        {step !== "done" && step !== "no-pin" && (
+          <div className="px-5 pb-5">
+            <button type="button" onClick={onCancel} disabled={isLoading}
+              className="w-full py-2.5 border border-[#E3E3E3] rounded-xl text-sm font-semibold text-[#767676] hover:border-[#BBBBBB] transition-colors">
+              Cancel
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

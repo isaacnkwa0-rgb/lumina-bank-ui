@@ -67,7 +67,7 @@ export function LanguageSwitcher({ compact = false, className = "" }: LanguageSw
       >
         {LANGUAGES.map((l) => (
           <option key={l.code} value={l.code}>
-            {l.flag} {l.code} — {l.code === "EN" ? "English" : l.code === "ES" ? "Español" : l.code === "FR" ? "Français" : l.code === "PT" ? "Português" : "Deutsch"}
+            {l.flag} {l.code} - {l.code === "EN" ? "English" : l.code === "ES" ? "Español" : l.code === "FR" ? "Français" : l.code === "PT" ? "Português" : "Deutsch"}
           </option>
         ))}
       </select>

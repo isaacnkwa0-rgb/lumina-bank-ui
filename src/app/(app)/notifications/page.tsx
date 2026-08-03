@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Bell, Shield, Info, CreditCard, Gift,
   CheckCheck, ArrowDownLeft, ArrowUpRight,
@@ -180,6 +181,7 @@ export default function NotificationsPage() {
                     key={n.id}
                     notification={n}
                     onMarkRead={() => markRead(n.id)}
+                    link={getNotificationLink(n)}
                   />
                 ))}
               </div>
@@ -191,15 +193,48 @@ export default function NotificationsPage() {
   );
 }
 
+// ── Link resolver ─────────────────────────────────────────────────────────────
+
+function getNotificationLink(n: Notification): string | null {
+  const t = n.title.toLowerCase();
+  switch (n.type) {
+    case "TRANSFER":
+    case "TRANSACTION":
+      return "/accounts";
+    case "LOAN":
+      return "/loans";
+    case "SECURITY":
+      return "/profile";
+    case "MARKETING":
+      return null;
+    case "SYSTEM":
+      if (t.includes("kyc")) return "/kyc";
+      if (t.includes("dispute")) return "/disputes";
+      if (t.includes("card")) return "/cards";
+      if (t.includes("loan")) return "/loans";
+      if (t.includes("insurance")) return "/insurance";
+      if (t.includes("goal")) return "/goals";
+      if (t.includes("support") || t.includes("ticket")) return "/support";
+      if (t.includes("account") || t.includes("frozen") || t.includes("unfrozen")) return "/accounts";
+      if (t.includes("tier") || t.includes("password") || t.includes("profile")) return "/profile";
+      return null;
+    default:
+      return null;
+  }
+}
+
 // ── NotificationRow ───────────────────────────────────────────────────────────
 
 function NotificationRow({
   notification: n,
   onMarkRead,
+  link,
 }: {
   notification: Notification;
   onMarkRead: () => void;
+  link: string | null;
 }) {
+  const router = useRouter();
   const config =
     n.type === "TRANSFER"
       ? getTransferConfig(n.title)
@@ -208,15 +243,21 @@ function NotificationRow({
   const Icon = config.icon;
   const amount = extractAmount(n.body);
 
-  // Determine if this is a credit (incoming money) based on title keywords
   const isIncoming =
     n.title.toLowerCase().includes("received") ||
     n.title.toLowerCase().includes("money received");
 
+  function handleClick() {
+    if (!n.isRead) onMarkRead();
+    if (link) router.push(link);
+  }
+
   return (
     <button
-      onClick={n.isRead ? undefined : onMarkRead}
+      onClick={handleClick}
       className={`w-full text-left flex items-start gap-3 px-4 py-3.5 border-b border-[#E3E3E3] last:border-0 transition-colors ${
+        link ? "cursor-pointer" : "cursor-default"
+      } ${
         !n.isRead
           ? "bg-white hover:bg-[#FAFAFA] border-l-4 border-l-[#DB0011]"
           : "bg-white hover:bg-[#F8F8F8] border-l-4 border-l-transparent"

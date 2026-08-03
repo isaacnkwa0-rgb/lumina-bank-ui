@@ -152,6 +152,16 @@ export const authApi = {
     api.post<ApiResponse<{ message: string }>>("/auth/change-password", { currentPassword, newPassword }),
   verifyPassword: (password: string) =>
     api.post<ApiResponse<{ verified: boolean }>>("/auth/verify-password", { password }),
+  requestTransferOtp: () =>
+    api.post<ApiResponse<{ sent: boolean; maskedEmail: string }>>("/auth/transfer-otp"),
+  verifyTransferOtp: (code: string) =>
+    api.post<ApiResponse<{ verified: boolean }>>("/auth/verify-transfer-otp", { code }),
+  getTransferPinStatus: () =>
+    api.get<ApiResponse<{ hasPin: boolean }>>("/auth/transfer-pin/status"),
+  setupTransferPin: (pin: string, currentPin?: string) =>
+    api.post<ApiResponse<{ set: boolean }>>("/auth/transfer-pin/setup", { pin, ...(currentPin ? { currentPin } : {}) }),
+  verifyTransferPin: (pin: string) =>
+    api.post<ApiResponse<{ verified: boolean }>>("/auth/transfer-pin/verify", { pin }),
 };
 
 export const accountsApi = {
@@ -159,6 +169,8 @@ export const accountsApi = {
   get: (id: string) => api.get<ApiResponse<Account>>(`/accounts/${id}`),
   create: (data: { type: string; currency?: string }) =>
     api.post<ApiResponse<Account>>("/accounts", data),
+  statement: (id: string, params?: { dateFrom?: string; dateTo?: string }) =>
+    api.get<ApiResponse<Transaction[]>>(`/accounts/${id}/statement`, { params }),
 };
 
 export const transactionsApi = {
@@ -182,6 +194,7 @@ export const transfersApi = {
     toAccountId: string;
     amount: number;
     description: string;
+    transferOtp: string;
   }) => api.post<ApiResponse<Transfer>>("/transfers/internal", data),
   domestic: (data: {
     fromAccountId: string;
@@ -191,6 +204,7 @@ export const transfersApi = {
     amount: number;
     description: string;
     saveBeneficiary?: boolean;
+    transferOtp: string;
   }) => api.post<ApiResponse<Transfer>>("/transfers/domestic", data),
   international: (data: {
     fromAccountId: string;
@@ -202,6 +216,7 @@ export const transfersApi = {
     toCurrency: string;
     amount: number;
     description: string;
+    transferOtp: string;
   }) => api.post<ApiResponse<Transfer>>("/transfers/international", data),
   quote: (params: { fromCurrency: string; toCurrency: string; amount: number }) =>
     api.get<ApiResponse<FxQuote>>("/transfers/quote", { params }),
@@ -368,6 +383,13 @@ export const adminApi = {
     api.patch<ApiResponse<{ id: string; unlocked: boolean }>>(`/admin/users/${id}/reset-lockout`),
   verifyUserEmail: (id: string) =>
     api.patch<ApiResponse<{ id: string; isEmailVerified: boolean }>>(`/admin/users/${id}/verify-email`),
+  updateUserProfile: (id: string, data: {
+    firstName?: string; lastName?: string; phone?: string; gender?: string;
+    dateOfBirth?: string; nationality?: string; countryOfResidence?: string;
+    address?: { line1?: string; line2?: string; city?: string; state?: string; postalCode?: string; country?: string };
+    occupation?: string; employer?: string; annualIncome?: number;
+    preferredCurrency?: string; accountType?: string;
+  }) => api.patch<ApiResponse<{ id: string; changes: number }>>(`/admin/users/${id}/profile`, data),
   getUserAccounts: (userId: string) =>
     api.get<ApiResponse<AdminAccount[]>>(`/admin/users/${userId}/accounts`),
   freezeAccount: (accountId: string) =>
@@ -376,6 +398,10 @@ export const adminApi = {
     api.patch<ApiResponse<AdminAccount>>(`/admin/accounts/${accountId}/unfreeze`),
   closeAccount: (accountId: string) =>
     api.patch<ApiResponse<AdminAccount>>(`/admin/accounts/${accountId}/close`),
+  fundAccount: (userId: string, accountId: string, amount: number, description?: string) =>
+    api.post<ApiResponse<AdminAccount>>(`/admin/users/${userId}/accounts/${accountId}/fund`, { amount, description }),
+  getKycSubmissions: (status?: string) =>
+    api.get<ApiResponse<AdminKycUser[]>>('/admin/kyc', { params: status ? { status } : undefined }),
   approveKyc: (userId: string) =>
     api.patch<ApiResponse<{ userId: string; kycStatus: string }>>(`/admin/kyc/${userId}/verify`),
   rejectKyc: (userId: string, reason: string) =>
@@ -437,6 +463,54 @@ export const adminApi = {
     api.patch<ApiResponse<AdminDeposit>>(`/admin/deposits/${id}/approve`, { notes }),
   rejectDeposit: (id: string, reason: string) =>
     api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/deposits/${id}/reject`, { reason }),
+  // Support tickets
+  supportTickets: (params?: { page?: number; status?: string; search?: string }) =>
+    api.get<ApiResponse<{ tickets: AdminSupportTicket[]; meta: unknown }>>("/admin/support/tickets", { params }),
+  getSupportTicket: (id: string) =>
+    api.get<ApiResponse<AdminSupportTicket>>(`/admin/support/tickets/${id}`),
+  replyToTicket: (id: string, body: string) =>
+    api.post<ApiResponse<SupportMessage>>(`/admin/support/tickets/${id}/reply`, { body }),
+  signalTyping: (id: string) =>
+    api.post(`/admin/support/tickets/${id}/typing`),
+  resolveSupportTicket: (id: string) =>
+    api.patch<ApiResponse<SupportTicket>>(`/admin/support/tickets/${id}/resolve`),
+  // Agents
+  getAgents: () => api.get<ApiResponse<AdminAgent[]>>("/admin/agents"),
+  createAgent: (data: { firstName: string; lastName: string; email: string; password: string; avatarUrl?: string }) =>
+    api.post<ApiResponse<AdminAgent>>("/admin/agents", data),
+  updateAgent: (id: string, data: { firstName?: string; lastName?: string; avatarUrl?: string; password?: string }) =>
+    api.patch<ApiResponse<AdminAgent>>(`/admin/agents/${id}`, data),
+  uploadAgentAvatar: (id: string, file: File) => {
+    const fd = new FormData();
+    fd.append("avatar", file);
+    return api.post<ApiResponse<{ avatarUrl: string }>>(`/admin/agents/${id}/avatar`, fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+  deleteAgent: (id: string) => api.delete<ApiResponse<{ id: string }>>(`/admin/agents/${id}`),
+  sendBulkEmail: (data: {
+    subject: string;
+    body: string;
+    recipientType: 'ALL' | 'SINGLE' | 'SELECTED' | 'KYC_PENDING' | 'KYC_VERIFIED' | 'KYC_REJECTED' | 'TIER_STANDARD' | 'TIER_PREMIUM' | 'TIER_ELITE' | 'TIER_PRIVATE' | 'TIER_BUSINESS' | 'MARKETING_CONSENT' | 'SUSPENDED';
+    userId?: string;
+    userIds?: string[];
+  }) =>
+    api.post<ApiResponse<{ total: number; sent: number; failed: number }>>("/admin/mail/send", data),
+  // Notifications
+  getNotifications: (params?: { page?: number; limit?: number; type?: string; unread?: boolean }) =>
+    api.get<ApiResponse<{ items: AdminNotification[]; unreadCount: number; pagination: PaginationMeta }>>("/admin/notifications", { params }),
+  getNotificationUnreadCount: () =>
+    api.get<ApiResponse<{ unreadCount: number }>>("/admin/notifications/unread-count"),
+  markNotificationRead: (id: string) =>
+    api.patch<ApiResponse<AdminNotification>>(`/admin/notifications/${id}/read`),
+  markNotificationUnread: (id: string) =>
+    api.patch<ApiResponse<AdminNotification>>(`/admin/notifications/${id}/unread`),
+  markAllNotificationsRead: () =>
+    api.patch<ApiResponse<{ updated: number }>>("/admin/notifications/read-all"),
+  deleteNotification: (id: string) =>
+    api.delete<ApiResponse<{ id: string; deleted: boolean }>>(`/admin/notifications/${id}`),
+  deleteAllNotifications: () =>
+    api.delete<ApiResponse<{ deleted: number }>>("/admin/notifications"),
 };
 
 export const disputesApi = {
@@ -445,6 +519,17 @@ export const disputesApi = {
   create: (data: { subject: string; description: string; transactionId?: string }) =>
     api.post<ApiResponse<Dispute>>("/disputes", data),
   close: (id: string) => api.patch<ApiResponse<Dispute>>(`/disputes/${id}/close`),
+};
+
+export const supportApi = {
+  listTickets: () => api.get<ApiResponse<SupportTicket[]>>("/support/tickets"),
+  getTicket: (id: string) => api.get<ApiResponse<SupportTicket>>(`/support/tickets/${id}`),
+  createTicket: (subject: string, body: string) =>
+    api.post<ApiResponse<SupportTicket>>("/support/tickets", { subject, body }),
+  postMessage: (id: string, body: string) =>
+    api.post<ApiResponse<SupportMessage>>(`/support/tickets/${id}/messages`, { body }),
+  closeTicket: (id: string) => api.patch<ApiResponse<SupportTicket>>(`/support/tickets/${id}/close`),
+  getTyping: (id: string) => api.get<ApiResponse<{ typing: boolean }>>(`/support/tickets/${id}/typing`),
 };
 
 export const insuranceApi = {
@@ -468,6 +553,16 @@ export const cryptoApi = {
   }) => api.post<ApiResponse<CryptoOrder>>("/crypto/orders", data),
   listOrders: () => api.get<ApiResponse<CryptoOrder[]>>("/crypto/orders"),
   getOrder: (id: string) => api.get<ApiResponse<CryptoOrder>>(`/crypto/orders/${id}`),
+};
+
+export const depositsApi = {
+  initiateBankTransfer: (data: { accountId: string; amount: number; senderName?: string; senderBank?: string }) =>
+    api.post<ApiResponse<{ deposit: Deposit; bankDetails: BankReceivingDetails }>>("/deposits/bank-transfer", data),
+  initiateCrypto: (data: { accountId: string; coin: string; network: string; coinAmount: number; priceGbp: number }) =>
+    api.post<ApiResponse<{ deposit: Deposit; walletAddress: string; network: string; coin: string; coinAmount: number; estimatedGbp: number }>>("/deposits/crypto", data),
+  list: () => api.get<ApiResponse<Deposit[]>>("/deposits"),
+  get: (id: string) => api.get<ApiResponse<Deposit>>(`/deposits/${id}`),
+  getSupportedCoins: () => api.get<ApiResponse<{ coin: string; network: string }[]>>("/deposits/coins"),
 };
 
 export const ratesApi = {
@@ -790,6 +885,7 @@ export interface Notification {
   body: string;
   isRead: boolean;
   createdAt: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Rate {
@@ -914,8 +1010,43 @@ export interface AdminUser {
 
 export interface AdminUserDetail extends AdminUser {
   accounts: { id: string; accountNumber: string; type: string; balance: string; currency: string; isDefault: boolean }[];
-  profile: Record<string, unknown> | null;
+  profile: {
+    occupation?: string | null;
+    employer?: string | null;
+    employmentStatus?: string | null;
+    industry?: string | null;
+    annualIncomeRange?: string | null;
+    sourceOfFunds?: string[] | null;
+    expectedMonthlyVolume?: string | null;
+    annualIncome?: string | null;
+  } | null;
+  kycDocuments?: { idFront: string; idBack: string } | null;
+  kycStatus: string;
   _count: { accounts: number; transactions: number };
+  // Onboarding / registration fields
+  gender?: string | null;
+  dateOfBirth?: string | null;
+  nationality?: string | null;
+  address?: { line1?: string; line2?: string; city?: string; state?: string; postalCode?: string; country?: string } | null;
+  countryOfResidence?: string | null;
+  taxResidency?: string[] | null;
+  accountType?: string | null;
+  termsAcceptedAt?: string | null;
+  marketingConsent?: boolean;
+  electronicStatementsConsent?: boolean;
+  dataProcessingConsent?: boolean;
+  onboardingStep?: number;
+}
+
+export interface AdminKycUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string | null;
+  kycStatus: string;
+  kycDocuments: { idFront: string; idBack: string } | null;
+  createdAt: string;
 }
 
 export interface AdminLoan {
@@ -962,7 +1093,6 @@ export interface AdminAccount {
   currency: string;
   balance: string;
   availableBalance: string;
-  isFrozen: boolean;
 }
 
 export interface AdminInsuranceQuote extends InsuranceQuote {
@@ -1044,6 +1174,35 @@ export interface AdminGoal {
   user: { id: string; firstName: string; lastName: string; email: string };
 }
 
+export interface Deposit {
+  id: string;
+  userId: string;
+  accountId: string;
+  method: "BANK_TRANSFER" | "CRYPTO";
+  amount: string;
+  currency: string;
+  reference: string;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED";
+  coin?: string | null;
+  network?: string | null;
+  coinAmount?: string | null;
+  priceGbp?: string | null;
+  senderName?: string | null;
+  senderBank?: string | null;
+  adminNotes?: string | null;
+  processedAt?: string | null;
+  transactionId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BankReceivingDetails {
+  accountName: string;
+  sortCode: string;
+  accountNumber: string;
+  iban: string;
+}
+
 export interface CryptoOrder {
   id: string;
   userId: string;
@@ -1086,4 +1245,80 @@ export interface AdminDeposit {
   createdAt: string;
   user: { id: string; firstName: string; lastName: string; email: string };
   account: { id: string; accountNumber: string; type: string };
+}
+
+export interface AdminSupportTicket extends SupportTicket {
+  user: { id: string; firstName: string; lastName: string; email: string };
+  _count?: { messages: number };
+}
+
+export interface SupportMessage {
+  id: string;
+  ticketId: string;
+  senderId: string;
+  senderRole: "CUSTOMER" | "AGENT";
+  body: string;
+  isRead: boolean;
+  createdAt: string;
+  sender?: {
+    firstName: string;
+    lastName: string;
+    profile?: { avatarUrl?: string | null } | null;
+  } | null;
+}
+
+export interface SupportTicket {
+  id: string;
+  userId: string;
+  subject: string;
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt: string | null;
+  messages: SupportMessage[];
+  lastMessage?: SupportMessage | null;
+  unreadCount?: number;
+}
+
+export interface AdminAgent {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  status: string;
+  createdAt: string;
+  profile?: { avatarUrl?: string | null } | null;
+}
+
+export interface AdminNotification {
+  id: string;
+  type:
+    | 'NEW_REGISTRATION'
+    | 'KYC_SUBMITTED'
+    | 'LOAN_APPLICATION'
+    | 'DISPUTE_FILED'
+    | 'INSURANCE_QUOTE'
+    | 'CRYPTO_ORDER'
+    | 'LARGE_TRANSFER'
+    | 'INTERNATIONAL_TRANSFER'
+    | 'ACCOUNT_LOCKED'
+    | 'PASSWORD_CHANGED'
+    | 'SITE_VISITOR'
+    | 'NEW_SUPPORT_TICKET'
+    | 'SUPPORT_MESSAGE'
+    | 'LARGE_DEPOSIT';
+  title: string;
+  message: string;
+  metadata: Record<string, unknown> | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
 }

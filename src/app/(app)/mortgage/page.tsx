@@ -256,7 +256,7 @@ export default function MortgagePage() {
               <p className="text-sm font-bold text-[#333]">
                 {mortgages.length
                   ? `${(mortgages.reduce((s, l) => s + Number(l.interestRate), 0) / mortgages.length).toFixed(1)}%`
-                  : "—"}
+                  : "N/A"}
               </p>
             </div>
           </div>

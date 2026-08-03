@@ -30,7 +30,7 @@ function StatusBanner({ status }: { status: KycStatus }) {
   );
 }
 
-function FileDropZone({ field, file, onChange }: { field: FileField; file: File | null; onChange: (f: File | null) => void }) {
+function FileDropZone({ field, file, onChange, capture }: { field: FileField; file: File | null; onChange: (f: File | null) => void; capture?: "user" | "environment" }) {
   const { t } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -88,6 +88,7 @@ function FileDropZone({ field, file, onChange }: { field: FileField; file: File 
         ref={inputRef}
         type="file"
         accept="image/jpeg,image/png,application/pdf"
+        capture={capture}
         className="hidden"
         onChange={(e) => onChange(e.target.files?.[0] ?? null)}
       />
@@ -203,7 +204,7 @@ export default function KycPage() {
               </div>
 
               {FIELDS.map((f) => (
-                <FileDropZone key={f.key} field={f} file={files[f.key]} onChange={(file) => setFile(f.key, file)} />
+                <FileDropZone key={f.key} field={f} file={files[f.key]} onChange={(file) => setFile(f.key, file)} capture={f.key === "selfie" ? "user" : undefined} />
               ))}
 
               <button

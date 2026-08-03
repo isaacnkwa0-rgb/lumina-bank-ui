@@ -1,22 +1,54 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   adminApi,
   type AdminTransfer, type AdminUser, type AdminLoan, type AdminDispute,
   type AdminInsuranceQuote, type AdminCard, type AdminTransaction,
   type AdminExchangeRate, type AdminPortfolio, type AdminGoal, type AdminAccount,
-  type AdminCryptoOrder, type AdminDeposit, type AuditLog,
+  type AdminCryptoOrder, type AdminDeposit, type AuditLog, type AdminKycUser, type AdminSupportTicket,
+  type AdminAgent, type AdminUserDetail, type AdminNotification,
 } from "@/lib/api";
+import { getUser } from "@/lib/auth";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   ShieldCheck, CheckCircle2, Users, ArrowLeftRight, Landmark, AlertCircle,
   ChevronRight, Search, RefreshCw, CreditCard, Receipt, Globe,
-  TrendingUp, Target, Home, ShieldAlert, Bitcoin, ScrollText, ArrowDownToLine,
-  Building2,
+  TrendingUp, Target, Home, ShieldAlert, Bitcoin, ScrollText, MessageSquare, Send,
+  UserCog, Trash2, Plus, User, Mail, Bell, BellOff, MailOpen, ArrowDownToLine, Building2,
 } from "lucide-react";
 
-type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "deposits" | "audit";
+type Tab = "transfers" | "deposits" | "loans" | "mortgages" | "disputes" | "support" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "kyc" | "audit" | "agents" | "mailer" | "notifications";
+
+const COUNTRIES = [
+  { code: "GB", name: "United Kingdom" }, { code: "US", name: "United States" },
+  { code: "CA", name: "Canada" }, { code: "AU", name: "Australia" },
+  { code: "DE", name: "Germany" }, { code: "FR", name: "France" },
+  { code: "ES", name: "Spain" }, { code: "PT", name: "Portugal" },
+  { code: "IT", name: "Italy" }, { code: "NL", name: "Netherlands" },
+  { code: "BE", name: "Belgium" }, { code: "CH", name: "Switzerland" },
+  { code: "AT", name: "Austria" }, { code: "SE", name: "Sweden" },
+  { code: "NO", name: "Norway" }, { code: "DK", name: "Denmark" },
+  { code: "FI", name: "Finland" }, { code: "IE", name: "Ireland" },
+  { code: "NZ", name: "New Zealand" }, { code: "JP", name: "Japan" },
+  { code: "KR", name: "South Korea" }, { code: "SG", name: "Singapore" },
+  { code: "AE", name: "United Arab Emirates" }, { code: "SA", name: "Saudi Arabia" },
+  { code: "IN", name: "India" }, { code: "BR", name: "Brazil" },
+  { code: "MX", name: "Mexico" }, { code: "PL", name: "Poland" },
+  { code: "CZ", name: "Czech Republic" }, { code: "TR", name: "Turkey" },
+  { code: "HK", name: "Hong Kong" }, { code: "PH", name: "Philippines" },
+  { code: "NG", name: "Nigeria" }, { code: "GH", name: "Ghana" },
+  { code: "KE", name: "Kenya" }, { code: "ZA", name: "South Africa" },
+  { code: "EG", name: "Egypt" }, { code: "MA", name: "Morocco" },
+  { code: "TZ", name: "Tanzania" }, { code: "UG", name: "Uganda" },
+  { code: "ZW", name: "Zimbabwe" }, { code: "CM", name: "Cameroon" },
+  { code: "CN", name: "China" }, { code: "PK", name: "Pakistan" },
+  { code: "BD", name: "Bangladesh" }, { code: "LK", name: "Sri Lanka" },
+  { code: "MY", name: "Malaysia" }, { code: "ID", name: "Indonesia" },
+  { code: "TH", name: "Thailand" }, { code: "VN", name: "Vietnam" },
+];
+
+const CURRENCIES = ["GBP", "USD", "EUR", "CHF", "JPY", "AED", "CAD", "AUD", "PLN", "SGD", "NGN", "GHS", "KES", "ZAR", "INR", "PKR", "CNY", "MYR", "THB"];
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -726,6 +758,24 @@ function UserRow({ u, onUpdate, onDelete }: {
   const [expanded, setExpanded] = useState(false);
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
   const [acctLoading, setAcctLoading] = useState(false);
+  const [acctError, setAcctError] = useState("");
+  const [kycExpanded, setKycExpanded] = useState(false);
+  const [kycDocs, setKycDocs] = useState<{ idFront: string; idBack: string } | null>(null);
+  const [kycDocsLoading, setKycDocsLoading] = useState(false);
+  const [regExpanded, setRegExpanded] = useState(false);
+  const [regDetails, setRegDetails] = useState<AdminUserDetail | null>(null);
+  const [fundForm, setFundForm] = useState<{ accountId: string; amount: string; desc: string } | null>(null);
+  const [fundLoading, setFundLoading] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const BLANK_FORM = {
+    firstName: "", lastName: "", phone: "", gender: "", dateOfBirth: "",
+    nationality: "", countryOfResidence: "", occupation: "", employer: "",
+    annualIncome: "", preferredCurrency: "", accountType: "",
+    addrLine1: "", addrLine2: "", addrCity: "", addrState: "", addrPostcode: "", addrCountry: "",
+  };
+  const [editForm, setEditForm] = useState(BLANK_FORM);
+  const [editInitial, setEditInitial] = useState(BLANK_FORM);
 
   async function act(fn: () => Promise<void>) {
     setActionId("x");
@@ -734,13 +784,96 @@ function UserRow({ u, onUpdate, onDelete }: {
   }
 
   async function loadAccounts() {
-    if (accounts.length > 0) { setExpanded((p) => !p); return; }
+    if (accounts.length > 0 || acctError) { setExpanded((p) => !p); return; }
     setExpanded(true);
     setAcctLoading(true);
+    setAcctError("");
     try {
       const r = await adminApi.getUserAccounts(u.id);
       setAccounts(r.data.data);
-    } catch {} finally { setAcctLoading(false); }
+    } catch (e: unknown) {
+      setAcctError((e as any)?.response?.data?.message || "Failed to load accounts");
+    } finally { setAcctLoading(false); }
+  }
+
+  async function loadKycDocs() {
+    if (kycDocs || regDetails) {
+      setKycExpanded((p) => !p);
+      return;
+    }
+    setKycExpanded(true);
+    setKycDocsLoading(true);
+    try {
+      const r = await adminApi.getUser(u.id);
+      const detail = r.data.data as AdminUserDetail;
+      setKycDocs(detail.kycDocuments ?? null);
+      setRegDetails(detail);
+    } catch {
+      setKycDocs(null);
+    } finally { setKycDocsLoading(false); }
+  }
+
+  async function openEdit() {
+    let detail = regDetails;
+    if (!detail) {
+      try {
+        const r = await adminApi.getUser(u.id);
+        detail = r.data.data as AdminUserDetail;
+        setRegDetails(detail);
+      } catch {}
+    }
+    const initial = {
+      firstName: u.firstName ?? "",
+      lastName: u.lastName ?? "",
+      phone: u.phone ?? "",
+      gender: detail?.gender ?? "",
+      dateOfBirth: detail?.dateOfBirth ? detail.dateOfBirth.slice(0, 10) : "",
+      nationality: detail?.nationality ?? "",
+      countryOfResidence: detail?.countryOfResidence ?? "",
+      occupation: detail?.profile?.occupation ?? "",
+      employer: detail?.profile?.employer ?? "",
+      annualIncome: detail?.profile?.annualIncome ?? "",
+      preferredCurrency: "",
+      accountType: detail?.accountType ?? "",
+      addrLine1: detail?.address?.line1 ?? "",
+      addrLine2: detail?.address?.line2 ?? "",
+      addrCity: detail?.address?.city ?? "",
+      addrState: detail?.address?.state ?? "",
+      addrPostcode: detail?.address?.postalCode ?? "",
+      addrCountry: detail?.address?.country ?? "",
+    };
+    setEditInitial(initial);
+    setEditForm(initial);
+    setEditOpen(true);
+  }
+
+  async function saveEdit() {
+    setEditSaving(true);
+    try {
+      const changed = <K extends keyof typeof editForm>(key: K) => editForm[key] !== editInitial[key];
+      const payload: Parameters<typeof adminApi.updateUserProfile>[1] = {};
+      if (changed("firstName") && editForm.firstName.trim()) payload.firstName = editForm.firstName.trim();
+      if (changed("lastName") && editForm.lastName.trim()) payload.lastName = editForm.lastName.trim();
+      if (changed("phone")) payload.phone = editForm.phone.trim();
+      if (changed("gender")) payload.gender = editForm.gender;
+      if (changed("dateOfBirth")) payload.dateOfBirth = editForm.dateOfBirth;
+      if (changed("nationality")) payload.nationality = editForm.nationality;
+      if (changed("countryOfResidence")) payload.countryOfResidence = editForm.countryOfResidence;
+      if (changed("occupation")) payload.occupation = editForm.occupation.trim();
+      if (changed("employer")) payload.employer = editForm.employer.trim();
+      if (changed("annualIncome") && editForm.annualIncome.trim()) payload.annualIncome = Number(editForm.annualIncome);
+      if (changed("preferredCurrency")) payload.preferredCurrency = editForm.preferredCurrency;
+      if (changed("accountType")) payload.accountType = editForm.accountType;
+      const addrChanged = (["addrLine1","addrLine2","addrCity","addrState","addrPostcode","addrCountry"] as const).some(changed);
+      if (addrChanged) payload.address = { line1: editForm.addrLine1, line2: editForm.addrLine2, city: editForm.addrCity, state: editForm.addrState, postalCode: editForm.addrPostcode, country: editForm.addrCountry };
+      if (Object.keys(payload).length === 0) { setEditOpen(false); return; }
+      await adminApi.updateUserProfile(u.id, payload);
+      onUpdate(u.id, { firstName: payload.firstName ?? u.firstName, lastName: payload.lastName ?? u.lastName, phone: payload.phone ?? u.phone });
+      setEditOpen(false);
+      alert("Profile updated. User has been notified by email.");
+    } catch (e: unknown) {
+      alert((e as any)?.response?.data?.error?.message || "Failed to update profile");
+    } finally { setEditSaving(false); }
   }
 
   return (
@@ -777,6 +910,7 @@ function UserRow({ u, onUpdate, onDelete }: {
           )}
           <Btn color="amber" label="Reset Lockout" loading={actionId === "x"} onClick={() => act(async () => { await adminApi.resetLockout(u.id); alert("Lockout cleared"); })} />
           <Btn color="blue" label="Verify Email" loading={actionId === "x"} onClick={() => act(async () => { await adminApi.verifyUserEmail(u.id); alert("Email marked as verified"); })} />
+          <Btn color="navy" label="Edit Profile" loading={actionId === "x"} onClick={openEdit} />
           <Btn color="red-outline" label="Delete User" loading={actionId === "x"} onClick={() => {
             if (!confirm(`Permanently delete ${u.firstName} ${u.lastName}? This cannot be undone.`)) return;
             act(async () => { await adminApi.deleteUser(u.id); onDelete(u.id); });
@@ -784,20 +918,134 @@ function UserRow({ u, onUpdate, onDelete }: {
         </div>
       </div>
 
-      {/* KYC actions */}
-      {u.kycStatus === "PENDING" && (
+      {/* KYC section */}
+      {(u.kycStatus === "PENDING" || u.kycStatus === "VERIFIED" || u.kycStatus === "REJECTED") && (
         <div className="mb-2">
           <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-1.5">KYC</p>
-          <div className="flex flex-wrap gap-1.5">
-            <Btn color="green" label="Verify KYC" loading={actionId === "x"} onClick={() => act(async () => { await adminApi.approveKyc(u.id); onUpdate(u.id, { kycStatus: "VERIFIED" }); })} />
-            <Btn color="red" label="Reject KYC" loading={actionId === "x"} onClick={async () => {
-              const reason = prompt("Reason for KYC rejection:");
-              if (!reason?.trim()) return;
-              await act(async () => { await adminApi.rejectKyc(u.id, reason.trim()); onUpdate(u.id, { kycStatus: "REJECTED" }); });
-            }} />
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            <button
+              onClick={loadKycDocs}
+              className="text-[10px] text-[#1a1a2e] font-semibold underline"
+            >
+              {kycExpanded ? "Hide documents ▲" : "View documents ▼"}
+            </button>
           </div>
+
+          {/* KYC document viewer */}
+          {kycExpanded && (
+            <div className="bg-[#F8F8F8] rounded-xl p-3 mb-2">
+              {kycDocsLoading ? (
+                <p className="text-xs text-[#AAAAAA]">Loading documents…</p>
+              ) : kycDocs ? (
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-1.5">ID Front</p>
+                    {kycDocs.idFront.match(/\.(jpg|jpeg|png|webp)$/i) || kycDocs.idFront.includes("cloudinary") ? (
+                      <img
+                        src={kycDocs.idFront}
+                        alt="ID Front"
+                        className="max-w-full rounded-lg border border-[#E3E3E3]"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    ) : (
+                      <a href={kycDocs.idFront} target="_blank" rel="noreferrer" className="text-xs text-[#DB0011] underline">
+                        View ID Front (PDF)
+                      </a>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-1.5">ID Back</p>
+                    {kycDocs.idBack.match(/\.(jpg|jpeg|png|webp)$/i) || kycDocs.idBack.includes("cloudinary") ? (
+                      <img
+                        src={kycDocs.idBack}
+                        alt="ID Back"
+                        className="max-w-full rounded-lg border border-[#E3E3E3]"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    ) : (
+                      <a href={kycDocs.idBack} target="_blank" rel="noreferrer" className="text-xs text-[#DB0011] underline">
+                        View ID Back (PDF)
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-[#AAAAAA]">No documents on file</p>
+              )}
+            </div>
+          )}
+
+          {u.kycStatus === "PENDING" && (
+            <div className="flex flex-wrap gap-1.5">
+              <Btn color="green" label="Verify KYC" loading={actionId === "x"} onClick={() => act(async () => { await adminApi.approveKyc(u.id); onUpdate(u.id, { kycStatus: "VERIFIED" }); })} />
+              <Btn color="red" label="Reject KYC" loading={actionId === "x"} onClick={async () => {
+                const reason = prompt("Reason for KYC rejection:");
+                if (!reason?.trim()) return;
+                await act(async () => { await adminApi.rejectKyc(u.id, reason.trim()); onUpdate(u.id, { kycStatus: "REJECTED" }); });
+              }} />
+            </div>
+          )}
         </div>
       )}
+
+      {/* Registration & Onboarding Details */}
+      <div className="mb-2">
+        <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-1.5">Registration Details</p>
+        <button
+          onClick={async () => {
+            if (!regDetails) {
+              setKycDocsLoading(true);
+              try {
+                const r = await adminApi.getUser(u.id);
+                const detail = r.data.data as AdminUserDetail;
+                setKycDocs(detail.kycDocuments ?? null);
+                setRegDetails(detail);
+              } catch {} finally { setKycDocsLoading(false); }
+            }
+            setRegExpanded((p) => !p);
+          }}
+          className="text-[10px] text-[#1a1a2e] font-semibold underline mb-2"
+        >
+          {regExpanded ? "Hide details ▲" : "View details ▼"}
+        </button>
+        {regExpanded && regDetails && (
+          <div className="bg-[#F8F8F8] rounded-xl p-3 text-[11px] text-[#444] space-y-1.5">
+            <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-2">Personal</p>
+            {regDetails.dateOfBirth && <p><span className="text-[#AAAAAA]">DOB:</span> {new Date(regDetails.dateOfBirth).toLocaleDateString("en-GB")}</p>}
+            {regDetails.gender && <p><span className="text-[#AAAAAA]">Gender:</span> {regDetails.gender}</p>}
+            {regDetails.nationality && <p><span className="text-[#AAAAAA]">Nationality:</span> {regDetails.nationality}</p>}
+            {regDetails.countryOfResidence && <p><span className="text-[#AAAAAA]">Country of residence:</span> {regDetails.countryOfResidence}</p>}
+            {regDetails.taxResidency && regDetails.taxResidency.length > 0 && <p><span className="text-[#AAAAAA]">Tax residency:</span> {regDetails.taxResidency.join(", ")}</p>}
+            {regDetails.address && (
+              <p><span className="text-[#AAAAAA]">Address:</span> {[regDetails.address.line1, regDetails.address.line2, regDetails.address.city, regDetails.address.state, regDetails.address.postalCode, regDetails.address.country].filter(Boolean).join(", ")}</p>
+            )}
+            <div className="h-px bg-[#E3E3E3] my-1.5" />
+            <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-1">Account & Onboarding</p>
+            {regDetails.accountType && <p><span className="text-[#AAAAAA]">Account type:</span> {regDetails.accountType}</p>}
+            {regDetails.onboardingStep !== undefined && <p><span className="text-[#AAAAAA]">Onboarding step:</span> {regDetails.onboardingStep}</p>}
+            {regDetails.termsAcceptedAt && <p><span className="text-[#AAAAAA]">Terms accepted:</span> {new Date(regDetails.termsAcceptedAt).toLocaleDateString("en-GB")}</p>}
+            <div className="flex gap-4">
+              <p><span className="text-[#AAAAAA]">Marketing:</span> {regDetails.marketingConsent ? "Yes" : "No"}</p>
+              <p><span className="text-[#AAAAAA]">E-statements:</span> {regDetails.electronicStatementsConsent ? "Yes" : "No"}</p>
+              <p><span className="text-[#AAAAAA]">Data processing:</span> {regDetails.dataProcessingConsent ? "Yes" : "No"}</p>
+            </div>
+            {regDetails.profile && (
+              <>
+                <div className="h-px bg-[#E3E3E3] my-1.5" />
+                <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-1">Financial Profile</p>
+                {regDetails.profile.employmentStatus && <p><span className="text-[#AAAAAA]">Employment:</span> {regDetails.profile.employmentStatus}</p>}
+                {regDetails.profile.occupation && <p><span className="text-[#AAAAAA]">Occupation:</span> {regDetails.profile.occupation}</p>}
+                {regDetails.profile.employer && <p><span className="text-[#AAAAAA]">Employer:</span> {regDetails.profile.employer}</p>}
+                {regDetails.profile.industry && <p><span className="text-[#AAAAAA]">Industry:</span> {regDetails.profile.industry}</p>}
+                {regDetails.profile.annualIncomeRange && <p><span className="text-[#AAAAAA]">Income range:</span> {regDetails.profile.annualIncomeRange}</p>}
+                {regDetails.profile.annualIncome && <p><span className="text-[#AAAAAA]">Annual income:</span> {regDetails.profile.annualIncome}</p>}
+                {regDetails.profile.sourceOfFunds && regDetails.profile.sourceOfFunds.length > 0 && <p><span className="text-[#AAAAAA]">Source of funds:</span> {regDetails.profile.sourceOfFunds.join(", ")}</p>}
+                {regDetails.profile.expectedMonthlyVolume && <p><span className="text-[#AAAAAA]">Monthly volume:</span> {regDetails.profile.expectedMonthlyVolume}</p>}
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Tier management */}
       <div>
@@ -814,40 +1062,240 @@ function UserRow({ u, onUpdate, onDelete }: {
       {expanded && (
         <div className="mt-3 border-t border-[#F0F0F0] pt-3">
           <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-2">Bank Accounts</p>
-          {acctLoading ? <p className="text-xs text-[#AAAAAA]">Loading…</p> : accounts.length === 0 ? (
+          {acctLoading ? (
+            <p className="text-xs text-[#AAAAAA]">Loading…</p>
+          ) : acctError ? (
+            <p className="text-xs text-red-500">{acctError}</p>
+          ) : accounts.length === 0 ? (
             <p className="text-xs text-[#AAAAAA]">No accounts</p>
           ) : (
             <div className="space-y-2">
               {accounts.map((a) => (
-                <div key={a.id} className="bg-[#F8F8F8] rounded-xl px-3 py-2.5 flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs font-semibold text-[#333]">{a.type} · {a.accountNumber}</p>
-                      <Pill status={a.status} />
+                <div key={a.id} className="bg-[#F8F8F8] rounded-xl overflow-hidden">
+                  <div className="px-3 py-2.5 flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-semibold text-[#333]">{a.type} · {a.accountNumber}</p>
+                        <Pill status={a.status} />
+                      </div>
+                      <p className="text-[10px] text-[#AAAAAA]">{formatCurrency(Number(a.balance), a.currency)}</p>
                     </div>
-                    <p className="text-[10px] text-[#AAAAAA]">{formatCurrency(Number(a.balance), a.currency)}</p>
+                    <div className="flex gap-1.5">
+                      {a.status === "ACTIVE" && (
+                        <Btn color="amber" label="Freeze" loading={false}
+                          onClick={() => act(async () => { await adminApi.freezeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "FROZEN" } : ac)); })} />
+                      )}
+                      {a.status === "FROZEN" && (
+                        <Btn color="green" label="Unfreeze" loading={false}
+                          onClick={() => act(async () => { await adminApi.unfreezeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "ACTIVE" } : ac)); })} />
+                      )}
+                      {a.status !== "CLOSED" && (
+                        <>
+                          <Btn color="green" label="Fund" loading={false}
+                            onClick={() => setFundForm(fundForm?.accountId === a.id ? null : { accountId: a.id, amount: "", desc: "" })} />
+                          <Btn color="red-outline" label="Close" loading={false}
+                            onClick={() => {
+                              if (!confirm(`Close account ${a.accountNumber}? Balance must be £0.`)) return;
+                              act(async () => { await adminApi.closeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "CLOSED" } : ac)); });
+                            }} />
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-1.5">
-                    {a.status === "ACTIVE" && (
-                      <Btn color="amber" label="Freeze" loading={false}
-                        onClick={() => act(async () => { await adminApi.freezeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "FROZEN", isFrozen: true } : ac)); })} />
-                    )}
-                    {a.status === "FROZEN" && (
-                      <Btn color="green" label="Unfreeze" loading={false}
-                        onClick={() => act(async () => { await adminApi.unfreezeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "ACTIVE", isFrozen: false } : ac)); })} />
-                    )}
-                    {a.status !== "CLOSED" && (
-                      <Btn color="red-outline" label="Close" loading={false}
-                        onClick={() => {
-                          if (!confirm(`Close account ${a.accountNumber}? Balance must be £0.`)) return;
-                          act(async () => { await adminApi.closeAccount(a.id); setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, status: "CLOSED" } : ac)); });
-                        }} />
-                    )}
-                  </div>
+                  {fundForm?.accountId === a.id && (
+                    <div className="px-3 pb-3 border-t border-[#E8E8E8] pt-3 space-y-2 bg-white">
+                      <p className="text-[10px] font-bold text-[#333] uppercase tracking-wide">Credit account</p>
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="Amount"
+                        value={fundForm.amount}
+                        onChange={(e) => setFundForm((f) => f ? { ...f, amount: e.target.value } : f)}
+                        className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Description (optional)"
+                        value={fundForm.desc}
+                        onChange={(e) => setFundForm((f) => f ? { ...f, desc: e.target.value } : f)}
+                        className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          disabled={fundLoading || !fundForm.amount || Number(fundForm.amount) <= 0}
+                          onClick={async () => {
+                            setFundLoading(true);
+                            try {
+                              const r = await adminApi.fundAccount(u.id, a.id, Number(fundForm.amount), fundForm.desc || undefined);
+                              const updated = r.data.data;
+                              setAccounts((p) => p.map((ac) => ac.id === a.id ? { ...ac, balance: updated.balance, availableBalance: updated.availableBalance } : ac));
+                              setFundForm(null);
+                            } catch (e: unknown) {
+                              alert((e as any)?.response?.data?.message || "Failed to fund account");
+                            } finally { setFundLoading(false); }
+                          }}
+                          className="px-3 py-1.5 bg-[#DB0011] text-white text-xs font-semibold rounded-lg disabled:opacity-50"
+                        >
+                          {fundLoading ? "…" : "Credit"}
+                        </button>
+                        <button onClick={() => setFundForm(null)} className="px-3 py-1.5 text-xs text-[#767676] hover:text-[#333]">Cancel</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Edit Profile Modal */}
+      {editOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white px-5 pt-5 pb-3 border-b border-[#F0F0F0] flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-[#DB0011] uppercase tracking-wider">Edit Profile</p>
+                <p className="text-sm font-semibold text-[#333]">{u.firstName} {u.lastName}</p>
+              </div>
+              <button onClick={() => setEditOpen(false)} className="text-[#AAAAAA] hover:text-[#333] text-xl leading-none">✕</button>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              {/* Name */}
+              <div>
+                <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-2">Name</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-[#767676]">First name</label>
+                    <input value={editForm.firstName} onChange={e => setEditForm(f => ({ ...f, firstName: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Last name</label>
+                    <input value={editForm.lastName} onChange={e => setEditForm(f => ({ ...f, lastName: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  </div>
+                </div>
+              </div>
+              {/* Contact */}
+              <div>
+                <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-2">Contact</p>
+                <label className="text-[10px] text-[#767676]">Phone</label>
+                <input value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
+                  placeholder="+447911123456"
+                  className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+              </div>
+              {/* Personal */}
+              <div>
+                <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-2">Personal</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Gender</label>
+                    <select value={editForm.gender} onChange={e => setEditForm(f => ({ ...f, gender: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011] bg-white">
+                      <option value="">— select —</option>
+                      <option value="MALE">Male</option>
+                      <option value="FEMALE">Female</option>
+                      <option value="OTHER">Other</option>
+                      <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Date of birth</label>
+                    <input type="date" value={editForm.dateOfBirth} onChange={e => setEditForm(f => ({ ...f, dateOfBirth: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Nationality</label>
+                    <select value={editForm.nationality} onChange={e => setEditForm(f => ({ ...f, nationality: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011] bg-white">
+                      <option value="">— select —</option>
+                      {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Country of residence</label>
+                    <select value={editForm.countryOfResidence} onChange={e => setEditForm(f => ({ ...f, countryOfResidence: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011] bg-white">
+                      <option value="">— select —</option>
+                      {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              {/* Address */}
+              <div>
+                <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-2">Address</p>
+                <div className="space-y-2">
+                  <input value={editForm.addrLine1} onChange={e => setEditForm(f => ({ ...f, addrLine1: e.target.value }))}
+                    placeholder="Line 1" className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  <input value={editForm.addrLine2} onChange={e => setEditForm(f => ({ ...f, addrLine2: e.target.value }))}
+                    placeholder="Line 2 (optional)" className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input value={editForm.addrCity} onChange={e => setEditForm(f => ({ ...f, addrCity: e.target.value }))}
+                      placeholder="City" className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                    <input value={editForm.addrPostcode} onChange={e => setEditForm(f => ({ ...f, addrPostcode: e.target.value }))}
+                      placeholder="Postcode" className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                    <input value={editForm.addrState} onChange={e => setEditForm(f => ({ ...f, addrState: e.target.value }))}
+                      placeholder="State / county" className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                    <select value={editForm.addrCountry} onChange={e => setEditForm(f => ({ ...f, addrCountry: e.target.value }))}
+                      className="w-full border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011] bg-white">
+                      <option value="">— Country —</option>
+                      {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              {/* Financial */}
+              <div>
+                <p className="text-[9px] text-[#AAAAAA] uppercase font-bold mb-2">Financial & Employment</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Occupation</label>
+                    <input value={editForm.occupation} onChange={e => setEditForm(f => ({ ...f, occupation: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Employer</label>
+                    <input value={editForm.employer} onChange={e => setEditForm(f => ({ ...f, employer: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Annual income (£)</label>
+                    <input type="number" value={editForm.annualIncome} onChange={e => setEditForm(f => ({ ...f, annualIncome: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011]" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#767676]">Preferred currency</label>
+                    <select value={editForm.preferredCurrency} onChange={e => setEditForm(f => ({ ...f, preferredCurrency: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011] bg-white">
+                      <option value="">— select —</option>
+                      {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-[10px] text-[#767676]">Account type</label>
+                    <select value={editForm.accountType} onChange={e => setEditForm(f => ({ ...f, accountType: e.target.value }))}
+                      className="w-full mt-0.5 border border-[#E3E3E3] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#DB0011] bg-white">
+                      <option value="">— select —</option>
+                      <option value="PERSONAL">Personal</option>
+                      <option value="BUSINESS">Business</option>
+                      <option value="STUDENT">Student</option>
+                      <option value="JOINT">Joint</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="sticky bottom-0 bg-white px-5 py-4 border-t border-[#F0F0F0] flex gap-2">
+              <button onClick={saveEdit} disabled={editSaving}
+                className="flex-1 bg-[#DB0011] text-white text-xs font-bold py-2.5 rounded-xl hover:bg-[#b8000e] disabled:opacity-50 transition-colors">
+                {editSaving ? "Saving…" : "Save changes"}
+              </button>
+              <button onClick={() => setEditOpen(false)} className="px-4 text-xs text-[#767676] hover:text-[#333]">Cancel</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -1001,6 +1449,191 @@ function CryptoTab() {
   );
 }
 
+// ── Support Tickets ───────────────────────────────────────────────────────────
+
+function SupportTab() {
+  const [filter, setFilter] = useState<"OPEN" | "IN_PROGRESS" | "ALL">("OPEN");
+  const [items, setItems] = useState<AdminSupportTicket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState("");
+  const [threadTicket, setThreadTicket] = useState<AdminSupportTicket | null>(null);
+  const [threadLoading, setThreadLoading] = useState(false);
+  const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
+  const [resolving, setResolving] = useState("");
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [loadError, setLoadError] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError("");
+    try {
+      const r = await adminApi.supportTickets({ status: filter === "ALL" ? undefined : filter, limit: 50 } as any);
+      setItems((r.data.data as any).tickets ?? r.data.data ?? []);
+    } catch (e: unknown) {
+      setLoadError((e as any)?.response?.data?.message || "Failed to load tickets");
+    } finally { setLoading(false); }
+  }, [filter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Auto-refresh every 30 s so agents see new tickets without reloading
+  useEffect(() => {
+    const id = setInterval(load, 30_000);
+    return () => clearInterval(id);
+  }, [load]);
+
+  async function openThread(ticket: AdminSupportTicket) {
+    if (expanded === ticket.id) { setExpanded(""); setThreadTicket(null); return; }
+    setExpanded(ticket.id);
+    setThreadLoading(true);
+    try {
+      const r = await adminApi.getSupportTicket(ticket.id);
+      setThreadTicket(r.data.data as AdminSupportTicket);
+    } catch {} finally { setThreadLoading(false); }
+    setReply("");
+  }
+
+  async function sendReply(ticketId: string) {
+    if (!reply.trim()) return;
+    setSending(true);
+    try {
+      await adminApi.replyToTicket(ticketId, reply.trim());
+      const r = await adminApi.getSupportTicket(ticketId);
+      setThreadTicket(r.data.data as AdminSupportTicket);
+      setItems((p) => p.map((t) => t.id === ticketId ? { ...t, status: "IN_PROGRESS" as const } : t));
+      setReply("");
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed to send reply"); }
+    finally { setSending(false); }
+  }
+
+  async function resolve(ticketId: string) {
+    if (!confirm("Mark this ticket as resolved?")) return;
+    setResolving(ticketId);
+    try {
+      await adminApi.resolveSupportTicket(ticketId);
+      setItems((p) => p.map((t) => t.id === ticketId ? { ...t, status: "RESOLVED" as const } : t));
+      if (threadTicket?.id === ticketId) setThreadTicket((p) => p ? { ...p, status: "RESOLVED" } : p);
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setResolving(""); }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between px-4 pt-3 pb-1">
+        <span className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest">Support tickets</span>
+        <button onClick={load} className="flex items-center gap-1 text-xs text-[#DB0011] font-semibold hover:opacity-70">
+          <RefreshCw size={11} /> Refresh
+        </button>
+      </div>
+      <FilterBar
+        filters={["OPEN", "IN_PROGRESS", "ALL"]}
+        active={filter}
+        onSelect={(f) => setFilter(f as any)}
+        labels={{ OPEN: "Open", IN_PROGRESS: "In Progress", ALL: "All" }}
+      />
+      {loadError && (
+        <div className="mx-4 mt-3 px-4 py-3 rounded-lg bg-red-50 border border-red-100 text-xs text-red-700">{loadError}</div>
+      )}
+      {loading ? <LoadingRows /> : items.length === 0 ? <Empty icon={MessageSquare} label="No support tickets" /> : (
+        <div className="divide-y divide-[#F0F0F0]">
+          {items.map((t) => (
+            <div key={t.id} className="bg-white">
+              {/* Ticket header row */}
+              <button onClick={() => openThread(t)} className="w-full text-left px-4 py-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <Pill status={t.status} />
+                      {t._count && t._count.messages > 0 && (
+                        <span className="text-[10px] text-[#AAAAAA]">{t._count.messages} msg{t._count.messages !== 1 ? "s" : ""}</span>
+                      )}
+                    </div>
+                    <p className="text-sm font-semibold text-[#333] mt-1">{t.subject}</p>
+                    <UserLine user={t.user} />
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-3">
+                    <p className="text-[10px] text-[#AAAAAA]">{formatDate(t.createdAt)}</p>
+                    <ChevronRight size={14} className={`text-[#CCCCCC] mt-1 ml-auto transition-transform ${expanded === t.id ? "rotate-90" : ""}`} />
+                  </div>
+                </div>
+              </button>
+
+              {/* Thread */}
+              {expanded === t.id && (
+                <div className="border-t border-[#F0F0F0] bg-[#FAFAFA] px-4 py-3 space-y-3">
+                  {threadLoading ? (
+                    <p className="text-xs text-[#AAAAAA] py-4 text-center">Loading messages…</p>
+                  ) : threadTicket?.messages && threadTicket.messages.length > 0 ? (
+                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                      {threadTicket.messages.map((m) => (
+                        <div key={m.id} className={`flex ${m.senderRole === "AGENT" ? "justify-end" : "justify-start"}`}>
+                          <div className={`max-w-[80%] rounded-2xl px-3 py-2 ${m.senderRole === "AGENT" ? "bg-[#1a1a2e] text-white" : "bg-white border border-[#E8E8E8] text-[#333]"}`}>
+                            <p className="text-[10px] font-bold mb-0.5 opacity-60">
+                              {m.senderRole === "AGENT" ? "You (agent)" : threadTicket.user.firstName}
+                            </p>
+                            <p className="text-xs leading-relaxed">{m.body}</p>
+                            <p className="text-[9px] opacity-40 mt-1 text-right">
+                              {new Date(m.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[#AAAAAA] text-center py-2">No messages yet</p>
+                  )}
+
+                  {/* Reply box */}
+                  {t.status !== "RESOLVED" && t.status !== "CLOSED" && (
+                    <div className="flex gap-2 pt-1">
+                      <textarea
+                        value={reply}
+                        onChange={(e) => {
+                          setReply(e.target.value);
+                          if (e.target.value.trim() && !typingTimerRef.current) {
+                            adminApi.signalTyping(t.id).catch(() => {});
+                            typingTimerRef.current = setTimeout(() => { typingTimerRef.current = null; }, 2000);
+                          }
+                        }}
+                        onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) sendReply(t.id); }}
+                        placeholder="Type a reply… (Ctrl+Enter to send)"
+                        rows={2}
+                        className="flex-1 text-sm bg-white border border-[#E8E8E8] rounded-xl px-3 py-2 resize-none focus:outline-none focus:border-[#1a1a2e] placeholder-[#AAAAAA]"
+                      />
+                      <div className="flex flex-col gap-1.5">
+                        <button
+                          onClick={() => sendReply(t.id)}
+                          disabled={sending || !reply.trim()}
+                          className="flex items-center justify-center h-9 w-9 rounded-xl bg-[#1a1a2e] text-white disabled:opacity-40 hover:bg-[#2a2a4e] transition-colors"
+                        >
+                          <Send size={14} className={sending ? "animate-pulse" : ""} />
+                        </button>
+                        <button
+                          onClick={() => resolve(t.id)}
+                          disabled={!!resolving}
+                          className="flex items-center justify-center h-9 w-9 rounded-xl bg-green-600 text-white disabled:opacity-40 hover:bg-green-700 transition-colors"
+                          title="Mark resolved"
+                        >
+                          <CheckCircle2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {(t.status === "RESOLVED" || t.status === "CLOSED") && (
+                    <p className="text-[10px] text-[#AAAAAA] text-center py-1">This ticket is {t.status.toLowerCase()}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Deposits ──────────────────────────────────────────────────────────────────
 
 function DepositsTab() {
@@ -1069,18 +1702,12 @@ function DepositsTab() {
                       <Pill status={d.status} />
                     </div>
                     <UserLine user={d.user} />
-                    <p className="text-[10px] text-[#AAAAAA] mt-0.5 font-mono">
-                      {d.account.type} · {d.account.accountNumber}
-                    </p>
+                    <p className="text-[10px] text-[#AAAAAA] mt-0.5 font-mono">{d.account.type} · {d.account.accountNumber}</p>
                     {d.method === "CRYPTO" && d.coinAmount && (
-                      <p className="text-[10px] text-[#AAAAAA] mt-0.5">
-                        {d.coinAmount} {d.coin} on {d.network}
-                      </p>
+                      <p className="text-[10px] text-[#AAAAAA] mt-0.5">{d.coinAmount} {d.coin} on {d.network}</p>
                     )}
                     {d.method === "BANK_TRANSFER" && d.senderName && (
-                      <p className="text-[10px] text-[#AAAAAA] mt-0.5">
-                        From: {d.senderName}{d.senderBank ? ` (${d.senderBank})` : ""}
-                      </p>
+                      <p className="text-[10px] text-[#AAAAAA] mt-0.5">From: {d.senderName}{d.senderBank ? ` (${d.senderBank})` : ""}</p>
                     )}
                   </div>
                   <div className="text-right flex-shrink-0 ml-3">
@@ -1090,7 +1717,6 @@ function DepositsTab() {
                   </div>
                 </div>
               </button>
-
               {expanded === d.id && (
                 <div className="mt-3 space-y-3">
                   <div className="bg-[#F8F8F8] rounded-xl px-4 py-3 text-xs text-[#555] space-y-1.5">
@@ -1170,6 +1796,131 @@ function Empty({ icon: Icon, label }: { icon: React.ElementType; label: string }
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
+
+// ── KYC Review ───────────────────────────────────────────────────────────────
+
+function KycTab() {
+  const [filter, setFilter] = useState<"PENDING" | "VERIFIED" | "REJECTED" | "ALL">("PENDING");
+  const [items, setItems] = useState<AdminKycUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [actionId, setActionId] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await adminApi.getKycSubmissions(filter === "ALL" ? undefined : filter);
+      setItems(r.data.data);
+    } catch {} finally { setLoading(false); }
+  }, [filter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function approve(id: string) {
+    setActionId(id + ":approve");
+    try {
+      await adminApi.approveKyc(id);
+      setItems((p) => p.map((u) => u.id === id ? { ...u, kycStatus: "VERIFIED" } : u));
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
+  async function reject(id: string) {
+    const reason = prompt("Reason for KYC rejection:");
+    if (!reason?.trim()) return;
+    setActionId(id + ":reject");
+    try {
+      await adminApi.rejectKyc(id, reason.trim());
+      setItems((p) => p.map((u) => u.id === id ? { ...u, kycStatus: "REJECTED" } : u));
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
+  function DocImage({ src, alt }: { src: string; alt: string }) {
+    return src.match(/\.(jpg|jpeg|png|webp)$/i) || src.includes("cloudinary") ? (
+      <img
+        src={src}
+        alt={alt}
+        className="max-w-full max-h-72 object-contain rounded-lg border border-[#E3E3E3] bg-white"
+      />
+    ) : (
+      <a href={src} target="_blank" rel="noreferrer" className="text-xs text-[#DB0011] underline">
+        Open {alt} (PDF)
+      </a>
+    );
+  }
+
+  return (
+    <div>
+      <FilterBar
+        filters={["PENDING", "VERIFIED", "REJECTED", "ALL"]}
+        active={filter}
+        onSelect={(f) => setFilter(f as any)}
+        labels={{ PENDING: "Pending Review", VERIFIED: "Approved", REJECTED: "Rejected", ALL: "All" }}
+      />
+      {loading ? <LoadingRows /> : items.length === 0 ? (
+        <Empty icon={ShieldCheck} label={filter === "PENDING" ? "No pending KYC submissions" : "No submissions found"} />
+      ) : (
+        <div className="divide-y divide-[#F0F0F0]">
+          {items.map((u) => {
+            const isOpen = expandedId === u.id;
+            return (
+              <div key={u.id} className="bg-white px-4 py-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                      <p className="text-sm font-semibold text-[#333]">{u.firstName} {u.lastName}</p>
+                      <Pill status={u.kycStatus} />
+                    </div>
+                    <p className="text-xs text-[#767676] truncate">{u.email}</p>
+                    {u.phone && <p className="text-[10px] text-[#AAAAAA]">{u.phone}</p>}
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-3">
+                    <p className="text-[10px] text-[#AAAAAA]">{formatDate(u.createdAt)}</p>
+                    <button
+                      onClick={() => setExpandedId(isOpen ? null : u.id)}
+                      className="text-[10px] font-semibold text-[#DB0011] mt-1"
+                    >
+                      {isOpen ? "Hide documents ▲" : "View documents ▼"}
+                    </button>
+                  </div>
+                </div>
+
+                {isOpen && (
+                  <div className="bg-[#F8F8F8] rounded-xl p-3 mb-3 space-y-4">
+                    {u.kycDocuments ? (
+                      <>
+                        <div>
+                          <p className="text-[9px] text-[#AAAAAA] uppercase font-bold tracking-widest mb-2">ID: Front</p>
+                          <DocImage src={u.kycDocuments.idFront} alt="ID Front" />
+                        </div>
+                        <div>
+                          <p className="text-[9px] text-[#AAAAAA] uppercase font-bold tracking-widest mb-2">ID: Back</p>
+                          <DocImage src={u.kycDocuments.idBack} alt="ID Back" />
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-xs text-[#AAAAAA]">No documents on file</p>
+                    )}
+                  </div>
+                )}
+
+                {u.kycStatus === "PENDING" && (
+                  <div className="flex gap-2">
+                    <ActButton label="Approve KYC" variant="approve" onClick={() => approve(u.id)} loading={actionId === u.id + ":approve"} />
+                    <ActButton label="Reject KYC" variant="reject" onClick={() => reject(u.id)} loading={actionId === u.id + ":reject"} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function AuditLogsTab() {
   const [logs, setLogs]         = useState<AuditLog[]>([]);
@@ -1275,25 +2026,686 @@ function AuditLogsTab() {
   );
 }
 
-const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: "transfers",    label: "Transfers",    icon: ArrowLeftRight  },
-  { id: "deposits",     label: "Deposits",     icon: ArrowDownToLine },
-  { id: "loans",        label: "Loans",        icon: Landmark        },
-  { id: "mortgages",    label: "Mortgages",    icon: Home            },
-  { id: "disputes",     label: "Disputes",     icon: AlertCircle     },
-  { id: "insurance",    label: "Insurance",    icon: ShieldAlert     },
-  { id: "crypto",       label: "Crypto",       icon: Bitcoin         },
-  { id: "cards",        label: "Cards",        icon: CreditCard      },
-  { id: "transactions", label: "Transactions", icon: Receipt         },
-  { id: "rates",        label: "Rates",        icon: Globe           },
-  { id: "investments",  label: "Investments",  icon: TrendingUp      },
-  { id: "goals",        label: "Goals",        icon: Target          },
-  { id: "users",        label: "Users",        icon: Users           },
-  { id: "audit",        label: "Audit Log",    icon: ScrollText      },
+// ── Agents ────────────────────────────────────────────────────────────────────
+
+const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/api\/v\d+.*$/, "");
+function resolveAvatarUrl(url: string) {
+  if (!url || url.startsWith("blob:") || url.startsWith("http")) return url;
+  return `${API_ORIGIN}${url}`;
+}
+
+const BLANK_CREATE = { firstName: "", lastName: "", email: "", password: "", avatarUrl: "" };
+const BLANK_EDIT   = { firstName: "", lastName: "", password: "" };
+
+function AgentsTab() {
+  const [agents, setAgents] = useState<AdminAgent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState(BLANK_CREATE);
+  const [saving, setSaving] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState(BLANK_EDIT);
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [editPreview, setEditPreview] = useState<string>("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { const r = await adminApi.getAgents(); setAgents(r.data.data); }
+    catch {} finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const { avatarUrl, ...rest } = createForm;
+      await adminApi.createAgent(avatarUrl ? { ...rest, avatarUrl } : rest);
+      setCreateForm(BLANK_CREATE);
+      setShowCreate(false);
+      load();
+    } catch (err: unknown) { alert((err as any)?.response?.data?.message || "Failed to create agent"); }
+    finally { setSaving(false); }
+  }
+
+  function startEdit(a: AdminAgent) {
+    setEditId(a.id);
+    setEditForm({ firstName: a.firstName, lastName: a.lastName, password: "" });
+    setEditFile(null);
+    setEditPreview(resolveAvatarUrl(a.profile?.avatarUrl ?? ""));
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setEditFile(file);
+    setEditPreview(URL.createObjectURL(file));
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editId) return;
+    setEditSaving(true);
+    try {
+      const payload: Record<string, string> = {};
+      if (editForm.firstName) payload.firstName = editForm.firstName;
+      if (editForm.lastName)  payload.lastName  = editForm.lastName;
+      if (editForm.password)  payload.password  = editForm.password;
+
+      await Promise.all([
+        Object.keys(payload).length ? adminApi.updateAgent(editId, payload) : Promise.resolve(null),
+        editFile ? adminApi.uploadAgentAvatar(editId, editFile) : Promise.resolve(null),
+      ]);
+
+      setEditId(null);
+      load();
+    } catch (err: unknown) { alert((err as any)?.response?.data?.message || "Failed to update agent"); }
+    finally { setEditSaving(false); }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Remove this support agent?")) return;
+    setDeleteId(id);
+    try { await adminApi.deleteAgent(id); setAgents((p) => p.filter((a) => a.id !== id)); }
+    catch (err: unknown) { alert((err as any)?.response?.data?.message || "Failed"); }
+    finally { setDeleteId(""); }
+  }
+
+  const inputCls = "w-full border border-[#E0E0E0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#DB0011]";
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-bold text-[#333]">Support Agents</h2>
+        <button onClick={() => setShowCreate((p) => !p)}
+          className="flex items-center gap-1.5 bg-[#DB0011] text-white text-xs font-bold px-3 py-2 rounded-lg">
+          <Plus size={13} /> Add Agent
+        </button>
+      </div>
+
+      {/* Create form */}
+      {showCreate && (
+        <form onSubmit={handleCreate} className="bg-white rounded-xl border border-[#E8E8E8] p-4 space-y-3">
+          <p className="text-xs font-bold text-[#333] mb-1">New Support Agent</p>
+          <div className="grid grid-cols-2 gap-2">
+            <input required value={createForm.firstName} onChange={(e) => setCreateForm((p) => ({ ...p, firstName: e.target.value }))}
+              placeholder="First name" className={inputCls} />
+            <input required value={createForm.lastName} onChange={(e) => setCreateForm((p) => ({ ...p, lastName: e.target.value }))}
+              placeholder="Last name" className={inputCls} />
+          </div>
+          <input required type="email" value={createForm.email} onChange={(e) => setCreateForm((p) => ({ ...p, email: e.target.value }))}
+            placeholder="Email address" className={inputCls} />
+          <input required type="password" value={createForm.password} onChange={(e) => setCreateForm((p) => ({ ...p, password: e.target.value }))}
+            placeholder="Password (min 8 chars)" minLength={8} className={inputCls} />
+          <input value={createForm.avatarUrl} onChange={(e) => setCreateForm((p) => ({ ...p, avatarUrl: e.target.value }))}
+            placeholder="Profile picture URL (optional)" className={inputCls} />
+          <div className="flex gap-2 pt-1">
+            <button type="submit" disabled={saving}
+              className="flex-1 bg-[#DB0011] text-white py-2 rounded-lg text-xs font-bold disabled:opacity-50">
+              {saving ? "Creating…" : "Create Agent"}
+            </button>
+            <button type="button" onClick={() => setShowCreate(false)}
+              className="flex-1 border border-[#E0E0E0] py-2 rounded-lg text-xs font-semibold text-[#767676]">
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {loading ? <LoadingRows /> : agents.length === 0 ? (
+        <Empty icon={UserCog} label="No support agents yet" />
+      ) : (
+        <div className="space-y-2">
+          {agents.map((a) => (
+            <div key={a.id} className="bg-white rounded-xl border border-[#E8E8E8] overflow-hidden">
+              {/* Agent row */}
+              <div className="flex items-center gap-3 px-4 py-3">
+                {a.profile?.avatarUrl ? (
+                  <img src={resolveAvatarUrl(a.profile.avatarUrl)} alt="" className="h-10 w-10 rounded-full object-cover flex-shrink-0 border border-[#E8E8E8]" />
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-[#DB0011] flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-sm font-bold">{a.firstName[0]}{a.lastName[0]}</span>
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-[#333] truncate">{a.firstName} {a.lastName}</p>
+                  <p className="text-xs text-[#767676] truncate">{a.email}</p>
+                </div>
+                <Pill status={a.status} />
+                <button onClick={() => editId === a.id ? setEditId(null) : startEdit(a)}
+                  className="ml-1 p-1.5 text-[#555] hover:bg-[#F5F5F5] rounded-lg text-xs font-semibold">
+                  {editId === a.id ? "✕" : "Edit"}
+                </button>
+                <button onClick={() => handleDelete(a.id)} disabled={deleteId === a.id}
+                  className="p-1.5 text-[#DB0011] hover:bg-red-50 rounded-lg disabled:opacity-40">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+
+              {/* Inline edit form */}
+              {editId === a.id && (
+                <form onSubmit={handleEdit} className="border-t border-[#F0F0F0] bg-[#FAFAFA] px-4 py-4 space-y-3">
+                  <p className="text-xs font-bold text-[#555]">Edit agent details</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input value={editForm.firstName} onChange={(e) => setEditForm((p) => ({ ...p, firstName: e.target.value }))}
+                      placeholder="First name" className={inputCls} />
+                    <input value={editForm.lastName} onChange={(e) => setEditForm((p) => ({ ...p, lastName: e.target.value }))}
+                      placeholder="Last name" className={inputCls} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-[#AAAAAA] mb-1.5">Profile picture</p>
+                    <div className="flex items-center gap-3">
+                      {editPreview ? (
+                        <img src={editPreview} alt="Preview" className="h-14 w-14 rounded-full object-cover border border-[#E8E8E8] flex-shrink-0" />
+                      ) : (
+                        <div className="h-14 w-14 rounded-full bg-[#F0F0F0] flex items-center justify-center flex-shrink-0">
+                          <User size={22} className="text-[#CCCCCC]" />
+                        </div>
+                      )}
+                      <label className="flex-1 cursor-pointer">
+                        <div className="border border-dashed border-[#DB0011] rounded-lg px-3 py-2.5 text-center hover:bg-red-50 transition-colors">
+                          <p className="text-xs font-semibold text-[#DB0011]">Choose photo</p>
+                          <p className="text-[10px] text-[#AAAAAA] mt-0.5">JPG, PNG, WebP · max 5 MB</p>
+                        </div>
+                        <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                      </label>
+                    </div>
+                  </div>
+                  <input type="password" value={editForm.password} onChange={(e) => setEditForm((p) => ({ ...p, password: e.target.value }))}
+                    placeholder="New password (leave blank to keep)" minLength={8} className={inputCls} />
+                  <div className="flex gap-2 pt-1">
+                    <button type="submit" disabled={editSaving}
+                      className="flex-1 bg-[#DB0011] text-white py-2 rounded-lg text-xs font-bold disabled:opacity-50">
+                      {editSaving ? "Saving…" : "Save changes"}
+                    </button>
+                    <button type="button" onClick={() => setEditId(null)}
+                      className="flex-1 border border-[#E0E0E0] py-2 rounded-lg text-xs font-semibold text-[#767676]">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Notifications Tab ─────────────────────────────────────────────────────────
+
+const NOTIF_TYPE_META: Record<AdminNotification["type"], { label: string; color: string }> = {
+  NEW_REGISTRATION:      { label: "Registration",    color: "bg-blue-100 text-blue-700"     },
+  KYC_SUBMITTED:         { label: "KYC",             color: "bg-amber-100 text-amber-700"   },
+  LOAN_APPLICATION:      { label: "Loan",            color: "bg-purple-100 text-purple-700" },
+  DISPUTE_FILED:         { label: "Dispute",         color: "bg-red-100 text-red-700"       },
+  INSURANCE_QUOTE:       { label: "Insurance",       color: "bg-teal-100 text-teal-700"     },
+  CRYPTO_ORDER:          { label: "Crypto",          color: "bg-orange-100 text-orange-700" },
+  LARGE_TRANSFER:        { label: "Large Transfer",  color: "bg-rose-100 text-rose-700"     },
+  INTERNATIONAL_TRANSFER:{ label: "Intl Transfer",   color: "bg-indigo-100 text-indigo-700" },
+  ACCOUNT_LOCKED:        { label: "Locked",          color: "bg-red-100 text-red-800"       },
+  PASSWORD_CHANGED:      { label: "Password",        color: "bg-yellow-100 text-yellow-700" },
+  SITE_VISITOR:          { label: "Visitor",         color: "bg-sky-100 text-sky-700"       },
+  NEW_SUPPORT_TICKET:    { label: "Support Ticket",  color: "bg-violet-100 text-violet-700" },
+  SUPPORT_MESSAGE:       { label: "Support Reply",   color: "bg-fuchsia-100 text-fuchsia-700"},
+  LARGE_DEPOSIT:         { label: "Large Deposit",   color: "bg-green-100 text-green-700"   },
+};
+
+function NotificationsTab() {
+  const [items, setItems]             = useState<AdminNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [page, setPage]               = useState(1);
+  const [totalPages, setTotalPages]   = useState(1);
+  const [filterUnread, setFilterUnread] = useState(false);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState("");
+
+  const load = useCallback(async (p: number, unreadOnly: boolean) => {
+    setLoading(true);
+    setError("");
+    try {
+      const r = await adminApi.getNotifications({ page: p, limit: 20, unread: unreadOnly || undefined });
+      setItems(r.data.data.items);
+      setUnreadCount(r.data.data.unreadCount);
+      setTotalPages(r.data.data.pagination.totalPages);
+    } catch { setError("Failed to load notifications"); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(page, filterUnread); }, [load, page, filterUnread]);
+
+  async function markRead(id: string) {
+    await adminApi.markNotificationRead(id).catch(() => {});
+    setItems((p) => p.map((n) => n.id === id ? { ...n, isRead: true } : n));
+    setUnreadCount((c) => Math.max(0, c - 1));
+  }
+
+  async function markUnread(id: string) {
+    await adminApi.markNotificationUnread(id).catch(() => {});
+    setItems((p) => p.map((n) => n.id === id ? { ...n, isRead: false } : n));
+    setUnreadCount((c) => c + 1);
+  }
+
+  async function remove(id: string) {
+    await adminApi.deleteNotification(id).catch(() => {});
+    setItems((p) => p.filter((n) => n.id !== id));
+  }
+
+  async function markAllRead() {
+    await adminApi.markAllNotificationsRead().catch(() => {});
+    setItems((p) => p.map((n) => ({ ...n, isRead: true })));
+    setUnreadCount(0);
+  }
+
+  async function deleteAll() {
+    if (!confirm("Delete all notifications? This cannot be undone.")) return;
+    await adminApi.deleteAllNotifications().catch(() => {});
+    setItems([]);
+    setUnreadCount(0);
+  }
+
+  return (
+    <div className="p-4 max-w-2xl mx-auto">
+      {/* Header bar */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-[#333]">Notifications</p>
+          {unreadCount > 0 && (
+            <span className="bg-[#DB0011] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{unreadCount}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setFilterUnread((v) => !v); setPage(1); }}
+            className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border transition-colors ${filterUnread ? "bg-[#DB0011] text-white border-[#DB0011]" : "text-[#AAAAAA] border-[#E3E3E3] hover:border-[#DB0011] hover:text-[#DB0011]"}`}
+          >
+            Unread only
+          </button>
+          {unreadCount > 0 && (
+            <button onClick={markAllRead} className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border border-[#E3E3E3] text-[#AAAAAA] hover:border-[#333] hover:text-[#333] transition-colors">
+              Mark all read
+            </button>
+          )}
+          <button onClick={deleteAll} className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border border-[#E3E3E3] text-[#AAAAAA] hover:border-[#DB0011] hover:text-[#DB0011] transition-colors">
+            Clear all
+          </button>
+          <button onClick={() => load(page, filterUnread)} className="text-[#AAAAAA] hover:text-[#333]"><RefreshCw size={13} /></button>
+        </div>
+      </div>
+
+      {loading && <p className="text-sm text-[#AAAAAA] text-center py-8">Loading…</p>}
+      {error   && <p className="text-sm text-[#DB0011] text-center py-4">{error}</p>}
+
+      {!loading && items.length === 0 && (
+        <div className="text-center py-12">
+          <Bell size={28} className="text-[#E3E3E3] mx-auto mb-2" />
+          <p className="text-sm text-[#AAAAAA]">{filterUnread ? "No unread notifications" : "No notifications yet"}</p>
+        </div>
+      )}
+
+      {!loading && items.length > 0 && (
+        <div className="bg-white border border-[#E8E8E8] rounded-xl overflow-hidden divide-y divide-[#F0F0F0]">
+          {items.map((n) => {
+            const meta = NOTIF_TYPE_META[n.type];
+            return (
+              <div key={n.id} className={`px-4 py-3 flex gap-3 items-start ${n.isRead ? "" : "bg-red-50/40"}`}>
+                {/* Unread dot */}
+                <div className="pt-1.5 flex-shrink-0">
+                  {!n.isRead
+                    ? <span className="block w-2 h-2 rounded-full bg-[#DB0011]" />
+                    : <span className="block w-2 h-2 rounded-full bg-transparent" />}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${meta.color}`}>{meta.label}</span>
+                    <span className="text-[10px] text-[#AAAAAA]">{formatDate(n.createdAt)}</span>
+                  </div>
+                  <p className="text-sm font-semibold text-[#333] leading-snug">{n.title}</p>
+                  <p className="text-xs text-[#767676] mt-0.5 leading-relaxed">{n.message}</p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 flex-shrink-0 pt-0.5">
+                  {n.isRead ? (
+                    <button onClick={() => markUnread(n.id)} title="Mark unread" className="text-[#AAAAAA] hover:text-[#333] p-1">
+                      <BellOff size={13} />
+                    </button>
+                  ) : (
+                    <button onClick={() => markRead(n.id)} title="Mark read" className="text-[#AAAAAA] hover:text-[#333] p-1">
+                      <MailOpen size={13} />
+                    </button>
+                  )}
+                  <button onClick={() => remove(n.id)} title="Delete" className="text-[#AAAAAA] hover:text-[#DB0011] p-1">
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 mt-4">
+          <button disabled={page === 1} onClick={() => setPage((p) => p - 1)}
+            className="text-xs font-bold text-[#AAAAAA] disabled:opacity-30 hover:text-[#333]">← Prev</button>
+          <span className="text-xs text-[#AAAAAA]">{page} / {totalPages}</span>
+          <button disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}
+            className="text-xs font-bold text-[#AAAAAA] disabled:opacity-30 hover:text-[#333]">Next →</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Mailer Tab ────────────────────────────────────────────────────────────────
+
+type MailRecipientType = "ALL" | "SINGLE" | "SELECTED" | "KYC_PENDING" | "KYC_VERIFIED" | "KYC_REJECTED" | "TIER_STANDARD" | "TIER_PREMIUM" | "TIER_ELITE" | "TIER_PRIVATE" | "TIER_BUSINESS" | "MARKETING_CONSENT" | "SUSPENDED";
+
+const RECIPIENT_GROUPS: { label: string; options: { value: MailRecipientType; label: string }[] }[] = [
+  {
+    label: "Audience",
+    options: [
+      { value: "ALL",      label: "All active customers" },
+      { value: "SINGLE",   label: "Single customer" },
+      { value: "SELECTED", label: "Selected customers" },
+    ],
+  },
+  {
+    label: "KYC Status",
+    options: [
+      { value: "KYC_PENDING",  label: "KYC pending" },
+      { value: "KYC_VERIFIED", label: "KYC verified" },
+      { value: "KYC_REJECTED", label: "KYC rejected" },
+    ],
+  },
+  {
+    label: "Account Tier",
+    options: [
+      { value: "TIER_STANDARD", label: "Standard tier" },
+      { value: "TIER_PREMIUM",  label: "Premium tier" },
+      { value: "TIER_ELITE",    label: "Elite tier" },
+      { value: "TIER_PRIVATE",  label: "Private tier" },
+      { value: "TIER_BUSINESS", label: "Business tier" },
+    ],
+  },
+  {
+    label: "Other",
+    options: [
+      { value: "MARKETING_CONSENT", label: "Marketing consent opted-in" },
+      { value: "SUSPENDED",         label: "Suspended accounts" },
+    ],
+  },
+];
+
+const RECIPIENT_LABELS: Record<MailRecipientType, string> = {
+  ALL: "all active customers",
+  SINGLE: "1 customer",
+  SELECTED: "{n} selected customer(s)",
+  KYC_PENDING: "all KYC-pending customers",
+  KYC_VERIFIED: "all KYC-verified customers",
+  KYC_REJECTED: "all KYC-rejected customers",
+  TIER_STANDARD: "all Standard tier customers",
+  TIER_PREMIUM: "all Premium tier customers",
+  TIER_ELITE: "all Elite tier customers",
+  TIER_PRIVATE: "all Private tier customers",
+  TIER_BUSINESS: "all Business tier customers",
+  MARKETING_CONSENT: "all marketing-consent customers",
+  SUSPENDED: "all suspended accounts",
+};
+
+function MailerTab() {
+  const [recipientType, setRecipientType] = useState<MailRecipientType>("ALL");
+  const [userSearch, setUserSearch] = useState("");
+  const [userResults, setUserResults] = useState<AdminUser[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<AdminUser[]>([]);
+  const [singleUser, setSingleUser] = useState<AdminUser | null>(null);
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ total: number; sent: number; failed: number } | null>(null);
+  const [error, setError] = useState("");
+
+  function handleTypeChange(t: MailRecipientType) {
+    setRecipientType(t);
+    setSelectedUsers([]);
+    setSingleUser(null);
+    setUserResults([]);
+    setUserSearch("");
+    setError("");
+    setResult(null);
+  }
+
+  async function searchUsers(q: string) {
+    if (!q.trim()) { setUserResults([]); return; }
+    try {
+      const r = await adminApi.users({ search: q, limit: 10 });
+      const exclude = recipientType === "SINGLE"
+        ? (singleUser ? [singleUser.id] : [])
+        : selectedUsers.map((s) => s.id);
+      setUserResults(r.data.data.users.filter((u) => !exclude.includes(u.id)));
+    } catch {}
+  }
+
+  async function handleSend() {
+    if (!subject.trim() || !body.trim()) { setError("Subject and message body are required."); return; }
+    if (recipientType === "SINGLE" && !singleUser) { setError("Select a recipient."); return; }
+    if (recipientType === "SELECTED" && selectedUsers.length === 0) { setError("Select at least one recipient."); return; }
+
+    const label = RECIPIENT_LABELS[recipientType].replace("{n}", String(selectedUsers.length));
+    if (!confirm(`This will send an email to ${label}. Continue?`)) return;
+
+    setSending(true);
+    setError("");
+    setResult(null);
+    try {
+      const r = await adminApi.sendBulkEmail({
+        subject,
+        body,
+        recipientType,
+        userId:  recipientType === "SINGLE"   ? singleUser!.id                      : undefined,
+        userIds: recipientType === "SELECTED" ? selectedUsers.map((u) => u.id)      : undefined,
+      });
+      setResult(r.data.data);
+      setSubject("");
+      setBody("");
+      setSelectedUsers([]);
+      setSingleUser(null);
+    } catch (e: unknown) {
+      setError((e as any)?.response?.data?.error?.message || "Failed to send");
+    } finally { setSending(false); }
+  }
+
+  const showUserSearch = recipientType === "SINGLE" || recipientType === "SELECTED";
+
+  return (
+    <div className="p-4 max-w-2xl mx-auto">
+      <div className="bg-white border border-[#E8E8E8] rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-[#E8E8E8]">
+          <p className="text-sm font-semibold text-[#333]">Send Email to Customers</p>
+          <p className="text-xs text-[#AAAAAA] mt-0.5">Compose and send a branded Lumina Bank email to a targeted group of customers.</p>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+          {/* Recipient type */}
+          <div>
+            <p className="text-[10px] text-[#AAAAAA] uppercase font-bold mb-2">Recipients</p>
+            <select
+              value={recipientType}
+              onChange={(e) => handleTypeChange(e.target.value as MailRecipientType)}
+              className="w-full border border-[#E3E3E3] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#DB0011] bg-white text-[#333]"
+            >
+              {RECIPIENT_GROUPS.map((g) => (
+                <optgroup key={g.label} label={g.label}>
+                  {g.options.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+
+          {/* User search — single or multi */}
+          {showUserSearch && (
+            <div>
+              <p className="text-[10px] text-[#AAAAAA] uppercase font-bold mb-2">
+                {recipientType === "SINGLE" ? "Customer" : "Add Customers"}
+              </p>
+
+              {/* Single — show selected pill or search */}
+              {recipientType === "SINGLE" && singleUser ? (
+                <div className="flex items-center justify-between border border-[#E3E3E3] rounded-lg px-3 py-2">
+                  <div>
+                    <span className="text-sm font-medium text-[#333]">{singleUser.firstName} {singleUser.lastName}</span>
+                    <span className="text-xs text-[#AAAAAA] ml-2">{singleUser.email}</span>
+                  </div>
+                  <button onClick={() => { setSingleUser(null); setUserSearch(""); }} className="text-[#AAAAAA] hover:text-[#DB0011] text-sm">×</button>
+                </div>
+              ) : (
+                <>
+                  <div className="relative mb-2">
+                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#AAAAAA]" />
+                    <input
+                      type="text"
+                      placeholder="Search by name or email..."
+                      value={userSearch}
+                      onChange={(e) => { setUserSearch(e.target.value); searchUsers(e.target.value); }}
+                      className="w-full pl-8 pr-3 py-2 border border-[#E3E3E3] rounded-lg text-sm focus:outline-none focus:border-[#DB0011]"
+                    />
+                  </div>
+                  {userResults.length > 0 && (
+                    <div className="border border-[#E3E3E3] rounded-lg divide-y divide-[#F0F0F0] mb-2 max-h-48 overflow-y-auto">
+                      {userResults.map((u) => (
+                        <button
+                          key={u.id}
+                          onClick={() => {
+                            if (recipientType === "SINGLE") {
+                              setSingleUser(u); setUserResults([]); setUserSearch("");
+                            } else {
+                              setSelectedUsers((p) => [...p, u]);
+                              setUserResults((p) => p.filter((r) => r.id !== u.id));
+                              setUserSearch("");
+                            }
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-[#F8F8F8] text-sm"
+                        >
+                          <span className="font-medium text-[#333]">{u.firstName} {u.lastName}</span>
+                          <span className="text-[#AAAAAA] ml-2 text-xs">{u.email}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Multi selected chips */}
+              {recipientType === "SELECTED" && selectedUsers.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {selectedUsers.map((u) => (
+                    <span key={u.id} className="inline-flex items-center gap-1 bg-red-50 border border-red-200 text-[#DB0011] text-xs px-2 py-0.5 rounded-full">
+                      {u.firstName} {u.lastName}
+                      <button onClick={() => setSelectedUsers((p) => p.filter((s) => s.id !== u.id))} className="hover:text-[#8B000A]">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Subject */}
+          <div>
+            <p className="text-[10px] text-[#AAAAAA] uppercase font-bold mb-2">Subject</p>
+            <input
+              type="text"
+              placeholder="Email subject..."
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="w-full border border-[#E3E3E3] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#DB0011]"
+            />
+          </div>
+
+          {/* Body */}
+          <div>
+            <p className="text-[10px] text-[#AAAAAA] uppercase font-bold mb-2">Message</p>
+            <textarea
+              rows={8}
+              placeholder="Write your message here. Use blank lines to separate paragraphs."
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              className="w-full border border-[#E3E3E3] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#DB0011] resize-y font-sans"
+            />
+            <p className="text-[10px] text-[#AAAAAA] mt-1">Plain text only. Wrapped in the Lumina Bank branded email template with personalised greeting.</p>
+          </div>
+
+          {error && <p className="text-sm text-[#DB0011]">{error}</p>}
+
+          {result && (
+            <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+              <p className="text-sm font-semibold text-green-800">Email sent successfully</p>
+              <p className="text-xs text-green-700 mt-0.5">{result.sent} sent · {result.failed} failed · {result.total} total recipients</p>
+            </div>
+          )}
+
+          <button
+            onClick={handleSend}
+            disabled={sending}
+            className="flex items-center gap-2 bg-[#DB0011] text-white text-sm font-bold px-5 py-2.5 rounded-lg hover:bg-[#b8000e] disabled:opacity-50 transition-colors"
+          >
+            <Send size={14} />
+            {sending ? "Sending…" : "Send Email"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const ALL_TABS: { id: Tab; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
+  { id: "notifications", label: "Notifications", icon: Bell,           adminOnly: true  },
+  { id: "transfers",    label: "Transfers",    icon: ArrowLeftRight,  adminOnly: true  },
+  { id: "deposits",     label: "Deposits",     icon: ArrowDownToLine, adminOnly: true  },
+  { id: "loans",        label: "Loans",        icon: Landmark,        adminOnly: true  },
+  { id: "mortgages",    label: "Mortgages",    icon: Home,           adminOnly: true  },
+  { id: "disputes",     label: "Disputes",     icon: AlertCircle,    adminOnly: true  },
+  { id: "support",      label: "Support",      icon: MessageSquare                   },
+  { id: "agents",       label: "Agents",       icon: UserCog,        adminOnly: true  },
+  { id: "insurance",    label: "Insurance",    icon: ShieldAlert,    adminOnly: true  },
+  { id: "crypto",       label: "Crypto",       icon: Bitcoin,        adminOnly: true  },
+  { id: "cards",        label: "Cards",        icon: CreditCard,     adminOnly: true  },
+  { id: "transactions", label: "Transactions", icon: Receipt,        adminOnly: true  },
+  { id: "rates",        label: "Rates",        icon: Globe,          adminOnly: true  },
+  { id: "investments",  label: "Investments",  icon: TrendingUp,     adminOnly: true  },
+  { id: "goals",        label: "Goals",        icon: Target,         adminOnly: true  },
+  { id: "users",        label: "Users",        icon: Users,          adminOnly: true  },
+  { id: "kyc",          label: "KYC Review",   icon: ShieldCheck,    adminOnly: true  },
+  { id: "audit",        label: "Audit Log",    icon: ScrollText,     adminOnly: true  },
+  { id: "mailer",       label: "Mailer",       icon: Mail,           adminOnly: true  },
 ];
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("transfers");
+  const currentUser = getUser();
+  const isAgent = currentUser?.role === "AGENT";
+  const TABS = ALL_TABS.filter((t) => !t.adminOnly || !isAgent);
+  const [activeTab, setActiveTab] = useState<Tab>(isAgent ? "support" : "notifications");
+  const [notifUnread, setNotifUnread] = useState(0);
+
+  useEffect(() => {
+    if (isAgent) return;
+    adminApi.getNotificationUnreadCount()
+      .then((r) => setNotifUnread(r.data.data.unreadCount))
+      .catch(() => {});
+  }, [isAgent]);
+
+  function handleTabClick(id: Tab) {
+    setActiveTab(id);
+    if (id === "notifications") setNotifUnread(0);
+  }
 
   return (
     <div className="max-w-lg mx-auto lg:max-w-none">
@@ -1301,18 +2713,25 @@ export default function AdminPage() {
       <div className="bg-gradient-to-r from-[#1a1a2e] to-[#16213e] text-white">
         <div className="px-4 py-4 flex items-center gap-2">
           <ShieldCheck size={18} className="text-[#DB0011]" />
-          <h1 className="text-base font-semibold">Admin Console</h1>
+          <h1 className="text-base font-semibold">{isAgent ? "Support Console" : "Admin Console"}</h1>
           <span className="ml-auto text-[9px] uppercase tracking-widest text-white/30 font-bold">Internal</span>
         </div>
-        <StatsBar />
+        {!isAgent && <StatsBar />}
       </div>
 
       {/* Scrollable tab nav */}
       <div className="bg-white border-b border-[#E8E8E8] flex overflow-x-auto scrollbar-hide">
         {TABS.map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setActiveTab(id)}
+          <button key={id} onClick={() => handleTabClick(id)}
             className={`flex-shrink-0 flex flex-col items-center gap-0.5 px-4 py-2.5 border-b-2 transition-colors ${activeTab === id ? "border-[#DB0011] text-[#DB0011]" : "border-transparent text-[#AAAAAA]"}`}>
-            <Icon size={15} />
+            <span className="relative">
+              <Icon size={15} />
+              {id === "notifications" && notifUnread > 0 && (
+                <span className="absolute -top-1 -right-1.5 bg-[#DB0011] text-white text-[8px] font-bold leading-none px-1 py-px rounded-full min-w-[14px] text-center">
+                  {notifUnread > 99 ? "99+" : notifUnread}
+                </span>
+              )}
+            </span>
             <span className="text-[9px] font-bold uppercase tracking-wide whitespace-nowrap">{label}</span>
           </button>
         ))}
@@ -1325,6 +2744,8 @@ export default function AdminPage() {
         {activeTab === "loans"        && <LoansTab />}
         {activeTab === "mortgages"    && <LoansTab loanType="MORTGAGE" />}
         {activeTab === "disputes"     && <DisputesTab />}
+        {activeTab === "support"      && <SupportTab />}
+        {activeTab === "agents"       && <AgentsTab />}
         {activeTab === "insurance"    && <InsuranceTab />}
         {activeTab === "crypto"       && <CryptoTab />}
         {activeTab === "cards"        && <CardsTab />}
@@ -1333,7 +2754,10 @@ export default function AdminPage() {
         {activeTab === "investments"  && <InvestmentsTab />}
         {activeTab === "goals"        && <GoalsTab />}
         {activeTab === "users"        && <UsersTab />}
+        {activeTab === "kyc"          && <KycTab />}
         {activeTab === "audit"        && <AuditLogsTab />}
+        {activeTab === "mailer"        && <MailerTab />}
+        {activeTab === "notifications" && <NotificationsTab />}
       </div>
     </div>
   );

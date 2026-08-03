@@ -2,7 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { getToken } from "@/lib/auth";
+import { getToken, getRefreshToken } from "@/lib/auth";
 import { TopBar } from "@/components/layout/TopBar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -14,7 +14,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const token = getToken();
-    if (!token) {
+    const refresh = getRefreshToken();
+    if (!token && !refresh) {
       router.replace("/");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -25,7 +26,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       {/* Desktop sidebar */}
       <Sidebar />
 
-      <div className="flex flex-col min-h-screen bg-[#F8F8F8] lg:ml-60">
+      <div className="flex flex-col min-h-screen bg-[#F8F8F8] lg:ml-64">
         {/* TopBar — mobile only (lg: hidden) */}
         <TopBar />
         <KycBanner />
