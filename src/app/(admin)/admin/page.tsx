@@ -2253,6 +2253,7 @@ const NOTIF_TYPE_META: Record<AdminNotification["type"], { label: string; color:
   NEW_SUPPORT_TICKET:    { label: "Support Ticket",  color: "bg-violet-100 text-violet-700" },
   SUPPORT_MESSAGE:       { label: "Support Reply",   color: "bg-fuchsia-100 text-fuchsia-700"},
   LARGE_DEPOSIT:         { label: "Large Deposit",   color: "bg-green-100 text-green-700"   },
+  DEPOSIT_REQUEST:       { label: "Deposit",         color: "bg-emerald-100 text-emerald-700"},
 };
 
 function NotificationsTab() {
@@ -2350,7 +2351,7 @@ function NotificationsTab() {
       {!loading && items.length > 0 && (
         <div className="bg-white border border-[#E8E8E8] rounded-xl overflow-hidden divide-y divide-[#F0F0F0]">
           {items.map((n) => {
-            const meta = NOTIF_TYPE_META[n.type];
+            const meta = NOTIF_TYPE_META[n.type] ?? { label: n.type, color: "bg-gray-100 text-gray-700" };
             return (
               <div key={n.id} className={`px-4 py-3 flex gap-3 items-start ${n.isRead ? "" : "bg-red-50/40"}`}>
                 {/* Unread dot */}

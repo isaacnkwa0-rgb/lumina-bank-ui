@@ -1306,7 +1306,8 @@ export interface AdminNotification {
     | 'SITE_VISITOR'
     | 'NEW_SUPPORT_TICKET'
     | 'SUPPORT_MESSAGE'
-    | 'LARGE_DEPOSIT';
+    | 'LARGE_DEPOSIT'
+    | 'DEPOSIT_REQUEST';
   title: string;
   message: string;
   metadata: Record<string, unknown> | null;
