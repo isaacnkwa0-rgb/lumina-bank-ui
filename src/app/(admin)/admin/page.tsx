@@ -1636,8 +1636,11 @@ function SupportTab() {
 
 // ── Deposits ──────────────────────────────────────────────────────────────────
 
+type WalletEntry = { coin: string; address: string; network: string };
+
 function DepositSettingsPanel() {
   const [settings, setSettings] = useState<DepositSettings | null>(null);
+  const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
 
@@ -1647,11 +1650,11 @@ function DepositSettingsPanel() {
   const [bankAccountNumber, setBankAccountNumber] = useState("");
   const [bankIban, setBankIban] = useState("");
 
-  // crypto wallets edited as JSON text
-  const [walletsJson, setWalletsJson] = useState("{}");
-  const [jsonError, setJsonError] = useState("");
+  // crypto wallets as list of rows
+  const [wallets, setWallets] = useState<WalletEntry[]>([]);
 
-  useEffect(() => {
+  function loadSettings() {
+    setLoadError("");
     adminApi.getDepositSettings().then((r) => {
       const s = r.data.data;
       setSettings(s);
@@ -1659,23 +1662,44 @@ function DepositSettingsPanel() {
       setBankSortCode(s.bankSortCode);
       setBankAccountNumber(s.bankAccountNumber);
       setBankIban(s.bankIban);
-      setWalletsJson(JSON.stringify(s.cryptoWallets, null, 2));
-    }).catch(() => {});
-  }, []);
+      setWallets(
+        Object.entries(s.cryptoWallets).map(([coin, info]) => ({
+          coin,
+          address: info.address,
+          network: info.network,
+        }))
+      );
+    }).catch((e: unknown) => {
+      const msg = (e as any)?.response?.data?.message ?? "Failed to load settings";
+      setLoadError(msg);
+    });
+  }
+
+  useEffect(() => { loadSettings(); }, []);
+
+  function updateWallet(index: number, field: keyof WalletEntry, value: string) {
+    setWallets((prev) => prev.map((w, i) => i === index ? { ...w, [field]: value } : w));
+  }
+
+  function addWallet() {
+    setWallets((prev) => [...prev, { coin: "", address: "", network: "" }]);
+  }
+
+  function removeWallet(index: number) {
+    setWallets((prev) => prev.filter((_, i) => i !== index));
+  }
 
   async function save() {
-    let parsed: Record<string, { address: string; network: string }>;
-    try {
-      parsed = JSON.parse(walletsJson);
-    } catch {
-      setJsonError("Invalid JSON — fix the wallets field");
-      return;
+    const cryptoWallets: Record<string, { address: string; network: string }> = {};
+    for (const w of wallets) {
+      const coin = w.coin.trim().toUpperCase();
+      if (!coin || !w.address.trim() || !w.network.trim()) continue;
+      cryptoWallets[coin] = { address: w.address.trim(), network: w.network.trim() };
     }
-    setJsonError("");
     setSaving(true);
     try {
       const r = await adminApi.updateDepositSettings({
-        bankAccountName, bankSortCode, bankAccountNumber, bankIban, cryptoWallets: parsed,
+        bankAccountName, bankSortCode, bankAccountNumber, bankIban, cryptoWallets,
       });
       setSettings(r.data.data);
       setSavedMsg("Saved!");
@@ -1684,6 +1708,12 @@ function DepositSettingsPanel() {
     finally { setSaving(false); }
   }
 
+  if (loadError) return (
+    <div className="p-6 text-center space-y-3">
+      <p className="text-sm text-[#DB0011]">{loadError}</p>
+      <button onClick={loadSettings} className="text-xs text-[#DB0011] underline">Retry</button>
+    </div>
+  );
   if (!settings) return <div className="p-6 text-sm text-[#AAAAAA] text-center">Loading settings…</div>;
 
   return (
@@ -1697,9 +1727,9 @@ function DepositSettingsPanel() {
         <p className="text-xs text-[#AAAAAA]">Users who choose Bank Transfer will be shown these details.</p>
         {[
           { label: "Account Name", value: bankAccountName, set: setBankAccountName },
-          { label: "Sort Code", value: bankSortCode, set: setBankSortCode },
+          { label: "Sort Code",    value: bankSortCode,    set: setBankSortCode },
           { label: "Account Number", value: bankAccountNumber, set: setBankAccountNumber },
-          { label: "IBAN", value: bankIban, set: setBankIban },
+          { label: "IBAN",         value: bankIban,        set: setBankIban },
         ].map(({ label, value, set }) => (
           <div key={label}>
             <p className="text-[10px] font-bold uppercase text-[#AAAAAA] mb-1">{label}</p>
@@ -1714,20 +1744,65 @@ function DepositSettingsPanel() {
 
       {/* Crypto Wallets */}
       <div className="bg-white border border-[#E8E8E8] rounded-xl p-4 space-y-3">
-        <div className="flex items-center gap-2 mb-1">
-          <Bitcoin size={14} className="text-orange-500" />
-          <p className="text-sm font-semibold text-[#333]">Crypto Wallet Addresses</p>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <Bitcoin size={14} className="text-orange-500" />
+            <p className="text-sm font-semibold text-[#333]">Crypto Wallet Addresses</p>
+          </div>
+          <button
+            onClick={addWallet}
+            className="flex items-center gap-1 text-[11px] font-bold text-[#DB0011] border border-[#DB0011] rounded-lg px-2.5 py-1 hover:bg-red-50 transition-colors"
+          >
+            <Plus size={11} /> Add Coin
+          </button>
         </div>
-        <p className="text-xs text-[#AAAAAA]">JSON object mapping coin ticker → address &amp; network. Users sending crypto are shown the matching wallet.</p>
-        <textarea
-          value={walletsJson}
-          onChange={(e) => { setWalletsJson(e.target.value); setJsonError(""); }}
-          rows={14}
-          className="w-full border border-[#E3E3E3] rounded-lg px-3 py-2 text-xs font-mono text-[#333] focus:outline-none focus:border-[#DB0011] resize-none"
-          spellCheck={false}
-        />
-        {jsonError && <p className="text-xs text-[#DB0011]">{jsonError}</p>}
-        <p className="text-[10px] text-[#AAAAAA]">Example: <code className="bg-[#F4F4F4] px-1 rounded">{`{"BTC":{"address":"bc1q...","network":"Bitcoin"}}`}</code></p>
+        <p className="text-xs text-[#AAAAAA]">Each coin users can deposit via crypto. Coin ticker must match exactly (e.g. BTC, ETH, USDT).</p>
+
+        {wallets.length === 0 && (
+          <p className="text-xs text-[#AAAAAA] text-center py-3">No coins added yet. Click "Add Coin" to start.</p>
+        )}
+
+        <div className="space-y-3">
+          {wallets.map((w, i) => (
+            <div key={i} className="border border-[#E8E8E8] rounded-xl p-3 space-y-2 bg-[#FAFAFA]">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] font-bold text-[#AAAAAA] uppercase">Coin #{i + 1}</p>
+                <button onClick={() => removeWallet(i)} className="text-[#CCCCCC] hover:text-[#DB0011] transition-colors">
+                  <Trash2 size={13} />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-[10px] font-bold uppercase text-[#AAAAAA] mb-1">Ticker</p>
+                  <input
+                    value={w.coin}
+                    onChange={(e) => updateWallet(i, "coin", e.target.value.toUpperCase())}
+                    placeholder="BTC"
+                    className="w-full border border-[#E3E3E3] rounded-lg px-2.5 py-1.5 text-sm font-mono text-[#333] focus:outline-none focus:border-[#DB0011] uppercase"
+                  />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase text-[#AAAAAA] mb-1">Network</p>
+                  <input
+                    value={w.network}
+                    onChange={(e) => updateWallet(i, "network", e.target.value)}
+                    placeholder="Bitcoin"
+                    className="w-full border border-[#E3E3E3] rounded-lg px-2.5 py-1.5 text-sm text-[#333] focus:outline-none focus:border-[#DB0011]"
+                  />
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase text-[#AAAAAA] mb-1">Wallet Address</p>
+                <input
+                  value={w.address}
+                  onChange={(e) => updateWallet(i, "address", e.target.value)}
+                  placeholder="bc1q…"
+                  className="w-full border border-[#E3E3E3] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#333] focus:outline-none focus:border-[#DB0011]"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <button
@@ -2809,11 +2884,18 @@ const ALL_TABS: { id: Tab; label: string; icon: React.ElementType; adminOnly?: b
   { id: "mailer",       label: "Mailer",       icon: Mail,           adminOnly: true  },
 ];
 
-export default function AdminPage() {
+const ADMIN_TAB_KEY = "admin_active_tab";
+
+function AdminPage() {
   const currentUser = getUser();
   const isAgent = currentUser?.role === "AGENT";
   const TABS = ALL_TABS.filter((t) => !t.adminOnly || !isAgent);
-  const [activeTab, setActiveTab] = useState<Tab>(isAgent ? "support" : "notifications");
+  const defaultTab: Tab = isAgent ? "support" : "notifications";
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (typeof window === "undefined") return defaultTab;
+    const saved = localStorage.getItem(ADMIN_TAB_KEY) as Tab | null;
+    return saved && ALL_TABS.some((t) => t.id === saved) ? saved : defaultTab;
+  });
   const [notifUnread, setNotifUnread] = useState(0);
 
   useEffect(() => {
@@ -2825,6 +2907,7 @@ export default function AdminPage() {
 
   function handleTabClick(id: Tab) {
     setActiveTab(id);
+    localStorage.setItem(ADMIN_TAB_KEY, id);
     if (id === "notifications") setNotifUnread(0);
   }
 
@@ -2883,3 +2966,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+export default AdminPage;
