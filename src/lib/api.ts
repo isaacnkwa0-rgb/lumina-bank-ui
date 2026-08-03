@@ -563,8 +563,8 @@ export const cryptoApi = {
 export const depositsApi = {
   initiateBankTransfer: (data: { accountId: string; amount: number; senderName?: string; senderBank?: string }) =>
     api.post<ApiResponse<{ deposit: Deposit; bankDetails: BankReceivingDetails }>>("/deposits/bank-transfer", data),
-  initiateCrypto: (data: { accountId: string; coin: string; network: string; coinAmount: number; priceGbp: number }) =>
-    api.post<ApiResponse<{ deposit: Deposit; walletAddress: string; network: string; coin: string; coinAmount: number; estimatedGbp: number }>>("/deposits/crypto", data),
+  initiateCrypto: (data: { accountId: string; coin: string; amountGbp: number; priceGbp: number }) =>
+    api.post<ApiResponse<{ deposit: Deposit; walletAddress: string; network: string; coin: string; coinAmount: string; amountGbp: number }>>("/deposits/crypto", data),
   list: () => api.get<ApiResponse<Deposit[]>>("/deposits"),
   get: (id: string) => api.get<ApiResponse<Deposit>>(`/deposits/${id}`),
   getSupportedCoins: () => api.get<ApiResponse<{ coin: string; network: string }[]>>("/deposits/coins"),

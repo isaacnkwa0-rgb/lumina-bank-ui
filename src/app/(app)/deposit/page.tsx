@@ -106,8 +106,7 @@ const bankSchema = z.object({
 const cryptoSchema = z.object({
   accountId:  z.string().min(1, "Select an account"),
   coinIndex:  z.string().min(1, "Select a coin"),
-  coinAmount: z.string().min(1, "Enter amount").refine((v) => !isNaN(Number(v)) && Number(v) > 0, "Enter a valid amount"),
-  priceGbp:   z.string().min(1),
+  amountGbp:  z.string().min(1, "Enter amount").refine((v) => !isNaN(Number(v)) && Number(v) >= 10, "Minimum £10"),
 });
 
 type BankForm   = z.infer<typeof bankSchema>;
@@ -251,25 +250,31 @@ function BankTransferTab({ accounts }: { accounts: Account[] }) {
 
 // ── Crypto Tab ─────────────────────────────────────────────────────────────────
 
+// Indicative prices — used to show the coin equivalent in the form only.
+// The backend uses the priceGbp we send to compute the exact coinAmount.
 const MOCK_PRICES: Record<string, number> = {
   BTC: 62500, ETH: 3200, USDT: 1, BNB: 580, SOL: 145,
 };
 
 function CryptoTab({ accounts }: { accounts: Account[] }) {
-  const [walletInfo, setWalletInfo]   = useState<{ address: string; coin: string; network: string; coinAmount: number; estimatedGbp: number } | null>(null);
-  const [submitting, setSubmitting]   = useState(false);
-  const [error, setError]             = useState("");
+  const [walletInfo, setWalletInfo] = useState<{
+    address: string; coin: string; network: string; coinAmount: string; amountGbp: number;
+  } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError]           = useState("");
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<CryptoForm>({
     resolver: zodResolver(cryptoSchema),
-    defaultValues: { accountId: accounts[0]?.id ?? "", coinIndex: "0", priceGbp: "62500" },
+    defaultValues: { accountId: accounts[0]?.id ?? "", coinIndex: "0" },
   });
 
   const coinIndex    = Number(watch("coinIndex") ?? 0);
-  const coinAmount   = watch("coinAmount");
+  const amountGbp    = watch("amountGbp");
   const selectedCoin = COIN_OPTIONS[coinIndex] ?? COIN_OPTIONS[0];
   const priceGbp     = MOCK_PRICES[selectedCoin.coin] ?? 1;
-  const estimatedGbp = coinAmount && !isNaN(Number(coinAmount)) ? Number(coinAmount) * priceGbp : 0;
+  const coinEquiv    = amountGbp && !isNaN(Number(amountGbp)) && Number(amountGbp) > 0
+    ? Number(amountGbp) / priceGbp
+    : 0;
 
   async function onSubmit(data: CryptoForm) {
     setSubmitting(true);
@@ -277,18 +282,17 @@ function CryptoTab({ accounts }: { accounts: Account[] }) {
     const coin = COIN_OPTIONS[Number(data.coinIndex)] ?? COIN_OPTIONS[0];
     try {
       const res = await depositsApi.initiateCrypto({
-        accountId:  data.accountId,
-        coin:       coin.coin,
-        network:    coin.network,
-        coinAmount: Number(data.coinAmount),
-        priceGbp:   MOCK_PRICES[coin.coin] ?? 1,
+        accountId: data.accountId,
+        coin:      coin.coin,
+        amountGbp: Number(data.amountGbp),
+        priceGbp:  MOCK_PRICES[coin.coin] ?? 1,
       });
       setWalletInfo({
-        address:      res.data.data.walletAddress,
-        coin:         res.data.data.coin,
-        network:      res.data.data.network,
-        coinAmount:   res.data.data.coinAmount,
-        estimatedGbp: res.data.data.estimatedGbp,
+        address:   res.data.data.walletAddress,
+        coin:      res.data.data.coin,
+        network:   res.data.data.network,
+        coinAmount: res.data.data.coinAmount,
+        amountGbp: res.data.data.amountGbp,
       });
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
@@ -313,7 +317,7 @@ function CryptoTab({ accounts }: { accounts: Account[] }) {
           <DetailRow label="Coin"           value={walletInfo.coin} />
           <DetailRow label="Network"        value={walletInfo.network} />
           <DetailRow label="Amount to send" value={`${walletInfo.coinAmount} ${walletInfo.coin}`} />
-          <DetailRow label="Est. GBP value" value={`£${walletInfo.estimatedGbp.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+          <DetailRow label="GBP value"      value={`£${walletInfo.amountGbp.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
           <DetailRow label="Wallet address" value={walletInfo.address} />
         </div>
 
@@ -372,25 +376,28 @@ function CryptoTab({ accounts }: { accounts: Account[] }) {
         {errors.coinIndex && <p className="text-[11px] text-[#DB0011] mt-1">{errors.coinIndex.message}</p>}
       </div>
 
-      {/* Amount */}
+      {/* GBP Amount */}
       <div>
         <label className="block text-[11px] font-semibold text-[#555555] uppercase tracking-wider mb-1.5">
-          Amount ({selectedCoin.coin})
+          Amount (GBP)
         </label>
-        <Input
-          {...register("coinAmount")}
-          type="number"
-          step="any"
-          min="0.000001"
-          placeholder={`0.00`}
-        />
-        {coinAmount && !isNaN(Number(coinAmount)) && Number(coinAmount) > 0 && (
+        <div className="relative">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-[#AAAAAA]">£</span>
+          <Input
+            {...register("amountGbp")}
+            type="number"
+            min="10"
+            step="0.01"
+            placeholder="0.00"
+            className="pl-7"
+          />
+        </div>
+        {coinEquiv > 0 && (
           <p className="text-[11px] text-[#888888] mt-1">
-            ≈ £{estimatedGbp.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GBP
+            ≈ {coinEquiv.toFixed(8)} {selectedCoin.coin}
           </p>
         )}
-        {errors.coinAmount && <p className="text-[11px] text-[#DB0011] mt-1">{errors.coinAmount.message}</p>}
-        <input type="hidden" {...register("priceGbp")} value={priceGbp} />
+        {errors.amountGbp && <p className="text-[11px] text-[#DB0011] mt-1">{errors.amountGbp.message}</p>}
       </div>
 
       {error && (
