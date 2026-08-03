@@ -12,7 +12,7 @@ interface UseAuthReturn {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -68,8 +68,8 @@ export function useAuth(): UseAuthReturn {
     return () => window.removeEventListener("beforeunload", clearAccessToken);
   }, [token]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const response = await authApi.login(email, password);
+  const login = useCallback(async (identifier: string, password: string) => {
+    const response = await authApi.login(identifier, password);
     const data = response.data.data as unknown as {
       accessToken: string;
       refreshToken: string;

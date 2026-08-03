@@ -106,8 +106,8 @@ export interface ApiResponse<T> {
 
 // API helper functions
 export const authApi = {
-  login: (email: string, password: string) =>
-    api.post<ApiResponse<{ token: string; user: unknown }>>("/auth/login", { email, password }),
+  login: (identifier: string, password: string) =>
+    api.post<ApiResponse<{ token: string; user: unknown }>>("/auth/login", { identifier, password }),
   register: (data: {
     firstName: string;
     lastName: string;

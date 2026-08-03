@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
 const loginSchema = z.object({
-  email: z.string().email("Enter a valid email address"),
+  identifier: z.string().min(1, "Enter your email or account number"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -33,7 +33,7 @@ export default function LoginPage() {
   async function onSubmit(data: LoginForm) {
     setApiError("");
     try {
-      await login(data.email, data.password);
+      await login(data.identifier.trim(), data.password);
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -61,13 +61,13 @@ export default function LoginPage() {
         )}
 
         <Input
-          label={t("auth.login.emailLabel")}
-          type="email"
-          autoComplete="email"
+          label="Email or Account Number"
+          type="text"
+          autoComplete="username"
           autoCapitalize="none"
-          placeholder="e.g. demo@lumina.bank"
-          error={errors.email?.message}
-          {...register("email")}
+          placeholder="email@example.com or 0123456789"
+          error={errors.identifier?.message}
+          {...register("identifier")}
         />
 
         <Input
