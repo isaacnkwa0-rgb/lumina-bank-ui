@@ -6,16 +6,17 @@ import {
   type AdminTransfer, type AdminUser, type AdminLoan, type AdminDispute,
   type AdminInsuranceQuote, type AdminCard, type AdminTransaction,
   type AdminExchangeRate, type AdminPortfolio, type AdminGoal, type AdminAccount,
-  type AdminCryptoOrder, type AuditLog,
+  type AdminCryptoOrder, type AdminDeposit, type AuditLog,
 } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   ShieldCheck, CheckCircle2, Users, ArrowLeftRight, Landmark, AlertCircle,
   ChevronRight, Search, RefreshCw, CreditCard, Receipt, Globe,
-  TrendingUp, Target, Home, ShieldAlert, Bitcoin, ScrollText,
+  TrendingUp, Target, Home, ShieldAlert, Bitcoin, ScrollText, ArrowDownToLine,
+  Building2,
 } from "lucide-react";
 
-type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "audit";
+type Tab = "transfers" | "loans" | "mortgages" | "disputes" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "deposits" | "audit";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -1000,6 +1001,134 @@ function CryptoTab() {
   );
 }
 
+// ── Deposits ──────────────────────────────────────────────────────────────────
+
+function DepositsTab() {
+  const [filter, setFilter] = useState<"PENDING" | "COMPLETED" | "REJECTED" | "ALL">("PENDING");
+  const [items, setItems]   = useState<AdminDeposit[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionId, setActionId] = useState("");
+  const [expanded, setExpanded] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await adminApi.adminDeposits({ status: filter !== "ALL" ? filter : undefined, limit: 50 });
+      setItems(r.data.data);
+    } catch {} finally { setLoading(false); }
+  }, [filter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function approve(id: string) {
+    const notes = prompt("Admin notes (optional):") ?? "";
+    if (notes === null) return;
+    setActionId(id + ":approve");
+    try {
+      await adminApi.approveDeposit(id, notes || undefined);
+      setItems((p) => p.map((d) => d.id === id ? { ...d, status: "COMPLETED" as const } : d));
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
+  async function reject(id: string) {
+    const reason = prompt("Reason for rejection:");
+    if (!reason?.trim()) return;
+    setActionId(id + ":reject");
+    try {
+      await adminApi.rejectDeposit(id, reason.trim());
+      setItems((p) => p.map((d) => d.id === id ? { ...d, status: "REJECTED" as const } : d));
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
+  return (
+    <div>
+      <FilterBar
+        filters={["PENDING", "COMPLETED", "REJECTED", "ALL"]}
+        active={filter}
+        onSelect={(f) => setFilter(f as any)}
+        labels={{ PENDING: "Pending", COMPLETED: "Completed", REJECTED: "Rejected", ALL: "All" }}
+      />
+      {loading ? <LoadingRows /> : items.length === 0 ? <Empty icon={ArrowDownToLine} label="No deposits" /> : (
+        <div className="divide-y divide-[#F0F0F0]">
+          {items.map((d) => (
+            <div key={d.id} className="bg-white px-4 py-4">
+              <button onClick={() => setExpanded((p) => p === d.id ? "" : d.id)} className="w-full text-left">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <div className={`h-5 w-5 rounded flex items-center justify-center flex-shrink-0 ${d.method === "CRYPTO" ? "bg-orange-100" : "bg-blue-100"}`}>
+                        {d.method === "CRYPTO"
+                          ? <Bitcoin size={11} strokeWidth={2} className="text-orange-500" />
+                          : <Building2 size={11} strokeWidth={2} className="text-blue-600" />}
+                      </div>
+                      <span className="text-xs font-semibold text-[#333]">
+                        {d.method === "CRYPTO" ? `${d.coin} Crypto` : "Bank Transfer"}
+                      </span>
+                      <Pill status={d.status} />
+                    </div>
+                    <UserLine user={d.user} />
+                    <p className="text-[10px] text-[#AAAAAA] mt-0.5 font-mono">
+                      {d.account.type} · {d.account.accountNumber}
+                    </p>
+                    {d.method === "CRYPTO" && d.coinAmount && (
+                      <p className="text-[10px] text-[#AAAAAA] mt-0.5">
+                        {d.coinAmount} {d.coin} on {d.network}
+                      </p>
+                    )}
+                    {d.method === "BANK_TRANSFER" && d.senderName && (
+                      <p className="text-[10px] text-[#AAAAAA] mt-0.5">
+                        From: {d.senderName}{d.senderBank ? ` (${d.senderBank})` : ""}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-3">
+                    <p className="text-sm font-bold text-[#333]">£{Number(d.amount).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="text-[10px] text-[#AAAAAA]">{formatDate(d.createdAt)}</p>
+                    <ChevronRight size={14} className={`text-[#CCCCCC] mt-1 ml-auto transition-transform ${expanded === d.id ? "rotate-90" : ""}`} />
+                  </div>
+                </div>
+              </button>
+
+              {expanded === d.id && (
+                <div className="mt-3 space-y-3">
+                  <div className="bg-[#F8F8F8] rounded-xl px-4 py-3 text-xs text-[#555] space-y-1.5">
+                    <p><span className="text-[#AAAAAA]">Reference:</span> <span className="font-mono">{d.reference}</span></p>
+                    <p><span className="text-[#AAAAAA]">Currency:</span> {d.currency}</p>
+                    {d.method === "CRYPTO" && (
+                      <>
+                        <p><span className="text-[#AAAAAA]">Coin:</span> {d.coin} · {d.network}</p>
+                        <p><span className="text-[#AAAAAA]">Coin amount:</span> {d.coinAmount} {d.coin}</p>
+                        {d.priceGbp && <p><span className="text-[#AAAAAA]">Price at time:</span> £{Number(d.priceGbp).toLocaleString()}</p>}
+                      </>
+                    )}
+                    {d.method === "BANK_TRANSFER" && (
+                      <>
+                        {d.senderName && <p><span className="text-[#AAAAAA]">Sender name:</span> {d.senderName}</p>}
+                        {d.senderBank && <p><span className="text-[#AAAAAA]">Sending bank:</span> {d.senderBank}</p>}
+                      </>
+                    )}
+                    {d.adminNotes && <p><span className="text-[#AAAAAA]">Admin notes:</span> {d.adminNotes}</p>}
+                    {d.processedAt && <p><span className="text-[#AAAAAA]">Processed:</span> {formatDate(d.processedAt)}</p>}
+                    {d.transactionId && <p><span className="text-[#AAAAAA]">Transaction ID:</span> <span className="font-mono text-[10px]">{d.transactionId}</span></p>}
+                  </div>
+                  {d.status === "PENDING" && (
+                    <div className="flex gap-2">
+                      <ActButton label="Approve & Credit" variant="approve" onClick={() => approve(d.id)} loading={actionId === d.id + ":approve"} />
+                      <ActButton label="Reject" variant="reject" onClick={() => reject(d.id)} loading={actionId === d.id + ":reject"} />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Shared UI ─────────────────────────────────────────────────────────────────
 
 function FilterBar({ filters, active, onSelect, labels }: {
@@ -1147,19 +1276,20 @@ function AuditLogsTab() {
 }
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: "transfers",    label: "Transfers",    icon: ArrowLeftRight },
-  { id: "loans",        label: "Loans",        icon: Landmark       },
-  { id: "mortgages",    label: "Mortgages",    icon: Home           },
-  { id: "disputes",     label: "Disputes",     icon: AlertCircle    },
-  { id: "insurance",    label: "Insurance",    icon: ShieldAlert    },
-  { id: "crypto",       label: "Crypto",       icon: Bitcoin        },
-  { id: "cards",        label: "Cards",        icon: CreditCard     },
-  { id: "transactions", label: "Transactions", icon: Receipt        },
-  { id: "rates",        label: "Rates",        icon: Globe          },
-  { id: "investments",  label: "Investments",  icon: TrendingUp     },
-  { id: "goals",        label: "Goals",        icon: Target         },
-  { id: "users",        label: "Users",        icon: Users          },
-  { id: "audit",        label: "Audit Log",    icon: ScrollText     },
+  { id: "transfers",    label: "Transfers",    icon: ArrowLeftRight  },
+  { id: "deposits",     label: "Deposits",     icon: ArrowDownToLine },
+  { id: "loans",        label: "Loans",        icon: Landmark        },
+  { id: "mortgages",    label: "Mortgages",    icon: Home            },
+  { id: "disputes",     label: "Disputes",     icon: AlertCircle     },
+  { id: "insurance",    label: "Insurance",    icon: ShieldAlert     },
+  { id: "crypto",       label: "Crypto",       icon: Bitcoin         },
+  { id: "cards",        label: "Cards",        icon: CreditCard      },
+  { id: "transactions", label: "Transactions", icon: Receipt         },
+  { id: "rates",        label: "Rates",        icon: Globe           },
+  { id: "investments",  label: "Investments",  icon: TrendingUp      },
+  { id: "goals",        label: "Goals",        icon: Target          },
+  { id: "users",        label: "Users",        icon: Users           },
+  { id: "audit",        label: "Audit Log",    icon: ScrollText      },
 ];
 
 export default function AdminPage() {
@@ -1191,6 +1321,7 @@ export default function AdminPage() {
       {/* Tab content */}
       <div className="bg-[#F8F8F8] min-h-screen">
         {activeTab === "transfers"    && <TransfersTab />}
+        {activeTab === "deposits"     && <DepositsTab />}
         {activeTab === "loans"        && <LoansTab />}
         {activeTab === "mortgages"    && <LoansTab loanType="MORTGAGE" />}
         {activeTab === "disputes"     && <DisputesTab />}

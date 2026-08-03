@@ -430,6 +430,13 @@ export const adminApi = {
     api.patch<ApiResponse<AdminCryptoOrder>>(`/admin/crypto/orders/${id}/approve`, { notes }),
   rejectCryptoOrder: (id: string, reason: string) =>
     api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/crypto/orders/${id}/reject`, { reason }),
+  // Deposits
+  adminDeposits: (params?: { status?: string; page?: number; limit?: number }) =>
+    api.get<ApiResponse<AdminDeposit[]>>("/admin/deposits", { params }),
+  approveDeposit: (id: string, notes?: string) =>
+    api.patch<ApiResponse<AdminDeposit>>(`/admin/deposits/${id}/approve`, { notes }),
+  rejectDeposit: (id: string, reason: string) =>
+    api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/deposits/${id}/reject`, { reason }),
 };
 
 export const disputesApi = {
@@ -1058,4 +1065,25 @@ export interface CryptoOrder {
 
 export interface AdminCryptoOrder extends CryptoOrder {
   user: { id: string; firstName: string; lastName: string; email: string };
+}
+
+export interface AdminDeposit {
+  id: string;
+  method: "BANK_TRANSFER" | "CRYPTO";
+  amount: string;
+  currency: string;
+  reference: string;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED";
+  coin?: string | null;
+  network?: string | null;
+  coinAmount?: string | null;
+  priceGbp?: string | null;
+  senderName?: string | null;
+  senderBank?: string | null;
+  adminNotes?: string | null;
+  processedAt?: string | null;
+  transactionId?: string | null;
+  createdAt: string;
+  user: { id: string; firstName: string; lastName: string; email: string };
+  account: { id: string; accountNumber: string; type: string };
 }
