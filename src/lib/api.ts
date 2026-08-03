@@ -548,6 +548,16 @@ export const cryptoApi = {
   getOrder: (id: string) => api.get<ApiResponse<CryptoOrder>>(`/crypto/orders/${id}`),
 };
 
+export const depositsApi = {
+  initiateBankTransfer: (data: { accountId: string; amount: number; senderName?: string; senderBank?: string }) =>
+    api.post<ApiResponse<{ deposit: Deposit; bankDetails: BankReceivingDetails }>>("/deposits/bank-transfer", data),
+  initiateCrypto: (data: { accountId: string; coin: string; network: string; coinAmount: number; priceGbp: number }) =>
+    api.post<ApiResponse<{ deposit: Deposit; walletAddress: string; network: string; coin: string; coinAmount: number; estimatedGbp: number }>>("/deposits/crypto", data),
+  list: () => api.get<ApiResponse<Deposit[]>>("/deposits"),
+  get: (id: string) => api.get<ApiResponse<Deposit>>(`/deposits/${id}`),
+  getSupportedCoins: () => api.get<ApiResponse<{ coin: string; network: string }[]>>("/deposits/coins"),
+};
+
 export const ratesApi = {
   list: () => api.get<ApiResponse<Rate[]>>("/rates"),
   convert: (params: { from: string; to: string; amount: number }) =>
@@ -1155,6 +1165,35 @@ export interface AdminGoal {
   emoji?: string | null;
   createdAt: string;
   user: { id: string; firstName: string; lastName: string; email: string };
+}
+
+export interface Deposit {
+  id: string;
+  userId: string;
+  accountId: string;
+  method: "BANK_TRANSFER" | "CRYPTO";
+  amount: string;
+  currency: string;
+  reference: string;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED";
+  coin?: string | null;
+  network?: string | null;
+  coinAmount?: string | null;
+  priceGbp?: string | null;
+  senderName?: string | null;
+  senderBank?: string | null;
+  adminNotes?: string | null;
+  processedAt?: string | null;
+  transactionId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BankReceivingDetails {
+  accountName: string;
+  sortCode: string;
+  accountNumber: string;
+  iban: string;
 }
 
 export interface CryptoOrder {

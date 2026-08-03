@@ -8,7 +8,7 @@ import {
   Home, CreditCard, ArrowLeftRight, LayoutGrid, Landmark,
   BarChart3, Percent, Target, Bell, Settings,
   TrendingUp, X, Bitcoin, ShieldCheck, Building2, Receipt,
-  HelpCircle, Repeat2, Users, Banknote, AlertTriangle,
+  HelpCircle, Repeat2, Users, Banknote, AlertTriangle, ArrowDownToLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +20,8 @@ const mainNav = [
 ] as const;
 
 const moreItems = [
-  { href: "/transactions",   labelKey: "nav.transactions",    icon: Receipt,       color: "bg-slate-100  text-slate-600"    },
+  { href: "/transactions",   labelKey: "nav.transactions",    icon: Receipt,        color: "bg-slate-100  text-slate-600"    },
+  { href: "/deposit",        labelKey: "nav.deposit",         icon: ArrowDownToLine,color: "bg-green-50   text-green-600"    },
   { href: "/analytics",      labelKey: "nav.analytics",       icon: BarChart3,     color: "bg-blue-50    text-blue-600"     },
   { href: "/crypto",         labelKey: "nav.crypto",          icon: Bitcoin,       color: "bg-orange-50  text-orange-500"   },
   { href: "/investments",    labelKey: "nav.investments",     icon: TrendingUp,    color: "bg-emerald-50 text-emerald-600"  },

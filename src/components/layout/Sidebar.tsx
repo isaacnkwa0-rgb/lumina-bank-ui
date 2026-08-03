@@ -9,7 +9,7 @@ import {
   BarChart3, TrendingUp, Percent, Target,
   Bell, Settings, ShieldCheck, Building2, Bitcoin,
   LogOut, Repeat2, Users, Banknote, AlertTriangle,
-  HelpCircle, ChevronRight,
+  HelpCircle, ChevronRight, ArrowDownToLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -28,6 +28,7 @@ const navGroups = [
     labelKey: "sidebar.moveMoney",
     items: [
       { href: "/transfer",        labelKey: "nav.transfer",       icon: ArrowLeftRight },
+      { href: "/deposit",         labelKey: "nav.deposit",        icon: ArrowDownToLine },
       { href: "/standing-orders", labelKey: "nav.standingOrders", icon: Repeat2 },
       { href: "/direct-debits",   labelKey: "nav.directDebits",   icon: Repeat2 },
       { href: "/beneficiaries",   labelKey: "nav.beneficiaries",  icon: Users },
