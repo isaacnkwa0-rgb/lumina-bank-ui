@@ -1638,6 +1638,7 @@ function SupportTab() {
 
 function DepositSettingsPanel() {
   const [settings, setSettings] = useState<DepositSettings | null>(null);
+  const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
 
@@ -1651,7 +1652,8 @@ function DepositSettingsPanel() {
   const [walletsJson, setWalletsJson] = useState("{}");
   const [jsonError, setJsonError] = useState("");
 
-  useEffect(() => {
+  function loadSettings() {
+    setLoadError("");
     adminApi.getDepositSettings().then((r) => {
       const s = r.data.data;
       setSettings(s);
@@ -1660,8 +1662,13 @@ function DepositSettingsPanel() {
       setBankAccountNumber(s.bankAccountNumber);
       setBankIban(s.bankIban);
       setWalletsJson(JSON.stringify(s.cryptoWallets, null, 2));
-    }).catch(() => {});
-  }, []);
+    }).catch((e: unknown) => {
+      const msg = (e as any)?.response?.data?.message ?? "Failed to load settings";
+      setLoadError(msg);
+    });
+  }
+
+  useEffect(() => { loadSettings(); }, []);
 
   async function save() {
     let parsed: Record<string, { address: string; network: string }>;
@@ -1684,6 +1691,12 @@ function DepositSettingsPanel() {
     finally { setSaving(false); }
   }
 
+  if (loadError) return (
+    <div className="p-6 text-center space-y-3">
+      <p className="text-sm text-[#DB0011]">{loadError}</p>
+      <button onClick={loadSettings} className="text-xs text-[#DB0011] underline">Retry</button>
+    </div>
+  );
   if (!settings) return <div className="p-6 text-sm text-[#AAAAAA] text-center">Loading settings…</div>;
 
   return (
