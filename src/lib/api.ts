@@ -511,6 +511,11 @@ export const adminApi = {
     api.delete<ApiResponse<{ id: string; deleted: boolean }>>(`/admin/notifications/${id}`),
   deleteAllNotifications: () =>
     api.delete<ApiResponse<{ deleted: number }>>("/admin/notifications"),
+  // Deposit settings
+  getDepositSettings: () =>
+    api.get<ApiResponse<DepositSettings>>("/admin/deposit-settings"),
+  updateDepositSettings: (data: Partial<DepositSettings>) =>
+    api.patch<ApiResponse<DepositSettings>>("/admin/deposit-settings", data),
 };
 
 export const disputesApi = {
@@ -1313,6 +1318,16 @@ export interface AdminNotification {
   metadata: Record<string, unknown> | null;
   isRead: boolean;
   createdAt: string;
+}
+
+export interface DepositSettings {
+  id: string;
+  bankAccountName: string;
+  bankSortCode: string;
+  bankAccountNumber: string;
+  bankIban: string;
+  cryptoWallets: Record<string, { address: string; network: string }>;
+  updatedAt: string;
 }
 
 export interface PaginationMeta {

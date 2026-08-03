@@ -7,7 +7,7 @@ import {
   type AdminInsuranceQuote, type AdminCard, type AdminTransaction,
   type AdminExchangeRate, type AdminPortfolio, type AdminGoal, type AdminAccount,
   type AdminCryptoOrder, type AdminDeposit, type AuditLog, type AdminKycUser, type AdminSupportTicket,
-  type AdminAgent, type AdminUserDetail, type AdminNotification,
+  type AdminAgent, type AdminUserDetail, type AdminNotification, type DepositSettings,
 } from "@/lib/api";
 import { getUser } from "@/lib/auth";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -1636,7 +1636,113 @@ function SupportTab() {
 
 // ── Deposits ──────────────────────────────────────────────────────────────────
 
+function DepositSettingsPanel() {
+  const [settings, setSettings] = useState<DepositSettings | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [savedMsg, setSavedMsg] = useState("");
+
+  // bank fields
+  const [bankAccountName, setBankAccountName] = useState("");
+  const [bankSortCode, setBankSortCode] = useState("");
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
+  const [bankIban, setBankIban] = useState("");
+
+  // crypto wallets edited as JSON text
+  const [walletsJson, setWalletsJson] = useState("{}");
+  const [jsonError, setJsonError] = useState("");
+
+  useEffect(() => {
+    adminApi.getDepositSettings().then((r) => {
+      const s = r.data.data;
+      setSettings(s);
+      setBankAccountName(s.bankAccountName);
+      setBankSortCode(s.bankSortCode);
+      setBankAccountNumber(s.bankAccountNumber);
+      setBankIban(s.bankIban);
+      setWalletsJson(JSON.stringify(s.cryptoWallets, null, 2));
+    }).catch(() => {});
+  }, []);
+
+  async function save() {
+    let parsed: Record<string, { address: string; network: string }>;
+    try {
+      parsed = JSON.parse(walletsJson);
+    } catch {
+      setJsonError("Invalid JSON — fix the wallets field");
+      return;
+    }
+    setJsonError("");
+    setSaving(true);
+    try {
+      const r = await adminApi.updateDepositSettings({
+        bankAccountName, bankSortCode, bankAccountNumber, bankIban, cryptoWallets: parsed,
+      });
+      setSettings(r.data.data);
+      setSavedMsg("Saved!");
+      setTimeout(() => setSavedMsg(""), 3000);
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Save failed"); }
+    finally { setSaving(false); }
+  }
+
+  if (!settings) return <div className="p-6 text-sm text-[#AAAAAA] text-center">Loading settings…</div>;
+
+  return (
+    <div className="p-4 max-w-lg mx-auto space-y-5">
+      {/* Bank Transfer Details */}
+      <div className="bg-white border border-[#E8E8E8] rounded-xl p-4 space-y-3">
+        <div className="flex items-center gap-2 mb-1">
+          <Building2 size={14} className="text-blue-600" />
+          <p className="text-sm font-semibold text-[#333]">Bank Transfer Receiving Details</p>
+        </div>
+        <p className="text-xs text-[#AAAAAA]">Users who choose Bank Transfer will be shown these details.</p>
+        {[
+          { label: "Account Name", value: bankAccountName, set: setBankAccountName },
+          { label: "Sort Code", value: bankSortCode, set: setBankSortCode },
+          { label: "Account Number", value: bankAccountNumber, set: setBankAccountNumber },
+          { label: "IBAN", value: bankIban, set: setBankIban },
+        ].map(({ label, value, set }) => (
+          <div key={label}>
+            <p className="text-[10px] font-bold uppercase text-[#AAAAAA] mb-1">{label}</p>
+            <input
+              value={value}
+              onChange={(e) => set(e.target.value)}
+              className="w-full border border-[#E3E3E3] rounded-lg px-3 py-2 text-sm text-[#333] focus:outline-none focus:border-[#DB0011] font-mono"
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Crypto Wallets */}
+      <div className="bg-white border border-[#E8E8E8] rounded-xl p-4 space-y-3">
+        <div className="flex items-center gap-2 mb-1">
+          <Bitcoin size={14} className="text-orange-500" />
+          <p className="text-sm font-semibold text-[#333]">Crypto Wallet Addresses</p>
+        </div>
+        <p className="text-xs text-[#AAAAAA]">JSON object mapping coin ticker → address &amp; network. Users sending crypto are shown the matching wallet.</p>
+        <textarea
+          value={walletsJson}
+          onChange={(e) => { setWalletsJson(e.target.value); setJsonError(""); }}
+          rows={14}
+          className="w-full border border-[#E3E3E3] rounded-lg px-3 py-2 text-xs font-mono text-[#333] focus:outline-none focus:border-[#DB0011] resize-none"
+          spellCheck={false}
+        />
+        {jsonError && <p className="text-xs text-[#DB0011]">{jsonError}</p>}
+        <p className="text-[10px] text-[#AAAAAA]">Example: <code className="bg-[#F4F4F4] px-1 rounded">{`{"BTC":{"address":"bc1q...","network":"Bitcoin"}}`}</code></p>
+      </div>
+
+      <button
+        onClick={save}
+        disabled={saving}
+        className="w-full bg-[#DB0011] hover:bg-[#b8000e] disabled:opacity-50 text-white text-sm font-bold py-2.5 rounded-xl transition-colors"
+      >
+        {saving ? "Saving…" : savedMsg || "Save Settings"}
+      </button>
+    </div>
+  );
+}
+
 function DepositsTab() {
+  const [view, setView] = useState<"list" | "settings">("list");
   const [filter, setFilter] = useState<"PENDING" | "COMPLETED" | "REJECTED" | "ALL">("PENDING");
   const [items, setItems]   = useState<AdminDeposit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1651,7 +1757,7 @@ function DepositsTab() {
     } catch {} finally { setLoading(false); }
   }, [filter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (view === "list") load(); }, [load, view]);
 
   async function approve(id: string) {
     const notes = prompt("Admin notes (optional):") ?? "";
@@ -1677,79 +1783,93 @@ function DepositsTab() {
 
   return (
     <div>
-      <FilterBar
-        filters={["PENDING", "COMPLETED", "REJECTED", "ALL"]}
-        active={filter}
-        onSelect={(f) => setFilter(f as any)}
-        labels={{ PENDING: "Pending", COMPLETED: "Completed", REJECTED: "Rejected", ALL: "All" }}
-      />
-      {loading ? <LoadingRows /> : items.length === 0 ? <Empty icon={ArrowDownToLine} label="No deposits" /> : (
-        <div className="divide-y divide-[#F0F0F0]">
-          {items.map((d) => (
-            <div key={d.id} className="bg-white px-4 py-4">
-              <button onClick={() => setExpanded((p) => p === d.id ? "" : d.id)} className="w-full text-left">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <div className={`h-5 w-5 rounded flex items-center justify-center flex-shrink-0 ${d.method === "CRYPTO" ? "bg-orange-100" : "bg-blue-100"}`}>
-                        {d.method === "CRYPTO"
-                          ? <Bitcoin size={11} strokeWidth={2} className="text-orange-500" />
-                          : <Building2 size={11} strokeWidth={2} className="text-blue-600" />}
+      {/* Sub-nav */}
+      <div className="flex bg-white border-b border-[#E8E8E8]">
+        {(["list", "settings"] as const).map((v) => (
+          <button key={v} onClick={() => setView(v)}
+            className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wide border-b-2 transition-colors ${view === v ? "border-[#DB0011] text-[#DB0011]" : "border-transparent text-[#AAAAAA]"}`}>
+            {v === "list" ? "Deposits" : "Settings"}
+          </button>
+        ))}
+      </div>
+
+      {view === "settings" ? <DepositSettingsPanel /> : (
+        <>
+          <FilterBar
+            filters={["PENDING", "COMPLETED", "REJECTED", "ALL"]}
+            active={filter}
+            onSelect={(f) => setFilter(f as any)}
+            labels={{ PENDING: "Pending", COMPLETED: "Completed", REJECTED: "Rejected", ALL: "All" }}
+          />
+          {loading ? <LoadingRows /> : items.length === 0 ? <Empty icon={ArrowDownToLine} label="No deposits" /> : (
+            <div className="divide-y divide-[#F0F0F0]">
+              {items.map((d) => (
+                <div key={d.id} className="bg-white px-4 py-4">
+                  <button onClick={() => setExpanded((p) => p === d.id ? "" : d.id)} className="w-full text-left">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                          <div className={`h-5 w-5 rounded flex items-center justify-center flex-shrink-0 ${d.method === "CRYPTO" ? "bg-orange-100" : "bg-blue-100"}`}>
+                            {d.method === "CRYPTO"
+                              ? <Bitcoin size={11} strokeWidth={2} className="text-orange-500" />
+                              : <Building2 size={11} strokeWidth={2} className="text-blue-600" />}
+                          </div>
+                          <span className="text-xs font-semibold text-[#333]">
+                            {d.method === "CRYPTO" ? `${d.coin} Crypto` : "Bank Transfer"}
+                          </span>
+                          <Pill status={d.status} />
+                        </div>
+                        <UserLine user={d.user} />
+                        <p className="text-[10px] text-[#AAAAAA] mt-0.5 font-mono">{d.account.type} · {d.account.accountNumber}</p>
+                        {d.method === "CRYPTO" && d.coinAmount && (
+                          <p className="text-[10px] text-[#AAAAAA] mt-0.5">{d.coinAmount} {d.coin} on {d.network}</p>
+                        )}
+                        {d.method === "BANK_TRANSFER" && d.senderName && (
+                          <p className="text-[10px] text-[#AAAAAA] mt-0.5">From: {d.senderName}{d.senderBank ? ` (${d.senderBank})` : ""}</p>
+                        )}
                       </div>
-                      <span className="text-xs font-semibold text-[#333]">
-                        {d.method === "CRYPTO" ? `${d.coin} Crypto` : "Bank Transfer"}
-                      </span>
-                      <Pill status={d.status} />
+                      <div className="text-right flex-shrink-0 ml-3">
+                        <p className="text-sm font-bold text-[#333]">£{Number(d.amount).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <p className="text-[10px] text-[#AAAAAA]">{formatDate(d.createdAt)}</p>
+                        <ChevronRight size={14} className={`text-[#CCCCCC] mt-1 ml-auto transition-transform ${expanded === d.id ? "rotate-90" : ""}`} />
+                      </div>
                     </div>
-                    <UserLine user={d.user} />
-                    <p className="text-[10px] text-[#AAAAAA] mt-0.5 font-mono">{d.account.type} · {d.account.accountNumber}</p>
-                    {d.method === "CRYPTO" && d.coinAmount && (
-                      <p className="text-[10px] text-[#AAAAAA] mt-0.5">{d.coinAmount} {d.coin} on {d.network}</p>
-                    )}
-                    {d.method === "BANK_TRANSFER" && d.senderName && (
-                      <p className="text-[10px] text-[#AAAAAA] mt-0.5">From: {d.senderName}{d.senderBank ? ` (${d.senderBank})` : ""}</p>
-                    )}
-                  </div>
-                  <div className="text-right flex-shrink-0 ml-3">
-                    <p className="text-sm font-bold text-[#333]">£{Number(d.amount).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                    <p className="text-[10px] text-[#AAAAAA]">{formatDate(d.createdAt)}</p>
-                    <ChevronRight size={14} className={`text-[#CCCCCC] mt-1 ml-auto transition-transform ${expanded === d.id ? "rotate-90" : ""}`} />
-                  </div>
-                </div>
-              </button>
-              {expanded === d.id && (
-                <div className="mt-3 space-y-3">
-                  <div className="bg-[#F8F8F8] rounded-xl px-4 py-3 text-xs text-[#555] space-y-1.5">
-                    <p><span className="text-[#AAAAAA]">Reference:</span> <span className="font-mono">{d.reference}</span></p>
-                    <p><span className="text-[#AAAAAA]">Currency:</span> {d.currency}</p>
-                    {d.method === "CRYPTO" && (
-                      <>
-                        <p><span className="text-[#AAAAAA]">Coin:</span> {d.coin} · {d.network}</p>
-                        <p><span className="text-[#AAAAAA]">Coin amount:</span> {d.coinAmount} {d.coin}</p>
-                        {d.priceGbp && <p><span className="text-[#AAAAAA]">Price at time:</span> £{Number(d.priceGbp).toLocaleString()}</p>}
-                      </>
-                    )}
-                    {d.method === "BANK_TRANSFER" && (
-                      <>
-                        {d.senderName && <p><span className="text-[#AAAAAA]">Sender name:</span> {d.senderName}</p>}
-                        {d.senderBank && <p><span className="text-[#AAAAAA]">Sending bank:</span> {d.senderBank}</p>}
-                      </>
-                    )}
-                    {d.adminNotes && <p><span className="text-[#AAAAAA]">Admin notes:</span> {d.adminNotes}</p>}
-                    {d.processedAt && <p><span className="text-[#AAAAAA]">Processed:</span> {formatDate(d.processedAt)}</p>}
-                    {d.transactionId && <p><span className="text-[#AAAAAA]">Transaction ID:</span> <span className="font-mono text-[10px]">{d.transactionId}</span></p>}
-                  </div>
-                  {d.status === "PENDING" && (
-                    <div className="flex gap-2">
-                      <ActButton label="Approve & Credit" variant="approve" onClick={() => approve(d.id)} loading={actionId === d.id + ":approve"} />
-                      <ActButton label="Reject" variant="reject" onClick={() => reject(d.id)} loading={actionId === d.id + ":reject"} />
+                  </button>
+                  {expanded === d.id && (
+                    <div className="mt-3 space-y-3">
+                      <div className="bg-[#F8F8F8] rounded-xl px-4 py-3 text-xs text-[#555] space-y-1.5">
+                        <p><span className="text-[#AAAAAA]">Reference:</span> <span className="font-mono">{d.reference}</span></p>
+                        <p><span className="text-[#AAAAAA]">Currency:</span> {d.currency}</p>
+                        {d.method === "CRYPTO" && (
+                          <>
+                            <p><span className="text-[#AAAAAA]">Coin:</span> {d.coin} · {d.network}</p>
+                            <p><span className="text-[#AAAAAA]">Coin amount:</span> {d.coinAmount} {d.coin}</p>
+                            {d.priceGbp && <p><span className="text-[#AAAAAA]">Price at time:</span> £{Number(d.priceGbp).toLocaleString()}</p>}
+                          </>
+                        )}
+                        {d.method === "BANK_TRANSFER" && (
+                          <>
+                            {d.senderName && <p><span className="text-[#AAAAAA]">Sender name:</span> {d.senderName}</p>}
+                            {d.senderBank && <p><span className="text-[#AAAAAA]">Sending bank:</span> {d.senderBank}</p>}
+                          </>
+                        )}
+                        {d.adminNotes && <p><span className="text-[#AAAAAA]">Admin notes:</span> {d.adminNotes}</p>}
+                        {d.processedAt && <p><span className="text-[#AAAAAA]">Processed:</span> {formatDate(d.processedAt)}</p>}
+                        {d.transactionId && <p><span className="text-[#AAAAAA]">Transaction ID:</span> <span className="font-mono text-[10px]">{d.transactionId}</span></p>}
+                      </div>
+                      {d.status === "PENDING" && (
+                        <div className="flex gap-2">
+                          <ActButton label="Approve & Credit" variant="approve" onClick={() => approve(d.id)} loading={actionId === d.id + ":approve"} />
+                          <ActButton label="Reject" variant="reject" onClick={() => reject(d.id)} loading={actionId === d.id + ":reject"} />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );
