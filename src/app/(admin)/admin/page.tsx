@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   adminApi,
   type AdminTransfer, type AdminUser, type AdminLoan, type AdminDispute,
@@ -2822,11 +2823,17 @@ const ALL_TABS: { id: Tab; label: string; icon: React.ElementType; adminOnly?: b
   { id: "mailer",       label: "Mailer",       icon: Mail,           adminOnly: true  },
 ];
 
-export default function AdminPage() {
+function AdminPage() {
   const currentUser = getUser();
   const isAgent = currentUser?.role === "AGENT";
   const TABS = ALL_TABS.filter((t) => !t.adminOnly || !isAgent);
-  const [activeTab, setActiveTab] = useState<Tab>(isAgent ? "support" : "notifications");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const defaultTab: Tab = isAgent ? "support" : "notifications";
+  const tabFromUrl = searchParams.get("tab") as Tab | null;
+  const [activeTab, setActiveTab] = useState<Tab>(
+    tabFromUrl && ALL_TABS.some((t) => t.id === tabFromUrl) ? tabFromUrl : defaultTab
+  );
   const [notifUnread, setNotifUnread] = useState(0);
 
   useEffect(() => {
@@ -2838,6 +2845,7 @@ export default function AdminPage() {
 
   function handleTabClick(id: Tab) {
     setActiveTab(id);
+    router.replace(`?tab=${id}`, { scroll: false });
     if (id === "notifications") setNotifUnread(0);
   }
 
@@ -2894,5 +2902,13 @@ export default function AdminPage() {
         {activeTab === "notifications" && <NotificationsTab />}
       </div>
     </div>
+  );
+}
+
+export default function AdminPageWrapper() {
+  return (
+    <Suspense>
+      <AdminPage />
+    </Suspense>
   );
 }
