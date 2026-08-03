@@ -458,7 +458,7 @@ export const adminApi = {
     api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/crypto/orders/${id}/reject`, { reason }),
   // Deposits
   adminDeposits: (params?: { status?: string; page?: number; limit?: number }) =>
-    api.get<ApiResponse<AdminDeposit[]>>("/admin/deposits", { params }),
+    api.get<ApiResponse<{ deposits: AdminDeposit[]; meta: unknown }>>("/admin/deposits", { params }),
   approveDeposit: (id: string, notes?: string) =>
     api.patch<ApiResponse<AdminDeposit>>(`/admin/deposits/${id}/approve`, { notes }),
   rejectDeposit: (id: string, reason: string) =>

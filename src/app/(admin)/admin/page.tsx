@@ -1647,7 +1647,7 @@ function DepositsTab() {
     setLoading(true);
     try {
       const r = await adminApi.adminDeposits({ status: filter !== "ALL" ? filter : undefined, limit: 50 });
-      setItems(r.data.data);
+      setItems(r.data.data.deposits);
     } catch {} finally { setLoading(false); }
   }, [filter]);
 
