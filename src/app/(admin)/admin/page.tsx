@@ -2894,7 +2894,7 @@ function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     if (typeof window === "undefined") return defaultTab;
     const saved = localStorage.getItem(ADMIN_TAB_KEY) as Tab | null;
-    return saved && ALL_TABS.some((t) => t.id === saved) ? saved : defaultTab;
+    return saved && TABS.some((t) => t.id === saved) ? saved : defaultTab;
   });
   const [notifUnread, setNotifUnread] = useState(0);
 
