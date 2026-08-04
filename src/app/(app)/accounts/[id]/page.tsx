@@ -155,8 +155,13 @@ export default function AccountDetailPage() {
           For queries contact support@luminabank.online
         </div>
       </body></html>`;
-      const win = window.open("", "_blank");
-      if (win) { win.document.write(html); win.document.close(); win.focus(); win.print(); }
+      const blob = new Blob([html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `lumina-statement-${account.accountNumber}-${Date.now()}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
     } catch {
       alert("Could not download statement. Please try again.");
     } finally {

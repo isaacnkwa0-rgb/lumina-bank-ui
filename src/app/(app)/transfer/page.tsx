@@ -8,6 +8,7 @@ import { z } from "zod";
 import {
   CheckCircle2, Clock, ChevronDown, ArrowDownUp,
   RefreshCw, Send, Globe, ShieldCheck, KeyRound,
+  Download, Share2,
 } from "lucide-react";
 import {
   accountsApi, transfersApi, beneficiariesApi, authApi,
@@ -34,14 +35,14 @@ const UK_BANKS = [
   { code: "LMN", name: "Lumina Bank" },
 ];
 
-const CURRENCIES = ["USD", "EUR", "GBP", "CHF", "JPY", "AED", "CAD", "AUD", "NGN", "SGD"];
+const CURRENCIES = ["USD", "EUR", "GBP", "CHF", "JPY", "AED", "CAD", "AUD", "PLN", "SGD"];
 const COUNTRIES = [
   { code: "FR", name: "France" }, { code: "DE", name: "Germany" },
-  { code: "US", name: "United States" }, { code: "NG", name: "Nigeria" },
+  { code: "US", name: "United States" }, { code: "PL", name: "Poland" },
   { code: "AE", name: "UAE" }, { code: "JP", name: "Japan" },
   { code: "CA", name: "Canada" }, { code: "AU", name: "Australia" },
   { code: "SG", name: "Singapore" }, { code: "CH", name: "Switzerland" },
-  { code: "IN", name: "India" }, { code: "ZA", name: "South Africa" },
+  { code: "IN", name: "India" }, { code: "TR", name: "Turkey" },
 ];
 
 const ACCOUNT_COLORS: Record<string, string> = {
@@ -1081,88 +1082,169 @@ function InternationalForm({
 
 // ── Success Screen ───────────────────────────────────────────────────────────
 
+async function buildReceiptPdf(rows: { label: string; value: string }[], title: string): Promise<Blob> {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const W = doc.internal.pageSize.getWidth();
+  const red: [number, number, number] = [219, 0, 17];
+  const grey: [number, number, number] = [248, 248, 248];
+
+  // Header
+  doc.setFillColor(...red);
+  doc.rect(0, 0, W, 80, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(20);
+  doc.setFont("helvetica", "bold");
+  doc.text("◆ Lumina Bank", W / 2, 35, { align: "center" });
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(255, 255, 255, 0.8);
+  doc.text(title, W / 2, 58, { align: "center" });
+
+  // Rows
+  let y = 100;
+  rows.forEach((row, i) => {
+    if (i % 2 === 0) {
+      doc.setFillColor(...grey);
+      doc.rect(32, y - 14, W - 64, 28, "F");
+    }
+    doc.setFontSize(11);
+    doc.setTextColor(150, 150, 150);
+    doc.setFont("helvetica", "normal");
+    doc.text(row.label, 48, y + 2);
+    doc.setTextColor(34, 34, 34);
+    doc.setFont("helvetica", "bold");
+    doc.text(row.value, W - 48, y + 2, { align: "right" });
+    y += 32;
+  });
+
+  // Divider
+  doc.setDrawColor(230, 230, 230);
+  doc.line(32, y + 8, W - 32, y + 8);
+  y += 24;
+
+  // Footer
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(170, 170, 170);
+  doc.text("Lumina Bank plc  |  FCA Register No. 56754  |  FSCS protected up to £85,000", W / 2, y + 12, { align: "center" });
+  doc.text(`Generated ${new Date().toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}`, W / 2, y + 26, { align: "center" });
+
+  return doc.output("blob");
+}
+
+async function downloadReceipt(rows: { label: string; value: string }[], title: string, filename: string) {
+  const blob = await buildReceiptPdf(rows, title);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function shareReceipt(rows: { label: string; value: string }[], title: string, filename: string) {
+  const blob = await buildReceiptPdf(rows, title);
+  const file = new File([blob], filename, { type: "application/pdf" });
+  if (navigator.canShare?.({ files: [file] })) {
+    await navigator.share({ title: "Lumina Bank - " + title, files: [file] });
+  } else {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+}
+
 function SuccessScreen({ result, onReset }: { result: Transfer; onReset: () => void }) {
   const { t } = useLanguage();
   const isPending = result.status === "PENDING";
+  const [shared, setShared] = useState(false);
+
+  const receiptRows = [
+    { label: t("transfer.referenceLabel"), value: result.id.slice(0, 8).toUpperCase() },
+    { label: t("transfer.amount"),         value: formatCurrency(Number(result.amount), result.currency) },
+    { label: t("transfer.type"),           value: result.type.charAt(0) + result.type.slice(1).toLowerCase() },
+    { label: t("transfer.status"),         value: result.status },
+    ...(result.transferFee && Number(result.transferFee) > 0
+      ? [{ label: t("transfer.fee"), value: formatCurrency(Number(result.transferFee), result.currency) }]
+      : []),
+    ...(result.fxRate
+      ? [{ label: t("transfer.fxRate"), value: `1 GBP = ${Number(result.fxRate).toFixed(4)} ${result.currency}` }]
+      : []),
+    { label: "Date", value: new Date().toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) },
+  ];
+
+  const receiptTitle = `Transfer Receipt - ${result.id.slice(0, 8).toUpperCase()}`;
+
+  async function handleDownload() {
+    await downloadReceipt(receiptRows, receiptTitle, `lumina-receipt-${result.id.slice(0, 8)}.pdf`);
+  }
+
+  async function handleShare() {
+    await shareReceipt(receiptRows, receiptTitle, `lumina-receipt-${result.id.slice(0, 8)}.pdf`);
+    setShared(true);
+    setTimeout(() => setShared(false), 2000);
+  }
 
   return (
     <div className="max-w-lg mx-auto lg:max-w-none">
       {/* Status banner */}
-      <div
-        className={`px-4 py-10 flex flex-col items-center text-center ${
-          isPending ? "bg-amber-50" : "bg-green-50"
-        }`}
-      >
-        <div
-          className={`h-16 w-16 rounded-full flex items-center justify-center mb-4 ${
-            isPending ? "bg-amber-100" : "bg-green-100"
-          }`}
-        >
-          {isPending ? (
-            <Clock size={32} className="text-amber-500" />
-          ) : (
-            <CheckCircle2 size={32} className="text-green-500" />
-          )}
+      <div className={`px-4 py-10 flex flex-col items-center text-center ${isPending ? "bg-amber-50" : "bg-green-50"}`}>
+        <div className={`h-16 w-16 rounded-full flex items-center justify-center mb-4 ${isPending ? "bg-amber-100" : "bg-green-100"}`}>
+          {isPending ? <Clock size={32} className="text-amber-500" /> : <CheckCircle2 size={32} className="text-green-500" />}
         </div>
         <h2 className="text-xl font-bold text-[#333333] mb-1">
           {isPending ? t("transfer.submitted") : t("transfer.complete")}
         </h2>
         <p className="text-sm text-[#767676] max-w-xs">
-          {isPending
-            ? t("transfer.submittedDesc")
-            : `${formatCurrency(Number(result.amount), result.currency)} ${t("transfer.completedDesc")}`}
+          {isPending ? t("transfer.submittedDesc") : `${formatCurrency(Number(result.amount), result.currency)} ${t("transfer.completedDesc")}`}
         </p>
       </div>
 
       {/* Receipt */}
       <div className="bg-white border-b border-[#E3E3E3]">
         <div className="px-4 py-2.5 bg-[#F8F8F8] border-b border-[#E3E3E3]">
-          <p className="text-xs font-semibold text-[#767676] uppercase tracking-wide">
-            {t("transfer.receiptLabel")}
-          </p>
+          <p className="text-xs font-semibold text-[#767676] uppercase tracking-wide">{t("transfer.receiptLabel")}</p>
         </div>
-        {[
-          { id: "ref",    label: t("transfer.referenceLabel"), value: result.id.slice(0, 8).toUpperCase() },
-          { id: "amount", label: t("transfer.amount"),         value: formatCurrency(Number(result.amount), result.currency) },
-          { id: "type",   label: t("transfer.type"),           value: result.type.charAt(0) + result.type.slice(1).toLowerCase() },
-          { id: "status", label: t("transfer.status"),         value: result.status },
-          ...(result.transferFee && Number(result.transferFee) > 0
-            ? [{ id: "fee", label: t("transfer.fee"), value: formatCurrency(Number(result.transferFee), result.currency) }]
-            : []),
-          ...(result.fxRate
-            ? [{ id: "fx", label: t("transfer.fxRate"), value: `1 GBP = ${Number(result.fxRate).toFixed(4)} ${result.currency}` }]
-            : []),
-        ].map(({ id, label, value }) => (
-          <div
-            key={id}
-            className="flex justify-between items-center px-4 py-3.5 border-b border-[#E3E3E3] last:border-0"
-          >
+        {receiptRows.map(({ label, value }) => (
+          <div key={label} className="flex justify-between items-center px-4 py-3.5 border-b border-[#E3E3E3] last:border-0">
             <span className="text-sm text-[#767676]">{label}</span>
-            <span
-              className={`text-sm font-semibold ${
-                id === "status"
-                  ? isPending
-                    ? "text-amber-500"
-                    : "text-green-600"
-                  : "text-[#333333]"
-              }`}
-            >
+            <span className={`text-sm font-semibold ${label === t("transfer.status") ? (isPending ? "text-amber-500" : "text-green-600") : "text-[#333333]"}`}>
               {value}
             </span>
           </div>
         ))}
       </div>
 
+      {/* Download + Share */}
+      <div className="grid grid-cols-2 gap-3 px-4 mt-4">
+        <button
+          onClick={handleDownload}
+          className="flex items-center justify-center gap-2 border border-[#E3E3E3] rounded-sm py-3 text-sm font-semibold text-[#333] hover:bg-[#F8F8F8] transition-colors active:bg-[#F0F0F0]"
+        >
+          <Download size={15} className="text-[#DB0011]" />
+          Download
+        </button>
+        <button
+          onClick={handleShare}
+          className="flex items-center justify-center gap-2 border border-[#E3E3E3] rounded-sm py-3 text-sm font-semibold text-[#333] hover:bg-[#F8F8F8] transition-colors active:bg-[#F0F0F0]"
+        >
+          <Share2 size={15} className="text-[#DB0011]" />
+          {shared ? "Copied!" : "Share"}
+        </button>
+      </div>
+
       {isPending && (
-        <div className="mx-4 mt-4 bg-amber-50 border border-amber-200 rounded-sm p-3.5">
+        <div className="mx-4 mt-3 bg-amber-50 border border-amber-200 rounded-sm p-3.5">
           <p className="text-xs text-amber-700 leading-relaxed">{t("transfer.fundsHeld")}</p>
         </div>
       )}
 
       <div className="p-4">
-        <Button variant="secondary" fullWidth onClick={onReset}>
-          {t("transfer.makeAnother")}
-        </Button>
+        <Button variant="secondary" fullWidth onClick={onReset}>{t("transfer.makeAnother")}</Button>
       </div>
     </div>
   );
