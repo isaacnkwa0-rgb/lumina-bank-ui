@@ -37,9 +37,9 @@ const COUNTRIES = [
   { code: "KR", name: "South Korea" }, { code: "SG", name: "Singapore" },
   { code: "AE", name: "United Arab Emirates" }, { code: "SA", name: "Saudi Arabia" },
   { code: "IN", name: "India" }, { code: "BR", name: "Brazil" },
-  { code: "MX", name: "Mexico" }, { code: "ZA", name: "South Africa" },
-  { code: "GH", name: "Ghana" }, { code: "NG", name: "Nigeria" },
-  { code: "KE", name: "Kenya" }, { code: "EG", name: "Egypt" },
+  { code: "MX", name: "Mexico" }, { code: "PL", name: "Poland" },
+  { code: "CZ", name: "Czech Republic" }, { code: "TR", name: "Turkey" },
+  { code: "HK", name: "Hong Kong" }, { code: "PH", name: "Philippines" },
   { code: "IR", name: "Iran" }, { code: "KP", name: "North Korea" },
   { code: "CU", name: "Cuba" }, { code: "SY", name: "Syria" },
   { code: "MM", name: "Myanmar" }, { code: "RU", name: "Russia" },
@@ -57,10 +57,11 @@ const PHONE_PREFIXES = [
   { code: "NL", prefix: "+31", label: "+31 (NL)" },
   { code: "IE", prefix: "+353", label: "+353 (IE)" },
   { code: "IN", prefix: "+91", label: "+91 (IN)" },
-  { code: "NG", prefix: "+234", label: "+234 (NG)" },
-  { code: "GH", prefix: "+233", label: "+233 (GH)" },
-  { code: "KE", prefix: "+254", label: "+254 (KE)" },
-  { code: "ZA", prefix: "+27", label: "+27 (ZA)" },
+  { code: "PL", prefix: "+48", label: "+48 (PL)" },
+  { code: "CZ", prefix: "+420", label: "+420 (CZ)" },
+  { code: "TR", prefix: "+90", label: "+90 (TR)" },
+  { code: "HK", prefix: "+852", label: "+852 (HK)" },
+  { code: "PH", prefix: "+63", label: "+63 (PH)" },
   { code: "AE", prefix: "+971", label: "+971 (AE)" },
   { code: "SG", prefix: "+65", label: "+65 (SG)" },
 ];
@@ -522,7 +523,7 @@ function Stage3({
       if (isNaN(dob.getTime()) || age < 18) errs.dateOfBirth = "You must be at least 18 years old";
     }
     if (isUS && !state.ssn.trim()) errs.ssn = t("onboarding.personal.ssnRequired");
-    if (isUS && state.ssn && !/^\d{3}-\d{3}-\d{3}$/.test(state.ssn)) errs.ssn = "Format must be XXX-XXX-XXX";
+    if (isUS && state.ssn && !/^\d{3}-\d{2}-\d{4}$/.test(state.ssn)) errs.ssn = "Format must be XXX-XX-XXXX";
     if (Object.keys(errs).length) { dispatch({ type: "ERRORS", errors: errs }); return false; }
     return true;
   }
@@ -614,7 +615,7 @@ function Stage3({
         <div>
           <Input
             label={t("onboarding.personal.ssn")}
-            placeholder="XXX-XXX-XXX"
+            placeholder="XXX-XX-XXXX"
             value={state.ssn}
             onChange={(e) => {
               const digits = e.target.value.replace(/\D/g, "").slice(0, 9);
