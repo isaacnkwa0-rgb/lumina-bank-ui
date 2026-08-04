@@ -11,6 +11,7 @@ import {
   Download, Share2,
 } from "lucide-react";
 import { transactionsApi, type Transaction } from "@/lib/api";
+import { downloadReceiptPdf, shareReceiptPdf } from "@/lib/buildReceiptPdf";
 import { formatCurrency, formatDate, formatTime } from "@/lib/utils";
 import { useLanguage, type TranslationKey } from "@/lib/i18n";
 
@@ -100,51 +101,6 @@ function SectionCard({ title, children }: { title: string; children: React.React
   );
 }
 
-async function buildReceiptPdf(rows: { label: string; value: string }[], title: string): Promise<Blob> {
-  const { jsPDF } = await import("jspdf");
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const W = doc.internal.pageSize.getWidth();
-  const red: [number, number, number] = [219, 0, 17];
-  const altRow: [number, number, number] = [248, 248, 248];
-
-  doc.setFillColor(...red);
-  doc.rect(0, 0, W, 80, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
-  doc.setFont("helvetica", "bold");
-  doc.text("◆ Lumina Bank", W / 2, 35, { align: "center" });
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
-  doc.text(title, W / 2, 58, { align: "center" });
-
-  let y = 100;
-  rows.forEach((row, i) => {
-    if (i % 2 === 0) {
-      doc.setFillColor(...altRow);
-      doc.rect(32, y - 14, W - 64, 28, "F");
-    }
-    doc.setFontSize(11);
-    doc.setTextColor(150, 150, 150);
-    doc.setFont("helvetica", "normal");
-    doc.text(row.label, 48, y + 2);
-    doc.setTextColor(34, 34, 34);
-    doc.setFont("helvetica", "bold");
-    doc.text(row.value, W - 48, y + 2, { align: "right" });
-    y += 32;
-  });
-
-  doc.setDrawColor(230, 230, 230);
-  doc.line(32, y + 8, W - 32, y + 8);
-  y += 24;
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(170, 170, 170);
-  doc.text("Lumina Bank plc  |  FCA Register No. 56754  |  FSCS protected up to £85,000", W / 2, y + 12, { align: "center" });
-  doc.text(`Generated ${new Date().toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}`, W / 2, y + 26, { align: "center" });
-
-  return doc.output("blob");
-}
-
 function TxReceiptActions({ tx, isDebit, amount, statusLabel }: {
   tx: Transaction; isDebit: boolean; amount: number; statusLabel: string;
 }) {
@@ -163,24 +119,11 @@ function TxReceiptActions({ tx, isDebit, amount, statusLabel }: {
   const filename = `lumina-receipt-${tx.reference.slice(0, 12).toLowerCase()}.pdf`;
 
   async function handleDownload() {
-    const blob = await buildReceiptPdf(rows, title);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = filename; a.click();
-    URL.revokeObjectURL(url);
+    await downloadReceiptPdf(rows, title, filename);
   }
 
   async function handleShare() {
-    const blob = await buildReceiptPdf(rows, title);
-    const file = new File([blob], filename, { type: "application/pdf" });
-    if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ title: "Lumina Bank - " + title, files: [file] });
-    } else {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = filename; a.click();
-      URL.revokeObjectURL(url);
-    }
+    await shareReceiptPdf(rows, title, filename);
     setShared(true);
     setTimeout(() => setShared(false), 2000);
   }

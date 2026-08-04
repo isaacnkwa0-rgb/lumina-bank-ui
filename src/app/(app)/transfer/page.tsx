@@ -14,6 +14,7 @@ import {
   accountsApi, transfersApi, beneficiariesApi, authApi,
   type Account, type Beneficiary, type Transfer, type FxQuote,
 } from "@/lib/api";
+import { downloadReceiptPdf, shareReceiptPdf } from "@/lib/buildReceiptPdf";
 import { Loader2, BadgeCheck, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
@@ -1082,82 +1083,6 @@ function InternationalForm({
 
 // ── Success Screen ───────────────────────────────────────────────────────────
 
-async function buildReceiptPdf(rows: { label: string; value: string }[], title: string): Promise<Blob> {
-  const { jsPDF } = await import("jspdf");
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const W = doc.internal.pageSize.getWidth();
-  const red: [number, number, number] = [219, 0, 17];
-  const grey: [number, number, number] = [248, 248, 248];
-
-  // Header
-  doc.setFillColor(...red);
-  doc.rect(0, 0, W, 80, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
-  doc.setFont("helvetica", "bold");
-  doc.text("◆ Lumina Bank", W / 2, 35, { align: "center" });
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(255, 255, 255, 0.8);
-  doc.text(title, W / 2, 58, { align: "center" });
-
-  // Rows
-  let y = 100;
-  rows.forEach((row, i) => {
-    if (i % 2 === 0) {
-      doc.setFillColor(...grey);
-      doc.rect(32, y - 14, W - 64, 28, "F");
-    }
-    doc.setFontSize(11);
-    doc.setTextColor(150, 150, 150);
-    doc.setFont("helvetica", "normal");
-    doc.text(row.label, 48, y + 2);
-    doc.setTextColor(34, 34, 34);
-    doc.setFont("helvetica", "bold");
-    doc.text(row.value, W - 48, y + 2, { align: "right" });
-    y += 32;
-  });
-
-  // Divider
-  doc.setDrawColor(230, 230, 230);
-  doc.line(32, y + 8, W - 32, y + 8);
-  y += 24;
-
-  // Footer
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(170, 170, 170);
-  doc.text("Lumina Bank plc  |  FCA Register No. 56754  |  FSCS protected up to £85,000", W / 2, y + 12, { align: "center" });
-  doc.text(`Generated ${new Date().toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}`, W / 2, y + 26, { align: "center" });
-
-  return doc.output("blob");
-}
-
-async function downloadReceipt(rows: { label: string; value: string }[], title: string, filename: string) {
-  const blob = await buildReceiptPdf(rows, title);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-async function shareReceipt(rows: { label: string; value: string }[], title: string, filename: string) {
-  const blob = await buildReceiptPdf(rows, title);
-  const file = new File([blob], filename, { type: "application/pdf" });
-  if (navigator.canShare?.({ files: [file] })) {
-    await navigator.share({ title: "Lumina Bank - " + title, files: [file] });
-  } else {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-}
-
 function SuccessScreen({ result, onReset }: { result: Transfer; onReset: () => void }) {
   const { t } = useLanguage();
   const isPending = result.status === "PENDING";
@@ -1180,11 +1105,11 @@ function SuccessScreen({ result, onReset }: { result: Transfer; onReset: () => v
   const receiptTitle = `Transfer Receipt - ${result.id.slice(0, 8).toUpperCase()}`;
 
   async function handleDownload() {
-    await downloadReceipt(receiptRows, receiptTitle, `lumina-receipt-${result.id.slice(0, 8)}.pdf`);
+    await downloadReceiptPdf(receiptRows, receiptTitle, `lumina-receipt-${result.id.slice(0, 8)}.pdf`);
   }
 
   async function handleShare() {
-    await shareReceipt(receiptRows, receiptTitle, `lumina-receipt-${result.id.slice(0, 8)}.pdf`);
+    await shareReceiptPdf(receiptRows, receiptTitle, `lumina-receipt-${result.id.slice(0, 8)}.pdf`);
     setShared(true);
     setTimeout(() => setShared(false), 2000);
   }
