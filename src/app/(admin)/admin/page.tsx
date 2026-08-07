@@ -910,6 +910,7 @@ function UserRow({ u, onUpdate, onDelete }: {
           )}
           <Btn color="amber" label="Reset Lockout" loading={actionId === "x"} onClick={() => act(async () => { await adminApi.resetLockout(u.id); alert("Lockout cleared"); })} />
           <Btn color="blue" label="Verify Email" loading={actionId === "x"} onClick={() => act(async () => { await adminApi.verifyUserEmail(u.id); alert("Email marked as verified"); })} />
+          <Btn color="amber" label="Disable 2FA" loading={actionId === "x"} onClick={() => act(async () => { if (!confirm(`Disable 2FA for ${u.email}?`)) return; await adminApi.disable2fa(u.id); alert("2FA disabled — user can now log in without authenticator app"); })} />
           <Btn color="navy" label="Edit Profile" loading={actionId === "x"} onClick={openEdit} />
           <Btn color="red-outline" label="Delete User" loading={actionId === "x"} onClick={() => {
             if (!confirm(`Permanently delete ${u.firstName} ${u.lastName}? This cannot be undone.`)) return;

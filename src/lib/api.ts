@@ -383,6 +383,8 @@ export const adminApi = {
     api.patch<ApiResponse<{ id: string; unlocked: boolean }>>(`/admin/users/${id}/reset-lockout`),
   verifyUserEmail: (id: string) =>
     api.patch<ApiResponse<{ id: string; isEmailVerified: boolean }>>(`/admin/users/${id}/verify-email`),
+  disable2fa: (id: string) =>
+    api.patch<ApiResponse<{ id: string; twoFactorEnabled: boolean }>>(`/admin/users/${id}/disable-2fa`),
   updateUserProfile: (id: string, data: {
     firstName?: string; lastName?: string; phone?: string; gender?: string;
     dateOfBirth?: string; nationality?: string; countryOfResidence?: string;
