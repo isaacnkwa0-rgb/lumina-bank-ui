@@ -286,15 +286,14 @@ function AccountMiniCard({ account, cols }: { account: Account; cols: number }) 
     CREDIT: "from-purple-600 to-purple-800",
   };
   const gradient = colors[account.type] || colors["CURRENT"];
-  const formatted = formatCurrency(Number(account.balance), account.currency);
-  const len = formatted.length;
-  // Tighter thresholds for 3-col (narrowest) cards
-  const balanceSize =
-    cols >= 3
-      ? len > 9  ? "text-[10px]" : len > 6 ? "text-xs" : "text-sm"
-      : cols === 2
-      ? len > 11 ? "text-[10px]" : len > 8 ? "text-xs" : len > 5 ? "text-sm" : "text-base"
-      : len > 13 ? "text-xs" : len > 9 ? "text-sm" : "text-lg";
+  const value = Number(account.balance);
+  const sym = account.currency === "GBP" ? "£" : account.currency === "USD" ? "$" : account.currency === "EUR" ? "€" : account.currency + " ";
+  // On narrow 3-col cards abbreviate large numbers so all cards share the same font size
+  const display =
+    cols >= 3 && value >= 1_000_000 ? `${sym}${(value / 1_000_000).toFixed(1)}M`
+    : cols >= 3 && value >= 10_000  ? `${sym}${Math.round(value / 1_000)}K`
+    : formatCurrency(value, account.currency);
+  const balanceSize = cols >= 3 ? "text-sm" : cols === 2 ? "text-base" : "text-lg";
 
   return (
     <div
@@ -303,8 +302,8 @@ function AccountMiniCard({ account, cols }: { account: Account; cols: number }) 
       <p className="text-[10px] font-medium opacity-70 uppercase tracking-wide mb-2">
         {account.type}
       </p>
-      <p className={`${balanceSize} font-bold mb-1 leading-tight whitespace-nowrap overflow-hidden text-ellipsis`}>
-        {formatted}
+      <p className={`${balanceSize} font-bold mb-1 leading-tight`}>
+        {display}
       </p>
       <p className="text-[10px] opacity-60">
         ••••{account.accountNumber.slice(-4)}
