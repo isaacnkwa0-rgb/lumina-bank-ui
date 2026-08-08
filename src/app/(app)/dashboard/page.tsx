@@ -158,22 +158,20 @@ export default function DashboardPage() {
             <div className="skeleton rounded-sm h-[90px]" />
           </div>
         ) : (
-          <div
-            className={`grid gap-3 p-4 ${
-              accounts.length === 1
-                ? "grid-cols-1"
-                : accounts.length === 2
-                ? "grid-cols-2"
-                : accounts.length === 3
-                ? "grid-cols-3"
-                : "grid-cols-2"
-            }`}
-          >
-            {accounts.map((acc) => (
-              <Link key={acc.id} href={`/accounts/${acc.id}`} className="block">
-                <AccountMiniCard account={acc} />
-              </Link>
-            ))}
+          {(() => {
+            const n = accounts.length;
+            const cols = n === 1 ? 1 : n === 2 ? 2 : n === 3 ? 3 : 2;
+            const gridClass = cols === 1 ? "grid-cols-1" : cols === 3 ? "grid-cols-3" : "grid-cols-2";
+            return (
+              <div className={`grid gap-3 p-4 ${gridClass}`}>
+                {accounts.map((acc) => (
+                  <Link key={acc.id} href={`/accounts/${acc.id}`} className="block">
+                    <AccountMiniCard account={acc} cols={cols} />
+                  </Link>
+                ))}
+              </div>
+            );
+          })()}
           </div>
         )}
       </div>
@@ -285,7 +283,7 @@ export default function DashboardPage() {
   );
 }
 
-function AccountMiniCard({ account }: { account: Account }) {
+function AccountMiniCard({ account, cols }: { account: Account; cols: number }) {
   const colors: Record<string, string> = {
     CURRENT: "from-[#DB0011] to-[#8B000A]",
     SAVINGS: "from-blue-600 to-blue-800",
@@ -294,16 +292,25 @@ function AccountMiniCard({ account }: { account: Account }) {
     CREDIT: "from-purple-600 to-purple-800",
   };
   const gradient = colors[account.type] || colors["CURRENT"];
+  const formatted = formatCurrency(Number(account.balance), account.currency);
+  const len = formatted.length;
+  // Tighter thresholds for 3-col (narrowest) cards
+  const balanceSize =
+    cols >= 3
+      ? len > 9  ? "text-[10px]" : len > 6 ? "text-xs" : "text-sm"
+      : cols === 2
+      ? len > 11 ? "text-[10px]" : len > 8 ? "text-xs" : len > 5 ? "text-sm" : "text-base"
+      : len > 13 ? "text-xs" : len > 9 ? "text-sm" : "text-lg";
 
   return (
     <div
-      className={`bg-gradient-to-br ${gradient} rounded-sm p-4 text-white h-[90px] w-full`}
+      className={`bg-gradient-to-br ${gradient} rounded-sm p-4 text-white h-[90px] w-full overflow-hidden`}
     >
       <p className="text-[10px] font-medium opacity-70 uppercase tracking-wide mb-2">
         {account.type}
       </p>
-      <p className="text-lg font-bold mb-1">
-        {formatCurrency(Number(account.balance), account.currency)}
+      <p className={`${balanceSize} font-bold mb-1 leading-tight whitespace-nowrap overflow-hidden text-ellipsis`}>
+        {formatted}
       </p>
       <p className="text-[10px] opacity-60">
         ••••{account.accountNumber.slice(-4)}
