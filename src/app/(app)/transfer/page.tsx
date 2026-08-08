@@ -78,7 +78,7 @@ const domesticSchema = z.object({
 
 const internationalSchema = z.object({
   fromAccountId: z.string().min(1, "Select a source account"),
-  toIban: z.string().min(10, "Enter a valid IBAN"),
+  toAccountNumber: z.string().min(4, "Enter account number"),
   swiftCode: z.string().min(8, "Enter a valid SWIFT/BIC"),
   toBankName: z.string().min(2, "Enter bank name"),
   toAccountName: z.string().min(2, "Enter recipient name"),
@@ -983,11 +983,11 @@ function InternationalForm({
           {...register("toBankName")}
         />
         <Input
-          label="IBAN"
+          label="Account Number"
           type="text"
-          placeholder="e.g. FR76 3000 6000 0112 3456 7890 189"
-          error={errors.toIban?.message}
-          {...register("toIban")}
+          placeholder="e.g. 12345678"
+          error={errors.toAccountNumber?.message}
+          {...register("toAccountNumber")}
         />
         <Input
           label={t("transfer.swift")}
