@@ -86,6 +86,8 @@ export default function DashboardPage() {
 
   const accountCount = accounts.length;
   const accountWord = accountCount === 1 ? t("dashboard.account") : t("dashboard.accounts");
+  const accountCols = accountCount === 1 ? 1 : accountCount === 2 ? 2 : accountCount === 3 ? 3 : 2;
+  const accountGridClass = accountCols === 1 ? "grid-cols-1" : accountCols === 3 ? "grid-cols-3" : "grid-cols-2";
 
   return (
     <div className="max-w-lg mx-auto lg:max-w-none">
@@ -158,20 +160,13 @@ export default function DashboardPage() {
             <div className="skeleton rounded-sm h-[90px]" />
           </div>
         ) : (
-          {(() => {
-            const n = accounts.length;
-            const cols = n === 1 ? 1 : n === 2 ? 2 : n === 3 ? 3 : 2;
-            const gridClass = cols === 1 ? "grid-cols-1" : cols === 3 ? "grid-cols-3" : "grid-cols-2";
-            return (
-              <div className={`grid gap-3 p-4 ${gridClass}`}>
-                {accounts.map((acc) => (
-                  <Link key={acc.id} href={`/accounts/${acc.id}`} className="block">
-                    <AccountMiniCard account={acc} cols={cols} />
-                  </Link>
-                ))}
-              </div>
-            );
-          })()}
+          <div className={`grid gap-3 p-4 ${accountGridClass}`}>
+            {accounts.map((acc) => (
+              <Link key={acc.id} href={`/accounts/${acc.id}`} className="block">
+                <AccountMiniCard account={acc} cols={accountCols} />
+              </Link>
+            ))}
+          </div>
           </div>
         )}
       </div>
