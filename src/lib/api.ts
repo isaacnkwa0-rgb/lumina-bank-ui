@@ -208,7 +208,7 @@ export const transfersApi = {
   }) => api.post<ApiResponse<Transfer>>("/transfers/domestic", data),
   international: (data: {
     fromAccountId: string;
-    toIban: string;
+    toAccountNumber: string;
     swiftCode: string;
     toBankName: string;
     toAccountName: string;
