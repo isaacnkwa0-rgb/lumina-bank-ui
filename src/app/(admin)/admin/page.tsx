@@ -151,6 +151,18 @@ function TransfersTab() {
     finally { setActionId(""); }
   }
 
+  async function reverse(id: string) {
+    const reason = prompt("Reason for reversal (optional):") ?? null;
+    if (reason === null) return;
+    if (!confirm("Reverse this transfer and return funds to sender?")) return;
+    setActionId(id);
+    try {
+      await adminApi.reverseTransfer(id, reason || undefined);
+      setItems((p) => p.map((t) => t.id === id ? { ...t, status: "FAILED" } : t));
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
   return (
     <div>
       <FilterBar filters={["PENDING","ALL"]} active={filter} onSelect={(f) => setFilter(f as any)} labels={{ PENDING: "Pending", ALL: "All" }} />
@@ -177,6 +189,11 @@ function TransfersTab() {
                 <div className="flex gap-2 mt-3">
                   <ActButton label="Approve" variant="approve" onClick={() => approve(t.id)} loading={actionId === t.id} />
                   <ActButton label="Reject" variant="reject" onClick={() => reject(t.id)} loading={actionId === t.id} />
+                </div>
+              )}
+              {t.status === "COMPLETED" && (
+                <div className="flex gap-2 mt-3">
+                  <ActButton label="Reverse" variant="reject" onClick={() => reverse(t.id)} loading={actionId === t.id} />
                 </div>
               )}
             </div>

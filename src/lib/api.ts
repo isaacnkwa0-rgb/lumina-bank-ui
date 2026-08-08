@@ -414,6 +414,8 @@ export const adminApi = {
     api.patch<ApiResponse<Transfer>>(`/admin/transfers/${id}/approve`),
   rejectTransfer: (id: string, reason?: string) =>
     api.patch<ApiResponse<Transfer>>(`/admin/transfers/${id}/reject`, { reason }),
+  reverseTransfer: (id: string, reason?: string) =>
+    api.patch<ApiResponse<Transfer>>(`/admin/transfers/${id}/reverse`, { reason }),
   loans: (status?: string) =>
     api.get<ApiResponse<AdminLoan[]>>("/admin/loans", { params: status ? { status } : undefined }),
   approveLoan: (id: string) =>
