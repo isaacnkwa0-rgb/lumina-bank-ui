@@ -34,12 +34,18 @@ export function AccountCard({ account, compact = false }: AccountCardProps) {
   const gradientColor = accountTypeColors[account.type] || "bg-[#DB0011]";
 
   if (compact) {
+    const formatted = formatCurrency(Number(account.balance), account.currency);
+    const balanceSize =
+      formatted.length > 13 ? "text-xs" :
+      formatted.length > 10 ? "text-sm" :
+      formatted.length > 7  ? "text-base" :
+      "text-xl";
     return (
       <Link href={`/accounts/${account.id}`} className="block">
         <div className={`${gradientColor} rounded-sm p-4 text-white min-w-[200px] mr-3`}>
           <p className="text-xs font-medium opacity-80 mb-3">{label}</p>
-          <p className="text-xl font-bold mb-1">
-            {formatCurrency(Number(account.balance), account.currency)}
+          <p className={`${balanceSize} font-bold mb-1 break-all`}>
+            {formatted}
           </p>
           <p className="text-xs opacity-70">{maskAccountNumber(account.accountNumber)}</p>
         </div>
