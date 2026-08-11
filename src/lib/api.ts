@@ -260,6 +260,12 @@ export const loansApi = {
     api.get<ApiResponse<{ loan: Loan; schedule: AmortizationEntry[] }>>(`/loans/${id}/schedule`),
   repay: (id: string, amount: number) =>
     api.post<ApiResponse<{ loanId: string; amountPaid: number; remainingBalance: number }>>(`/loans/${id}/repay`, { amount }),
+  saveDraft: (id: string, step: number, data: Record<string, unknown>) =>
+    api.patch<ApiResponse<Loan>>(`/loans/${id}/draft`, { step, data }),
+  submitApplication: (id: string) =>
+    api.post<ApiResponse<Loan>>(`/loans/${id}/submit`),
+  getApplicationData: (id: string) =>
+    api.get<ApiResponse<{ loan: Loan; applicationData: Record<string, unknown> }>>(`/loans/${id}/application`),
 };
 
 export const usersApi = {
@@ -713,6 +719,13 @@ export interface Loan {
   status: string;
   disbursedAt?: string;
   payments?: LoanPayment[];
+  referenceNumber?: string;
+  purpose?: string;
+  purposeDetails?: string;
+  repaymentFrequency?: string;
+  applicationStep?: number;
+  applicationData?: Record<string, unknown>;
+  acknowledgedAt?: string;
 }
 
 export interface LoanPayment {

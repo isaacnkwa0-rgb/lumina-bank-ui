@@ -147,24 +147,22 @@ export default function LoanApplyPage() {
 
   if (success) {
     return (
-      <div className="max-w-lg mx-auto lg:max-w-none px-4 py-12 flex flex-col items-center text-center">
+      <div className="max-w-lg mx-auto lg:max-w-none px-4 py-10 flex flex-col items-center text-center">
         <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
           <CheckCircle2 size={40} className="text-green-500" />
         </div>
-        <h2 className="text-2xl font-bold text-[#333] mb-2">{t("loans.appSubmitted")}</h2>
-        <p className="text-[#767676] text-sm mb-2">
-          {t("loans.appSubmittedDesc")}
+        <h2 className="text-2xl font-bold text-[#333] mb-2">Application Submitted!</h2>
+        <p className="text-[#767676] text-sm mb-6">
+          Your initial application has been received. Our team will review it shortly and acknowledge your request.
         </p>
-        <p className="text-[#767676] text-sm mb-8">
-          You&apos;ll receive a decision shortly. Your loan will appear in the Loans section once approved.
-        </p>
+
         <div className="w-full bg-[#F8F8F8] rounded-2xl p-4 mb-6 text-left space-y-2">
           {[
-            { label: t("loans.loanType"),        value: selectedType ? t(selectedType.labelKey) : "" },
-            { label: "Amount",                    value: formatCurrency(parsedAmount)               },
-            { label: t("loans.term"),             value: `${termMonths} ${t("loans.months")}`       },
-            { label: t("loans.monthlyPayment"),   value: formatCurrency(monthly)                    },
-            { label: t("loans.apr"),              value: `${selectedType?.rate}%`                   },
+            { label: t("loans.loanType"),      value: selectedType ? t(selectedType.labelKey) : "" },
+            { label: "Amount Requested",        value: formatCurrency(parsedAmount)               },
+            { label: t("loans.term"),           value: `${termMonths} ${t("loans.months")}`       },
+            { label: t("loans.monthlyPayment"), value: formatCurrency(monthly)                    },
+            { label: t("loans.apr"),            value: `${selectedType?.rate}%`                   },
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between text-sm">
               <span className="text-[#767676]">{label}</span>
@@ -172,11 +170,29 @@ export default function LoanApplyPage() {
             </div>
           ))}
         </div>
+
+        <div className="w-full bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-6 text-left">
+          <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-2">What happens next?</p>
+          <div className="space-y-2">
+            {[
+              "Our team reviews your initial application",
+              "You receive an acknowledgement email",
+              "You complete your full application online",
+              "We assess and deliver a final decision",
+            ].map((step, i) => (
+              <div key={step} className="flex items-start gap-2.5">
+                <span className="h-5 w-5 rounded-full bg-blue-200 text-blue-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                <p className="text-xs text-[#555]">{step}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <button
           onClick={() => router.push("/loans")}
           className="w-full py-3.5 rounded-xl bg-[#DB0011] text-white font-bold text-sm hover:bg-[#b0000d] transition-colors"
         >
-          Back to Loans
+          View My Loans
         </button>
       </div>
     );

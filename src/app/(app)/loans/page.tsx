@@ -9,7 +9,7 @@ import { useLanguage, type TranslationKey } from "@/lib/i18n";
 import {
   Calendar, ChevronDown, ChevronUp, CheckCircle2,
   Clock, AlertCircle, Banknote, Percent, CreditCard,
-  TrendingDown, Star, X, TableProperties,
+  TrendingDown, Star, X, TableProperties, FileText, ArrowRight,
 } from "lucide-react";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -23,10 +23,12 @@ const PAYMENT_STATUS_KEYS: Record<string, TranslationKey> = {
 
 function statusConfig(status: string) {
   switch (status.toUpperCase()) {
-    case "ACTIVE":    return { color: "text-green-600",  bg: "bg-green-50",  border: "border-green-200",  icon: CheckCircle2 };
-    case "PAID_OFF":  return { color: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-200",   icon: Star         };
-    case "DEFAULTED": return { color: "text-[#DB0011]",  bg: "bg-red-50",    border: "border-red-200",    icon: AlertCircle  };
-    default:          return { color: "text-amber-600",  bg: "bg-amber-50",  border: "border-amber-200",  icon: Clock        };
+    case "ACTIVE":       return { color: "text-green-600",  bg: "bg-green-50",  border: "border-green-200",  icon: CheckCircle2 };
+    case "PAID_OFF":     return { color: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-200",   icon: Star         };
+    case "DEFAULTED":    return { color: "text-[#DB0011]",  bg: "bg-red-50",    border: "border-red-200",    icon: AlertCircle  };
+    case "ACKNOWLEDGED": return { color: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-200",   icon: FileText     };
+    case "UNDER_REVIEW": return { color: "text-purple-600", bg: "bg-purple-50", border: "border-purple-200", icon: Clock        };
+    default:             return { color: "text-amber-600",  bg: "bg-amber-50",  border: "border-amber-200",  icon: Clock        };
   }
 }
 
@@ -110,6 +112,66 @@ function RepayModal({ loan, onClose, onSuccess }: { loan: Loan; onClose: () => v
               {loading ? t("loans.processing") : `${t("loans.pay")} ${formatCurrency(parseFloat(amount) || 0)}`}
             </button>
           </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AcknowledgedBanner({ loan }: { loan: Loan }) {
+  const router = useRouter();
+  const isUnderReview = loan.status === "UNDER_REVIEW";
+  return (
+    <div className="bg-white rounded-2xl border-2 border-blue-200 shadow-sm overflow-hidden">
+      <div className={`px-5 py-4 ${isUnderReview ? "bg-purple-50" : "bg-blue-50"}`}>
+        <div className="flex items-start gap-3">
+          <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isUnderReview ? "bg-purple-100" : "bg-blue-100"}`}>
+            {isUnderReview ? <Clock size={18} className="text-purple-600" /> : <FileText size={18} className="text-blue-600" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-xs font-bold text-[#555] uppercase tracking-wide">{loan.type} Loan</span>
+              {loan.referenceNumber && (
+                <span className="text-[10px] font-mono text-[#999]">{loan.referenceNumber}</span>
+              )}
+            </div>
+            <p className="text-base font-bold text-[#333]">{formatCurrency(Number(loan.principalAmount))}</p>
+            <p className={`text-xs font-semibold mt-0.5 ${isUnderReview ? "text-purple-600" : "text-blue-600"}`}>
+              {isUnderReview ? "Under Review — We're assessing your application" : "Action Required — Complete your application"}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div className="px-5 py-4">
+        {isUnderReview ? (
+          <p className="text-sm text-[#767676]">
+            Your completed application is being reviewed by our team. You&apos;ll receive a decision within 3–5 business days.
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-[#767676] mb-3">
+              Your initial application has been acknowledged. Please complete your full application to proceed. We need additional information to assess your eligibility.
+            </p>
+            <div className="space-y-2 mb-4">
+              {[
+                "Personal & contact information",
+                "Employment & income details",
+                "Financial background",
+                "Supporting documents",
+              ].map((step) => (
+                <div key={step} className="flex items-center gap-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+                  <p className="text-xs text-[#555]">{step}</p>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => router.push(`/loans/${loan.id}/continue`)}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#DB0011] text-white font-bold text-sm hover:bg-[#b0000d] transition-colors"
+            >
+              Complete Application <ArrowRight size={16} />
+            </button>
+          </>
         )}
       </div>
     </div>
@@ -409,7 +471,30 @@ export default function LoansPage() {
           ))
         ) : (
           <>
-            {loans.map((loan) => <LoanCard key={loan.id} loan={loan} onRefresh={loadLoans} />)}
+            {loans.map((loan) => {
+              const status = loan.status.toUpperCase();
+              if (status === "ACKNOWLEDGED" || status === "UNDER_REVIEW") {
+                return <AcknowledgedBanner key={loan.id} loan={loan} />;
+              }
+              if (status === "PENDING") {
+                return (
+                  <div key={loan.id} className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-5">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="h-9 w-9 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+                        <Clock size={16} className="text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-[#333]">{loan.type} Loan · {formatCurrency(Number(loan.principalAmount))}</p>
+                        {loan.referenceNumber && <p className="text-[10px] font-mono text-[#999]">{loan.referenceNumber}</p>}
+                      </div>
+                      <span className="ml-auto text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">Pending Review</span>
+                    </div>
+                    <p className="text-xs text-[#767676]">Your application has been submitted and is awaiting initial review by our team. You&apos;ll be notified once it&apos;s acknowledged.</p>
+                  </div>
+                );
+              }
+              return <LoanCard key={loan.id} loan={loan} onRefresh={loadLoans} />;
+            })}
             <ApplyCTA eligibility={eligibility} />
           </>
         )}
