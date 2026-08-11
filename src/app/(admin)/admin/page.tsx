@@ -71,12 +71,14 @@ function Pill({ status }: { status: string }) {
 }
 
 function ActButton({ label, variant, onClick, loading }: {
-  label: string; variant: "approve" | "reject" | "resolve" | "block" | "unblock"; onClick: () => void; loading?: boolean;
+  label: string; variant: "approve" | "reject" | "resolve" | "block" | "unblock" | "neutral"; onClick: () => void; loading?: boolean;
 }) {
   const cls = ["approve","resolve","unblock"].includes(variant)
     ? "bg-green-600 hover:bg-green-700 text-white"
     : variant === "block"
     ? "bg-amber-600 hover:bg-amber-700 text-white"
+    : variant === "neutral"
+    ? "bg-[#555] hover:bg-[#333] text-white"
     : "bg-[#DB0011] hover:bg-[#b8000e] text-white";
   return (
     <button onClick={onClick} disabled={loading}
@@ -306,6 +308,17 @@ function LoansTab({ loanType }: { loanType?: "MORTGAGE" }) {
   const [actionId, setActionId] = useState("");
   const [expandedId, setExpandedId] = useState("");
 
+  async function requestInfo(id: string) {
+    const message = prompt("What information is needed? (leave blank for default guarantor message)");
+    if (message === null) return;
+    setActionId(id + ":info");
+    try {
+      await adminApi.requestMoreInfo(id, message || undefined);
+      setItems((p) => p.map((l) => l.id === id ? { ...l, status: "ACKNOWLEDGED" as AdminLoan["status"] } : l));
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -408,8 +421,9 @@ function LoansTab({ loanType }: { loanType?: "MORTGAGE" }) {
                   </div>
                 )}
                 {l.status === "UNDER_REVIEW" && (
-                  <div className="flex gap-2 mt-3">
+                  <div className="flex gap-2 mt-3 flex-wrap">
                     <ActButton label="Approve & Disburse" variant="approve" onClick={() => approve(l.id)} loading={isActing} />
+                    <ActButton label="Request Info" variant="neutral" onClick={() => requestInfo(l.id)} loading={isActing} />
                     <ActButton label="Reject" variant="reject" onClick={() => reject(l.id)} loading={isActing} />
                   </div>
                 )}
