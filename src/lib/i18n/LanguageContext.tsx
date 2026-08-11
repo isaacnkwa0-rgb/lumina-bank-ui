@@ -13,7 +13,7 @@ import { usersApi } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 
 const LANG_KEY = "lumina_lang";
-const SUPPORTED: Language[] = ["EN", "ES", "FR", "PT", "DE"];
+const SUPPORTED: Language[] = ["EN", "ES", "FR", "PT", "DE", "IT"];
 
 function isLanguage(v: unknown): v is Language {
   return typeof v === "string" && (SUPPORTED as string[]).includes(v);
