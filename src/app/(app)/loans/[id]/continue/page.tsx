@@ -178,8 +178,8 @@ function PersonalStep({ data, onChange }: { data: PersonalData; onChange: (d: Pe
           <Input label="Address line 1" value={data.addressLine1} onChange={u("addressLine1")} placeholder="123 Main Street" />
           <Input label="Address line 2 (optional)" value={data.addressLine2} onChange={u("addressLine2")} placeholder="Apt 4B" />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="City / Town" value={data.city} onChange={u("city")} placeholder="New York" />
-            <Input label="Postal code" value={data.postcode} onChange={u("postcode")} placeholder="10001" />
+            <Input label="City / Town" value={data.city} onChange={u("city")} placeholder="City" />
+            <Input label="Postal code" value={data.postcode} onChange={u("postcode")} placeholder="Postal code" />
           </div>
           <Select label="Years at this address" options={["Less than 1 year", "1–2 years", "3–5 years", "5–10 years", "10+ years"]} value={data.yearsAtAddress} onChange={u("yearsAtAddress")} />
         </div>
@@ -492,8 +492,8 @@ function GuarantorStep({ data, onChange }: { data: GuarantorData; onChange: (d: 
         <div className="space-y-3">
           <Input label="Address" value={data.addressLine1} onChange={u("addressLine1")} placeholder="123 Main Street" />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="City" value={data.city} onChange={u("city")} placeholder="Lagos" />
-            <Input label="Postal code" value={data.postcode} onChange={u("postcode")} placeholder="100001" />
+            <Input label="City" value={data.city} onChange={u("city")} placeholder="City" />
+            <Input label="Postal code" value={data.postcode} onChange={u("postcode")} placeholder="Postal code" />
           </div>
         </div>
       </div>

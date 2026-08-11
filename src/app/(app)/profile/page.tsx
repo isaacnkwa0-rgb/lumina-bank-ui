@@ -439,10 +439,10 @@ export default function ProfilePage() {
 
               <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest pt-1">Home address</p>
               {[
-                { label: "Street address", val: street,     set: setStreet,     placeholder: "123 Main Street" },
-                { label: "City / Town",    val: city,       set: setCity,       placeholder: "New York" },
-                { label: "Postal code",    val: postalCode, set: setPostalCode, placeholder: "10001" },
-                { label: "Country",        val: country,    set: setCountry,    placeholder: "United States" },
+                { label: "Street address", val: street,     set: setStreet,     placeholder: "Street address" },
+                { label: "City / Town",    val: city,       set: setCity,       placeholder: "City" },
+                { label: "Postal code",    val: postalCode, set: setPostalCode, placeholder: "Postal code" },
+                { label: "Country",        val: country,    set: setCountry,    placeholder: "Country" },
               ].map(({ label, val, set, placeholder }) => (
                 <div key={label}>
                   <label className="block text-xs font-bold text-[#555] uppercase tracking-wide mb-1.5">{label}</label>
