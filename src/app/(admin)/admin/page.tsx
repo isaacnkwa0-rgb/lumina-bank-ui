@@ -206,11 +206,105 @@ function TransfersTab() {
 
 // ── Loans / Mortgages ─────────────────────────────────────────────────────────
 
+function AppDataSection({ title, rows }: { title: string; rows: [string, string | null | undefined][] }) {
+  const filled = rows.filter(([, v]) => v);
+  if (!filled.length) return null;
+  return (
+    <div className="mb-3">
+      <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-1.5">{title}</p>
+      <div className="bg-[#FAFAFA] border border-[#F0F0F0] rounded-xl overflow-hidden">
+        {filled.map(([label, value]) => (
+          <div key={label} className="flex justify-between items-center px-3 py-2 border-b border-[#F5F5F5] last:border-0">
+            <span className="text-[11px] text-[#999]">{label}</span>
+            <span className="text-[11px] font-semibold text-[#333] text-right max-w-[60%] truncate">{value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FullApplicationView({ appData }: { appData: Record<string, unknown> }) {
+  const p = (appData.personal ?? {}) as Record<string, unknown>;
+  const e = (appData.employment ?? {}) as Record<string, unknown>;
+  const f = (appData.financial ?? {}) as Record<string, unknown>;
+  const d = (appData.documents ?? {}) as Record<string, unknown>;
+  const g = (appData.guarantor ?? {}) as Record<string, unknown>;
+
+  const str = (v: unknown) => v ? String(v) : null;
+  const money = (v: unknown) => v ? formatCurrency(Number(v)) : null;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-[#F0F0F0]">
+      <AppDataSection title="Personal Information" rows={[
+        ["Full name", [str(p.firstName), str(p.lastName)].filter(Boolean).join(" ") || null],
+        ["Date of birth", str(p.dateOfBirth)],
+        ["Nationality", str(p.nationality)],
+        ["Marital status", str(p.maritalStatus)],
+        ["Phone", str(p.phone)],
+        ["Address", [str(p.addressLine1), str(p.addressLine2), str(p.city), str(p.postcode)].filter(Boolean).join(", ") || null],
+      ]} />
+
+      <AppDataSection title="Employment & Income" rows={[
+        ["Status", str(e.employmentStatus)],
+        ["Employer / Business", str(e.employerName)],
+        ["Role", str(e.jobTitle)],
+        ["Start date", str(e.employmentStartDate)],
+        ["Monthly income", money(e.monthlyIncome)],
+        ["Other income", e.otherIncome ? `${money(e.otherIncome)} (${str(e.otherIncomeSource) ?? "unspecified"})` : null],
+      ]} />
+
+      <AppDataSection title="Financial Background" rows={[
+        ["Monthly rent / mortgage", money(f.monthlyRent)],
+        ["Monthly living expenses", money(f.monthlyLiving)],
+        ["Debt repayments / mo", money(f.monthlyDebt)],
+        ["Outstanding loans", money(f.existingLoans)],
+        ["Credit card balance", money(f.creditCardBalance)],
+        ["Bankruptcy / court judgment", str(f.bankruptcyHistory) === "yes" ? "Yes" : str(f.bankruptcyHistory) === "no" ? "No" : null],
+        ["Credit check consent", str(f.creditConsent) === "yes" ? "Given ✓" : str(f.creditConsent) === "no" ? "Not given" : null],
+      ]} />
+
+      <div className="mb-3">
+        <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-1.5">Documents</p>
+        <div className="space-y-1.5">
+          {[
+            { label: "Photo ID", type: str(d.idType), url: str(d.idDocumentUrl), note: str(d.idNote) },
+            { label: "Proof of address", type: null, url: str(d.addressProofUrl), note: str(d.addressProofNote) },
+            { label: "Proof of income", type: null, url: str(d.incomeProofUrl), note: str(d.incomeProofNote) },
+          ].map(({ label, type, url, note }) => (
+            <div key={label} className="flex items-center justify-between bg-[#FAFAFA] border border-[#F0F0F0] rounded-xl px-3 py-2">
+              <div>
+                <p className="text-[11px] font-semibold text-[#333]">{label}{type ? ` · ${type}` : ""}</p>
+                {note && <p className="text-[10px] text-[#AAAAAA]">{note}</p>}
+              </div>
+              {url
+                ? <a href={url} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-[#DB0011] hover:underline flex-shrink-0">View ↗</a>
+                : <span className="text-[10px] text-[#AAAAAA]">Not uploaded</span>
+              }
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <AppDataSection title="Guarantor" rows={[
+        ["Name", str(g.fullName)],
+        ["Relationship", str(g.relationship)],
+        ["Email", str(g.email)],
+        ["Phone", str(g.phone)],
+        ["Address", [str(g.addressLine1), str(g.city), str(g.postcode)].filter(Boolean).join(", ") || null],
+        ["Employment", str(g.employmentStatus)],
+        ["Monthly income", money(g.monthlyIncome)],
+      ]} />
+    </div>
+  );
+}
+
 function LoansTab({ loanType }: { loanType?: "MORTGAGE" }) {
   const [filter, setFilter] = useState<"PENDING" | "UNDER_REVIEW" | "ACTIVE" | "ALL">("PENDING");
   const [items, setItems] = useState<AdminLoan[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState("");
+  const [expandedId, setExpandedId] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -263,15 +357,19 @@ function LoansTab({ loanType }: { loanType?: "MORTGAGE" }) {
       <FilterBar
         filters={["PENDING","UNDER_REVIEW","ACTIVE","ALL"]}
         active={filter}
-        onSelect={(f) => setFilter(f as "PENDING" | "UNDER_REVIEW" | "ACTIVE" | "ALL")}
+        onSelect={(f) => { setFilter(f as "PENDING" | "UNDER_REVIEW" | "ACTIVE" | "ALL"); setExpandedId(""); }}
         labels={{ PENDING: "Pending", UNDER_REVIEW: "Under Review", ACTIVE: "Active", ALL: "All" }}
       />
       {loading ? <LoadingRows /> : items.length === 0 ? <Empty icon={Landmark} label={`No ${filter.toLowerCase().replace("_"," ")} ${label}s`} /> : (
         <div className="divide-y divide-[#F0F0F0]">
           {items.map((l) => {
-            const appData = (l as AdminLoan & { applicationData?: Record<string, unknown>; referenceNumber?: string; purpose?: string }).applicationData;
-            const refNum = (l as AdminLoan & { referenceNumber?: string }).referenceNumber;
+            const lx = l as AdminLoan & { applicationData?: Record<string, unknown>; referenceNumber?: string };
+            const appData = lx.applicationData;
+            const refNum = lx.referenceNumber;
             const isActing = actionId.startsWith(l.id);
+            const isExpanded = expandedId === l.id;
+            const hasFullApp = !!appData && (l.status === "UNDER_REVIEW" || l.status === "ACTIVE");
+
             return (
               <div key={l.id} className="bg-white px-4 py-4">
                 <div className="flex items-start justify-between mb-1">
@@ -283,17 +381,6 @@ function LoansTab({ loanType }: { loanType?: "MORTGAGE" }) {
                     </div>
                     <UserLine user={l.user} />
                     <p className="text-xs text-[#AAAAAA] mt-0.5">{l.termMonths} months · {(Number(l.interestRate) * 100).toFixed(1)}% p.a.</p>
-                    {appData && (() => {
-                      const ad = appData as Record<string, Record<string, unknown>>;
-                      const employer = ad.employment?.employerName ? String(ad.employment.employerName) : null;
-                      const income = ad.financial?.monthlyIncome ? Number(ad.financial.monthlyIncome) : null;
-                      return (employer || income) ? (
-                        <div className="mt-1.5 text-[10px] text-[#999] space-y-0.5">
-                          {employer && <p>Employer: <span className="text-[#555] font-medium">{employer}</span></p>}
-                          {income ? <p>Income: <span className="text-[#555] font-medium">{formatCurrency(income)}/mo</span></p> : null}
-                        </div>
-                      ) : null;
-                    })()}
                   </div>
                   <div className="text-right flex-shrink-0 ml-3">
                     <p className="text-sm font-bold text-[#333]">{formatCurrency(Number(l.principalAmount))}</p>
@@ -301,6 +388,19 @@ function LoansTab({ loanType }: { loanType?: "MORTGAGE" }) {
                     <p className="text-[10px] text-[#AAAAAA]">{formatDate(l.createdAt)}</p>
                   </div>
                 </div>
+
+                {hasFullApp && (
+                  <button
+                    onClick={() => setExpandedId(isExpanded ? "" : l.id)}
+                    className="mt-2 text-[11px] font-semibold text-[#DB0011] hover:text-[#b0000d] flex items-center gap-1"
+                  >
+                    <ChevronRight size={12} className={`transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                    {isExpanded ? "Hide" : "View Full Application"}
+                  </button>
+                )}
+
+                {isExpanded && appData && <FullApplicationView appData={appData} />}
+
                 {l.status === "PENDING" && (
                   <div className="flex gap-2 mt-3">
                     <ActButton label="Acknowledge" variant="approve" onClick={() => acknowledge(l.id)} loading={isActing} />
