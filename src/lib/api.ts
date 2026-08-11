@@ -428,6 +428,8 @@ export const adminApi = {
     api.patch<ApiResponse<Loan>>(`/admin/loans/${id}/approve`),
   rejectLoan: (id: string, reason?: string) =>
     api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/loans/${id}/reject`, { reason }),
+  acknowledgeLoan: (id: string) =>
+    api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/loans/${id}/acknowledge`),
   disputes: (status?: string) =>
     api.get<ApiResponse<AdminDispute[]>>("/admin/disputes", { params: status ? { status } : undefined }),
   reviewDispute: (id: string) =>

@@ -207,7 +207,7 @@ function TransfersTab() {
 // ── Loans / Mortgages ─────────────────────────────────────────────────────────
 
 function LoansTab({ loanType }: { loanType?: "MORTGAGE" }) {
-  const [filter, setFilter] = useState<"PENDING" | "ACTIVE" | "ALL">("PENDING");
+  const [filter, setFilter] = useState<"PENDING" | "UNDER_REVIEW" | "ACTIVE" | "ALL">("PENDING");
   const [items, setItems] = useState<AdminLoan[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState("");
@@ -225,9 +225,19 @@ function LoansTab({ loanType }: { loanType?: "MORTGAGE" }) {
 
   useEffect(() => { load(); }, [load]);
 
+  async function acknowledge(id: string) {
+    if (!confirm("Acknowledge this application? The customer will be notified to complete their full application.")) return;
+    setActionId(id + ":ack");
+    try {
+      await adminApi.acknowledgeLoan(id);
+      setItems((p) => p.map((l) => l.id === id ? { ...l, status: "ACKNOWLEDGED" } : l));
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
   async function approve(id: string) {
-    if (!confirm("Approve this loan?")) return;
-    setActionId(id);
+    if (!confirm("Approve this loan and disburse funds?")) return;
+    setActionId(id + ":approve");
     try {
       await adminApi.approveLoan(id);
       setItems((p) => p.map((l) => l.id === id ? { ...l, status: "ACTIVE" } : l));
@@ -238,7 +248,7 @@ function LoansTab({ loanType }: { loanType?: "MORTGAGE" }) {
   async function reject(id: string) {
     const reason = prompt("Reason for rejection (optional):") ?? null;
     if (reason === null) return;
-    setActionId(id);
+    setActionId(id + ":reject");
     try {
       await adminApi.rejectLoan(id, reason || undefined);
       setItems((p) => p.map((l) => l.id === id ? { ...l, status: "REJECTED" } : l));
@@ -250,34 +260,61 @@ function LoansTab({ loanType }: { loanType?: "MORTGAGE" }) {
 
   return (
     <div>
-      <FilterBar filters={["PENDING","ACTIVE","ALL"]} active={filter} onSelect={(f) => setFilter(f as any)} labels={{ PENDING: "Pending", ACTIVE: "Active", ALL: "All" }} />
-      {loading ? <LoadingRows /> : items.length === 0 ? <Empty icon={Landmark} label={`No ${filter.toLowerCase()} ${label}s`} /> : (
+      <FilterBar
+        filters={["PENDING","UNDER_REVIEW","ACTIVE","ALL"]}
+        active={filter}
+        onSelect={(f) => setFilter(f as "PENDING" | "UNDER_REVIEW" | "ACTIVE" | "ALL")}
+        labels={{ PENDING: "Pending", UNDER_REVIEW: "Under Review", ACTIVE: "Active", ALL: "All" }}
+      />
+      {loading ? <LoadingRows /> : items.length === 0 ? <Empty icon={Landmark} label={`No ${filter.toLowerCase().replace("_"," ")} ${label}s`} /> : (
         <div className="divide-y divide-[#F0F0F0]">
-          {items.map((l) => (
-            <div key={l.id} className="bg-white px-4 py-4">
-              <div className="flex items-start justify-between mb-1">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                    <span className="text-xs font-semibold text-[#333] uppercase">{l.type}</span>
-                    <Pill status={l.status} />
+          {items.map((l) => {
+            const appData = (l as AdminLoan & { applicationData?: Record<string, unknown>; referenceNumber?: string; purpose?: string }).applicationData;
+            const refNum = (l as AdminLoan & { referenceNumber?: string }).referenceNumber;
+            const isActing = actionId.startsWith(l.id);
+            return (
+              <div key={l.id} className="bg-white px-4 py-4">
+                <div className="flex items-start justify-between mb-1">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <span className="text-xs font-semibold text-[#333] uppercase">{l.type}</span>
+                      <Pill status={l.status} />
+                      {refNum && <span className="text-[10px] text-[#AAAAAA] font-mono">{refNum}</span>}
+                    </div>
+                    <UserLine user={l.user} />
+                    <p className="text-xs text-[#AAAAAA] mt-0.5">{l.termMonths} months · {(Number(l.interestRate) * 100).toFixed(1)}% p.a.</p>
+                    {appData && (
+                      <div className="mt-1.5 text-[10px] text-[#999] space-y-0.5">
+                        {(appData as Record<string, Record<string, unknown>>).employment?.employerName && (
+                          <p>Employer: <span className="text-[#555] font-medium">{String((appData as Record<string, Record<string, unknown>>).employment.employerName)}</span></p>
+                        )}
+                        {(appData as Record<string, Record<string, unknown>>).financial?.monthlyIncome && (
+                          <p>Income: <span className="text-[#555] font-medium">{formatCurrency(Number((appData as Record<string, Record<string, unknown>>).financial.monthlyIncome))}/mo</span></p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <UserLine user={l.user} />
-                  <p className="text-xs text-[#AAAAAA] mt-0.5">{l.termMonths} months · {(Number(l.interestRate) * 100).toFixed(1)}% p.a.</p>
+                  <div className="text-right flex-shrink-0 ml-3">
+                    <p className="text-sm font-bold text-[#333]">{formatCurrency(Number(l.principalAmount))}</p>
+                    <p className="text-[10px] text-[#AAAAAA]">{formatCurrency(Number(l.monthlyPayment))}/mo</p>
+                    <p className="text-[10px] text-[#AAAAAA]">{formatDate(l.createdAt)}</p>
+                  </div>
                 </div>
-                <div className="text-right flex-shrink-0 ml-3">
-                  <p className="text-sm font-bold text-[#333]">{formatCurrency(Number(l.principalAmount))}</p>
-                  <p className="text-[10px] text-[#AAAAAA]">{formatCurrency(Number(l.monthlyPayment))}/mo</p>
-                  <p className="text-[10px] text-[#AAAAAA]">{formatDate(l.createdAt)}</p>
-                </div>
+                {l.status === "PENDING" && (
+                  <div className="flex gap-2 mt-3">
+                    <ActButton label="Acknowledge" variant="approve" onClick={() => acknowledge(l.id)} loading={isActing} />
+                    <ActButton label="Reject" variant="reject" onClick={() => reject(l.id)} loading={isActing} />
+                  </div>
+                )}
+                {l.status === "UNDER_REVIEW" && (
+                  <div className="flex gap-2 mt-3">
+                    <ActButton label="Approve & Disburse" variant="approve" onClick={() => approve(l.id)} loading={isActing} />
+                    <ActButton label="Reject" variant="reject" onClick={() => reject(l.id)} loading={isActing} />
+                  </div>
+                )}
               </div>
-              {l.status === "PENDING" && (
-                <div className="flex gap-2 mt-3">
-                  <ActButton label="Approve" variant="approve" onClick={() => approve(l.id)} loading={actionId === l.id} />
-                  <ActButton label="Reject" variant="reject" onClick={() => reject(l.id)} loading={actionId === l.id} />
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
