@@ -592,6 +592,7 @@ export const ratesApi = {
   list: () => api.get<ApiResponse<Rate[]>>("/rates"),
   convert: (params: { from: string; to: string; amount: number }) =>
     api.get<ApiResponse<ConversionResult>>("/rates/convert", { params }),
+  cryptoPrices: () => api.get<ApiResponse<Record<string, number>>>("/rates/crypto"),
 };
 
 export const beneficiariesApi = {

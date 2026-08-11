@@ -10,7 +10,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import {
-  accountsApi, depositsApi,
+  accountsApi, depositsApi, ratesApi,
   type Account, type Deposit, type BankReceivingDetails,
 } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
@@ -250,18 +250,21 @@ function BankTransferTab({ accounts }: { accounts: Account[] }) {
 
 // ── Crypto Tab ─────────────────────────────────────────────────────────────────
 
-// Indicative prices — used to show the coin equivalent in the form only.
-// The backend uses the priceGbp we send to compute the exact coinAmount.
-const MOCK_PRICES: Record<string, number> = {
-  BTC: 62500, ETH: 3200, USDT: 1, BNB: 580, SOL: 145,
-};
-
 function CryptoTab({ accounts }: { accounts: Account[] }) {
   const [walletInfo, setWalletInfo] = useState<{
     address: string; coin: string; network: string; coinAmount: string; amountGbp: number;
   } | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError]           = useState("");
+  const [submitting, setSubmitting]     = useState(false);
+  const [error, setError]               = useState("");
+  const [prices, setPrices]             = useState<Record<string, number>>({});
+  const [pricesLoading, setPricesLoading] = useState(true);
+
+  useEffect(() => {
+    ratesApi.cryptoPrices()
+      .then(res => setPrices(res.data.data ?? {}))
+      .catch(() => {})
+      .finally(() => setPricesLoading(false));
+  }, []);
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<CryptoForm>({
     resolver: zodResolver(cryptoSchema),
@@ -271,8 +274,8 @@ function CryptoTab({ accounts }: { accounts: Account[] }) {
   const coinIndex    = Number(watch("coinIndex") ?? 0);
   const amountGbp    = watch("amountGbp");
   const selectedCoin = COIN_OPTIONS[coinIndex] ?? COIN_OPTIONS[0];
-  const priceGbp     = MOCK_PRICES[selectedCoin.coin] ?? 1;
-  const coinEquiv    = amountGbp && !isNaN(Number(amountGbp)) && Number(amountGbp) > 0
+  const priceGbp     = prices[selectedCoin.coin] ?? 0;
+  const coinEquiv    = amountGbp && !isNaN(Number(amountGbp)) && Number(amountGbp) > 0 && priceGbp > 0
     ? Number(amountGbp) / priceGbp
     : 0;
 
@@ -285,7 +288,7 @@ function CryptoTab({ accounts }: { accounts: Account[] }) {
         accountId: data.accountId,
         coin:      coin.coin,
         amountGbp: Number(data.amountGbp),
-        priceGbp:  MOCK_PRICES[coin.coin] ?? 1,
+        priceGbp:  prices[coin.coin] ?? 0,
       });
       setWalletInfo({
         address:   res.data.data.walletAddress,
@@ -392,11 +395,14 @@ function CryptoTab({ accounts }: { accounts: Account[] }) {
             className="pl-7"
           />
         </div>
-        {coinEquiv > 0 && (
+        {pricesLoading ? (
+          <p className="text-[11px] text-[#AAAAAA] mt-1">Loading live rates…</p>
+        ) : priceGbp > 0 && coinEquiv > 0 ? (
           <p className="text-[11px] text-[#888888] mt-1">
             ≈ {coinEquiv.toFixed(8)} {selectedCoin.coin}
+            <span className="ml-2 text-[#AAAAAA]">(1 {selectedCoin.coin} = £{priceGbp.toLocaleString("en-GB", { maximumFractionDigits: 2 })})</span>
           </p>
-        )}
+        ) : null}
         {errors.amountGbp && <p className="text-[11px] text-[#DB0011] mt-1">{errors.amountGbp.message}</p>}
       </div>
 
@@ -407,7 +413,7 @@ function CryptoTab({ accounts }: { accounts: Account[] }) {
         </div>
       )}
 
-      <Button type="submit" disabled={submitting} className="w-full">
+      <Button type="submit" disabled={submitting || pricesLoading} className="w-full">
         {submitting ? "Submitting…" : "Get Wallet Address"}
       </Button>
     </form>
