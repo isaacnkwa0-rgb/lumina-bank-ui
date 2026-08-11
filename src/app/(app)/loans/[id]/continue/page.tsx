@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { loansApi, type Loan } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import {
   ArrowLeft, ArrowRight, CheckCircle2, User, Briefcase,
-  DollarSign, FileText, Eye, Loader2, X,
+  DollarSign, FileText, Eye, Loader2, X, Upload, CheckCircle, Shield,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -31,8 +31,15 @@ type FinancialData = {
 };
 
 type DocumentsData = {
-  idType: string; idNote: string;
-  addressProofNote: string; incomeProofNote: string;
+  idType: string; idNote: string; idDocumentUrl: string;
+  addressProofNote: string; addressProofUrl: string;
+  incomeProofNote: string; incomeProofUrl: string;
+};
+
+type GuarantorData = {
+  fullName: string; relationship: string; email: string; phone: string;
+  addressLine1: string; city: string; postcode: string;
+  employmentStatus: string; monthlyIncome: string;
 };
 
 type AllData = {
@@ -40,14 +47,16 @@ type AllData = {
   employment: EmploymentData;
   financial: FinancialData;
   documents: DocumentsData;
+  guarantor: GuarantorData;
 };
 
 const STEPS = [
-  { id: 1, title: "Personal Information",   icon: User       },
-  { id: 2, title: "Employment & Income",     icon: Briefcase  },
-  { id: 3, title: "Financial Background",    icon: DollarSign },
-  { id: 4, title: "Documents",              icon: FileText   },
-  { id: 5, title: "Review & Submit",         icon: Eye        },
+  { id: 1, title: "Personal Information",   icon: User      },
+  { id: 2, title: "Employment & Income",    icon: Briefcase },
+  { id: 3, title: "Financial Background",   icon: DollarSign },
+  { id: 4, title: "Documents",             icon: FileText   },
+  { id: 5, title: "Guarantor",             icon: Shield     },
+  { id: 6, title: "Review & Submit",        icon: Eye        },
 ];
 
 const EMPLOYMENT_STATUSES = [
@@ -56,8 +65,8 @@ const EMPLOYMENT_STATUSES = [
 ];
 
 const MARITAL_STATUSES = ["Single", "Married", "Civil Partnership", "Divorced", "Widowed", "Separated"];
-
 const ID_TYPES = ["Passport", "UK Driving Licence", "National ID Card", "Residence Permit"];
+const RELATIONSHIPS = ["Parent", "Sibling", "Spouse / Partner", "Friend", "Colleague", "Other"];
 
 // ── Field helpers ──────────────────────────────────────────────────────────────
 
@@ -156,36 +165,59 @@ function PersonalStep({ data, onChange }: { data: PersonalData; onChange: (d: Pe
 function EmploymentStep({ data, onChange }: { data: EmploymentData; onChange: (d: EmploymentData) => void }) {
   const u = (field: keyof EmploymentData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     onChange({ ...data, [field]: e.target.value });
-  const isEmployed = ["Full-time employed", "Part-time employed", "Self-employed", "Contractor / Freelancer"].includes(data.employmentStatus);
+
+  const isTraditionalEmployee = ["Full-time employed", "Part-time employed"].includes(data.employmentStatus);
+  const isSelfEmployed = ["Self-employed", "Contractor / Freelancer"].includes(data.employmentStatus);
+  const isRetired = data.employmentStatus === "Retired";
+  const isStudent = data.employmentStatus === "Student";
+
+  const incomeLabel =
+    isRetired ? "Monthly pension income £" :
+    isStudent ? "Monthly income / allowance £" :
+    data.employmentStatus === "Unemployed" ? "Any monthly income £ (optional)" :
+    "Monthly net income (after tax) £";
 
   return (
     <div className="space-y-4">
       <Select label="Employment status" options={EMPLOYMENT_STATUSES} value={data.employmentStatus} onChange={u("employmentStatus")} />
-      {isEmployed && (
+
+      {isTraditionalEmployee && (
         <>
           <Input label="Employer / Company name" value={data.employerName} onChange={u("employerName")} placeholder="Acme Ltd" />
           <Input label="Job title" value={data.jobTitle} onChange={u("jobTitle")} placeholder="Software Engineer" />
           <Input label="Employment start date" type="date" value={data.employmentStartDate} onChange={u("employmentStartDate")} />
         </>
       )}
+
+      {isSelfEmployed && (
+        <>
+          <Input label="Trading / business name (optional)" value={data.employerName} onChange={u("employerName")} placeholder="Smith Consulting" />
+          <Input label="Nature of work / service" value={data.jobTitle} onChange={u("jobTitle")} placeholder="IT Consulting" />
+          <Input label="Self-employment start date" type="date" value={data.employmentStartDate} onChange={u("employmentStartDate")} />
+        </>
+      )}
+
+      {isRetired && (
+        <Input label="Pension provider (optional)" value={data.employerName} onChange={u("employerName")} placeholder="e.g. Aviva, NHS Pension" />
+      )}
+
+      {isStudent && (
+        <Input label="Institution / University (optional)" value={data.employerName} onChange={u("employerName")} placeholder="e.g. University of London" />
+      )}
+
       <div>
-        <Label>Monthly net income (after tax) £</Label>
+        <Label>{incomeLabel}</Label>
         <input
-          type="number"
-          min="0"
-          value={data.monthlyIncome}
-          onChange={u("monthlyIncome")}
+          type="number" min="0" value={data.monthlyIncome} onChange={u("monthlyIncome")}
           placeholder="e.g. 3500"
           className="w-full px-3 py-2.5 border border-[#E3E3E3] rounded-xl text-sm text-[#333] focus:outline-none focus:border-[#DB0011] focus:ring-1 focus:ring-[#DB0011]/20"
         />
       </div>
+
       <div>
         <Label>Other monthly income £ (optional)</Label>
         <input
-          type="number"
-          min="0"
-          value={data.otherIncome}
-          onChange={u("otherIncome")}
+          type="number" min="0" value={data.otherIncome} onChange={u("otherIncome")}
           placeholder="e.g. 500"
           className="w-full px-3 py-2.5 border border-[#E3E3E3] rounded-xl text-sm text-[#333] focus:outline-none focus:border-[#DB0011] focus:ring-1 focus:ring-[#DB0011]/20"
         />
@@ -204,31 +236,26 @@ function FinancialStep({ data, onChange }: { data: FinancialData; onChange: (d: 
   return (
     <div className="space-y-4">
       <p className="text-xs text-[#767676]">Please provide your monthly outgoings and existing financial commitments.</p>
-      <div>
-        <Label>Monthly rent / mortgage £</Label>
-        <input type="number" min="0" value={data.monthlyRent} onChange={u("monthlyRent")} placeholder="e.g. 1200"
-          className="w-full px-3 py-2.5 border border-[#E3E3E3] rounded-xl text-sm text-[#333] focus:outline-none focus:border-[#DB0011] focus:ring-1 focus:ring-[#DB0011]/20" />
-      </div>
-      <div>
-        <Label>Monthly living expenses £ (food, bills, transport)</Label>
-        <input type="number" min="0" value={data.monthlyLiving} onChange={u("monthlyLiving")} placeholder="e.g. 800"
-          className="w-full px-3 py-2.5 border border-[#E3E3E3] rounded-xl text-sm text-[#333] focus:outline-none focus:border-[#DB0011] focus:ring-1 focus:ring-[#DB0011]/20" />
-      </div>
-      <div>
-        <Label>Existing loan / debt repayments per month £</Label>
-        <input type="number" min="0" value={data.monthlyDebt} onChange={u("monthlyDebt")} placeholder="e.g. 300"
-          className="w-full px-3 py-2.5 border border-[#E3E3E3] rounded-xl text-sm text-[#333] focus:outline-none focus:border-[#DB0011] focus:ring-1 focus:ring-[#DB0011]/20" />
-      </div>
-      <div>
-        <Label>Total outstanding loans £ (excluding mortgages)</Label>
-        <input type="number" min="0" value={data.existingLoans} onChange={u("existingLoans")} placeholder="e.g. 5000"
-          className="w-full px-3 py-2.5 border border-[#E3E3E3] rounded-xl text-sm text-[#333] focus:outline-none focus:border-[#DB0011] focus:ring-1 focus:ring-[#DB0011]/20" />
-      </div>
-      <div>
-        <Label>Total credit card balances £</Label>
-        <input type="number" min="0" value={data.creditCardBalance} onChange={u("creditCardBalance")} placeholder="e.g. 2000"
-          className="w-full px-3 py-2.5 border border-[#E3E3E3] rounded-xl text-sm text-[#333] focus:outline-none focus:border-[#DB0011] focus:ring-1 focus:ring-[#DB0011]/20" />
-      </div>
+      {(["monthlyRent", "monthlyLiving", "monthlyDebt", "existingLoans", "creditCardBalance"] as const).map(field => {
+        const labels: Record<string, string> = {
+          monthlyRent: "Monthly rent / mortgage £",
+          monthlyLiving: "Monthly living expenses £ (food, bills, transport)",
+          monthlyDebt: "Existing loan / debt repayments per month £",
+          existingLoans: "Total outstanding loans £ (excluding mortgages)",
+          creditCardBalance: "Total credit card balances £",
+        };
+        const placeholders: Record<string, string> = {
+          monthlyRent: "e.g. 1200", monthlyLiving: "e.g. 800", monthlyDebt: "e.g. 300",
+          existingLoans: "e.g. 5000", creditCardBalance: "e.g. 2000",
+        };
+        return (
+          <div key={field}>
+            <Label>{labels[field]}</Label>
+            <input type="number" min="0" value={data[field]} onChange={u(field)} placeholder={placeholders[field]}
+              className="w-full px-3 py-2.5 border border-[#E3E3E3] rounded-xl text-sm text-[#333] focus:outline-none focus:border-[#DB0011] focus:ring-1 focus:ring-[#DB0011]/20" />
+          </div>
+        );
+      })}
       <RadioGroup
         label="Have you ever been declared bankrupt or had a CCJ?"
         options={[{ value: "no", label: "No" }, { value: "yes", label: "Yes" }]}
@@ -238,8 +265,7 @@ function FinancialStep({ data, onChange }: { data: FinancialData; onChange: (d: 
       <div className="bg-[#F8F8F8] rounded-xl p-3.5">
         <div className="flex items-start gap-2.5">
           <input
-            type="checkbox"
-            id="creditConsent"
+            type="checkbox" id="creditConsent"
             checked={data.creditConsent === "yes"}
             onChange={(e) => onChange({ ...data, creditConsent: e.target.checked ? "yes" : "no" })}
             className="mt-0.5 accent-[#DB0011]"
@@ -253,73 +279,212 @@ function FinancialStep({ data, onChange }: { data: FinancialData; onChange: (d: 
   );
 }
 
-function DocumentsStep({ data, onChange }: { data: DocumentsData; onChange: (d: DocumentsData) => void }) {
-  return (
-    <div className="space-y-5">
-      <p className="text-xs text-[#767676]">
-        The following documents will be required. You can note what you have available — a secure upload link will be sent to your email.
-      </p>
+type UploadStates = {
+  idDocument: "idle" | "uploading" | "done" | "error";
+  addressProof: "idle" | "uploading" | "done" | "error";
+  incomeProof: "idle" | "uploading" | "done" | "error";
+};
 
-      <div className="space-y-3">
-        {[
-          {
-            title: "Photo ID",
-            desc: "Passport, driving licence, or national ID card",
-            field: "idType" as keyof DocumentsData,
-            noteField: "idNote" as keyof DocumentsData,
-            options: ID_TYPES,
-          },
-          {
-            title: "Proof of address",
-            desc: "Utility bill or bank statement (dated within 3 months)",
-            field: null,
-            noteField: "addressProofNote" as keyof DocumentsData,
-            options: [],
-          },
-          {
-            title: "Proof of income",
-            desc: "Last 3 payslips or 2 years of accounts (self-employed)",
-            field: null,
-            noteField: "incomeProofNote" as keyof DocumentsData,
-            options: [],
-          },
-        ].map(({ title, desc, field, noteField, options }) => (
-          <div key={title} className="bg-white border border-[#E8E8E8] rounded-xl p-4">
+function DocumentsStep({
+  data, onChange, loanId, onUpload,
+}: {
+  data: DocumentsData;
+  onChange: (d: DocumentsData) => void;
+  loanId: string;
+  onUpload: (docType: "idDocument" | "addressProof" | "incomeProof", file: File) => Promise<void>;
+}) {
+  const [uploadStates, setUploadStates] = useState<UploadStates>({
+    idDocument: data.idDocumentUrl ? "done" : "idle",
+    addressProof: data.addressProofUrl ? "done" : "idle",
+    incomeProof: data.incomeProofUrl ? "done" : "idle",
+  });
+
+  const idRef = useRef<HTMLInputElement>(null);
+  const addrRef = useRef<HTMLInputElement>(null);
+  const incomeRef = useRef<HTMLInputElement>(null);
+
+  const refs = { idDocument: idRef, addressProof: addrRef, incomeProof: incomeRef };
+
+  async function handleFile(docType: "idDocument" | "addressProof" | "incomeProof", file: File) {
+    setUploadStates(s => ({ ...s, [docType]: "uploading" }));
+    try {
+      await onUpload(docType, file);
+      setUploadStates(s => ({ ...s, [docType]: "done" }));
+    } catch {
+      setUploadStates(s => ({ ...s, [docType]: "error" }));
+    }
+  }
+
+  const docs = [
+    {
+      key: "idDocument" as const,
+      title: "Photo ID",
+      desc: "Passport, driving licence, or national ID card",
+      urlField: "idDocumentUrl" as keyof DocumentsData,
+      noteField: "idNote" as keyof DocumentsData,
+      showTypeSelect: true,
+      ref: idRef,
+    },
+    {
+      key: "addressProof" as const,
+      title: "Proof of address",
+      desc: "Utility bill or bank statement (dated within 3 months)",
+      urlField: "addressProofUrl" as keyof DocumentsData,
+      noteField: "addressProofNote" as keyof DocumentsData,
+      showTypeSelect: false,
+      ref: addrRef,
+    },
+    {
+      key: "incomeProof" as const,
+      title: "Proof of income",
+      desc: "Last 3 payslips or 2 years of accounts (self-employed)",
+      urlField: "incomeProofUrl" as keyof DocumentsData,
+      noteField: "incomeProofNote" as keyof DocumentsData,
+      showTypeSelect: false,
+      ref: incomeRef,
+    },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-[#767676]">Upload your documents below. Accepted formats: JPG, PNG, PDF (max 10MB each).</p>
+
+      {docs.map(({ key, title, desc, urlField, noteField, showTypeSelect, ref }) => {
+        const state = uploadStates[key];
+        const url = data[urlField] as string;
+
+        return (
+          <div key={key} className="bg-white border border-[#E8E8E8] rounded-xl p-4">
             <div className="flex items-start gap-3 mb-3">
               <div className="h-8 w-8 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
                 <FileText size={14} className="text-[#DB0011]" />
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-[#333]">{title}</p>
                 <p className="text-[11px] text-[#AAAAAA]">{desc}</p>
               </div>
+              {state === "done" && (
+                <CheckCircle size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
+              )}
             </div>
-            {field && options.length > 0 && (
-              <Select
-                label="Document type"
-                options={options}
-                value={data[field]}
-                onChange={(e) => onChange({ ...data, [field]: e.target.value })}
-              />
+
+            {showTypeSelect && (
+              <div className="mb-3">
+                <Select
+                  label="Document type"
+                  options={ID_TYPES}
+                  value={data.idType}
+                  onChange={(e) => onChange({ ...data, idType: e.target.value })}
+                />
+              </div>
             )}
+
+            <input
+              ref={ref}
+              type="file"
+              accept=".jpg,.jpeg,.png,.pdf"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFile(key, file);
+              }}
+            />
+
+            {url ? (
+              <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <CheckCircle size={13} className="text-green-500 flex-shrink-0" />
+                  <a href={url} target="_blank" rel="noopener noreferrer"
+                    className="text-xs text-green-700 font-medium truncate hover:underline">
+                    Document uploaded — view
+                  </a>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { refs[key].current?.click(); }}
+                  className="text-[10px] text-[#AAAAAA] hover:text-[#555] ml-2 flex-shrink-0"
+                >
+                  Replace
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => ref.current?.click()}
+                disabled={state === "uploading"}
+                className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-[#E3E3E3] rounded-xl text-sm text-[#767676] hover:border-[#DB0011] hover:text-[#DB0011] transition-all disabled:opacity-50"
+              >
+                {state === "uploading" ? (
+                  <><Loader2 size={14} className="animate-spin" /> Uploading…</>
+                ) : (
+                  <><Upload size={14} /> Choose file</>
+                )}
+              </button>
+            )}
+            {state === "error" && (
+              <p className="text-[11px] text-[#DB0011] mt-1">Upload failed — please try again.</p>
+            )}
+
             <div className="mt-2">
               <Label>Notes (optional)</Label>
               <input
                 type="text"
-                value={data[noteField]}
+                value={data[noteField] as string}
                 onChange={(e) => onChange({ ...data, [noteField]: e.target.value })}
                 placeholder="e.g. I have a UK passport ready"
                 className="w-full px-3 py-2 border border-[#E3E3E3] rounded-xl text-sm text-[#333] focus:outline-none focus:border-[#DB0011]"
               />
             </div>
           </div>
-        ))}
+        );
+      })}
+    </div>
+  );
+}
+
+function GuarantorStep({ data, onChange }: { data: GuarantorData; onChange: (d: GuarantorData) => void }) {
+  const u = (field: keyof GuarantorData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    onChange({ ...data, [field]: e.target.value });
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5">
+        <p className="text-xs text-amber-700 font-medium">
+          A guarantor agrees to repay the loan if you are unable to. They must be over 18, a UK resident, and have a good credit history.
+        </p>
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-3.5">
-        <p className="text-xs text-blue-700 font-medium">
-          After submitting your application, you&apos;ll receive a secure email link to upload your documents through our verified portal.
-        </p>
+      <div className="grid grid-cols-2 gap-3">
+        <Input label="Full name" value={data.fullName} onChange={u("fullName")} placeholder="Jane Smith" />
+        <Select label="Relationship to you" options={RELATIONSHIPS} value={data.relationship} onChange={u("relationship")} />
+      </div>
+      <Input label="Email address" type="email" value={data.email} onChange={u("email")} placeholder="jane.smith@example.com" />
+      <Input label="Phone number" type="tel" value={data.phone} onChange={u("phone")} placeholder="+44 7700 000000" />
+
+      <div className="pt-1 border-t border-[#F0F0F0]">
+        <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest mb-3">Guarantor&apos;s Address</p>
+        <div className="space-y-3">
+          <Input label="Address" value={data.addressLine1} onChange={u("addressLine1")} placeholder="123 High Street, London" />
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="City" value={data.city} onChange={u("city")} placeholder="London" />
+            <Input label="Postcode" value={data.postcode} onChange={u("postcode")} placeholder="SW1A 1AA" />
+          </div>
+        </div>
+      </div>
+
+      <div className="pt-1 border-t border-[#F0F0F0]">
+        <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest mb-3">Guarantor&apos;s Finances</p>
+        <div className="space-y-3">
+          <Select label="Employment status" options={EMPLOYMENT_STATUSES} value={data.employmentStatus} onChange={u("employmentStatus")} />
+          <div>
+            <Label>Monthly income £</Label>
+            <input
+              type="number" min="0" value={data.monthlyIncome} onChange={u("monthlyIncome")}
+              placeholder="e.g. 3500"
+              className="w-full px-3 py-2.5 border border-[#E3E3E3] rounded-xl text-sm text-[#333] focus:outline-none focus:border-[#DB0011] focus:ring-1 focus:ring-[#DB0011]/20"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -351,8 +516,8 @@ function ReviewStep({ loan, allData }: { loan: Loan; allData: AllData }) {
       title: "Employment & Income",
       rows: [
         ["Status", allData.employment.employmentStatus],
-        ["Employer", allData.employment.employerName || "—"],
-        ["Job title", allData.employment.jobTitle || "—"],
+        ["Employer / Business", allData.employment.employerName || "—"],
+        ["Role", allData.employment.jobTitle || "—"],
         ["Monthly income", allData.employment.monthlyIncome ? `£${Number(allData.employment.monthlyIncome).toLocaleString()}` : "—"],
         ["Other income", allData.employment.otherIncome ? `£${Number(allData.employment.otherIncome).toLocaleString()}` : "None"],
       ],
@@ -366,6 +531,26 @@ function ReviewStep({ loan, allData }: { loan: Loan; allData: AllData }) {
         ["Outstanding loans", allData.financial.existingLoans ? `£${Number(allData.financial.existingLoans).toLocaleString()}` : "None"],
         ["Bankruptcy history", allData.financial.bankruptcyHistory === "yes" ? "Yes" : "No"],
         ["Credit check consent", allData.financial.creditConsent === "yes" ? "Given" : "Not given"],
+      ],
+    },
+    {
+      title: "Documents",
+      rows: [
+        ["Photo ID", allData.documents.idDocumentUrl ? "Uploaded ✓" : allData.documents.idNote || "—"],
+        ["Proof of address", allData.documents.addressProofUrl ? "Uploaded ✓" : allData.documents.addressProofNote || "—"],
+        ["Proof of income", allData.documents.incomeProofUrl ? "Uploaded ✓" : allData.documents.incomeProofNote || "—"],
+      ],
+    },
+    {
+      title: "Guarantor",
+      rows: [
+        ["Name", allData.guarantor.fullName || "—"],
+        ["Relationship", allData.guarantor.relationship || "—"],
+        ["Email", allData.guarantor.email || "—"],
+        ["Phone", allData.guarantor.phone || "—"],
+        ["Address", [allData.guarantor.addressLine1, allData.guarantor.city, allData.guarantor.postcode].filter(Boolean).join(", ") || "—"],
+        ["Employment", allData.guarantor.employmentStatus || "—"],
+        ["Monthly income", allData.guarantor.monthlyIncome ? `£${Number(allData.guarantor.monthlyIncome).toLocaleString()}` : "—"],
       ],
     },
   ];
@@ -424,7 +609,13 @@ export default function LoanContinuePage() {
     creditCardBalance: "", bankruptcyHistory: "", creditConsent: "",
   });
   const [documents, setDocuments] = useState<DocumentsData>({
-    idType: "", idNote: "", addressProofNote: "", incomeProofNote: "",
+    idType: "", idNote: "", idDocumentUrl: "",
+    addressProofNote: "", addressProofUrl: "",
+    incomeProofNote: "", incomeProofUrl: "",
+  });
+  const [guarantor, setGuarantor] = useState<GuarantorData>({
+    fullName: "", relationship: "", email: "", phone: "",
+    addressLine1: "", city: "", postcode: "", employmentStatus: "", monthlyIncome: "",
   });
 
   const load = useCallback(async () => {
@@ -436,8 +627,9 @@ export default function LoanContinuePage() {
       if (saved?.employment) setEmployment((e) => ({ ...e, ...saved.employment }));
       if (saved?.financial) setFinancial((f) => ({ ...f, ...saved.financial }));
       if (saved?.documents) setDocuments((d) => ({ ...d, ...saved.documents }));
+      if (saved?.guarantor) setGuarantor((g) => ({ ...g, ...saved.guarantor }));
       if (res.data.data.loan.applicationStep && res.data.data.loan.applicationStep > 1) {
-        setCurrentStep(Math.min(res.data.data.loan.applicationStep, 5));
+        setCurrentStep(Math.min(res.data.data.loan.applicationStep, 6));
       }
     } catch {
       setError("Could not load your application. Please go back and try again.");
@@ -448,6 +640,20 @@ export default function LoanContinuePage() {
 
   useEffect(() => { load(); }, [load]);
 
+  async function handleDocumentUpload(docType: "idDocument" | "addressProof" | "incomeProof", file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("docType", docType);
+    const res = await loansApi.uploadDocument(loanId, formData);
+    const url = res.data.data.url;
+    const urlFieldMap = {
+      idDocument: "idDocumentUrl",
+      addressProof: "addressProofUrl",
+      incomeProof: "incomeProofUrl",
+    } as const;
+    setDocuments((d) => ({ ...d, [urlFieldMap[docType]]: url }));
+  }
+
   async function saveAndNext() {
     setSaving(true);
     setError("");
@@ -456,6 +662,7 @@ export default function LoanContinuePage() {
     if (currentStep === 2) stepData.employment = employment;
     if (currentStep === 3) stepData.financial = financial;
     if (currentStep === 4) stepData.documents = documents;
+    if (currentStep === 5) stepData.guarantor = guarantor;
     try {
       await loansApi.saveDraft(loanId, currentStep + 1, stepData);
       setCurrentStep((s) => s + 1);
@@ -527,7 +734,7 @@ export default function LoanContinuePage() {
     );
   }
 
-  const allData: AllData = { personal, employment, financial, documents };
+  const allData: AllData = { personal, employment, financial, documents, guarantor };
   const step = STEPS[currentStep - 1];
   const StepIcon = step.icon;
   const isLast = currentStep === STEPS.length;
@@ -554,7 +761,7 @@ export default function LoanContinuePage() {
       <div className="px-4 -mt-6">
         {/* Progress bar */}
         <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-4 mb-4">
-          <div className="flex items-center gap-1.5 mb-3">
+          <div className="flex items-center gap-1 mb-3">
             {STEPS.map((s) => (
               <div
                 key={s.id}
@@ -593,8 +800,16 @@ export default function LoanContinuePage() {
           {currentStep === 1 && <PersonalStep data={personal} onChange={setPersonal} />}
           {currentStep === 2 && <EmploymentStep data={employment} onChange={setEmployment} />}
           {currentStep === 3 && <FinancialStep data={financial} onChange={setFinancial} />}
-          {currentStep === 4 && <DocumentsStep data={documents} onChange={setDocuments} />}
-          {currentStep === 5 && <ReviewStep loan={loan} allData={allData} />}
+          {currentStep === 4 && (
+            <DocumentsStep
+              data={documents}
+              onChange={setDocuments}
+              loanId={loanId}
+              onUpload={handleDocumentUpload}
+            />
+          )}
+          {currentStep === 5 && <GuarantorStep data={guarantor} onChange={setGuarantor} />}
+          {currentStep === 6 && <ReviewStep loan={loan} allData={allData} />}
         </div>
 
         {error && (

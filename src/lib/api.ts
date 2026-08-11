@@ -266,6 +266,10 @@ export const loansApi = {
     api.post<ApiResponse<Loan>>(`/loans/${id}/submit`),
   getApplicationData: (id: string) =>
     api.get<ApiResponse<{ loan: Loan; applicationData: Record<string, unknown> }>>(`/loans/${id}/application`),
+  uploadDocument: (id: string, formData: FormData) =>
+    api.post<ApiResponse<{ url: string }>>(`/loans/${id}/document`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 };
 
 export const usersApi = {
