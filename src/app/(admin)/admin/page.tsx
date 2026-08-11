@@ -283,16 +283,17 @@ function LoansTab({ loanType }: { loanType?: "MORTGAGE" }) {
                     </div>
                     <UserLine user={l.user} />
                     <p className="text-xs text-[#AAAAAA] mt-0.5">{l.termMonths} months · {(Number(l.interestRate) * 100).toFixed(1)}% p.a.</p>
-                    {appData && (
-                      <div className="mt-1.5 text-[10px] text-[#999] space-y-0.5">
-                        {(appData as Record<string, Record<string, unknown>>).employment?.employerName && (
-                          <p>Employer: <span className="text-[#555] font-medium">{String((appData as Record<string, Record<string, unknown>>).employment.employerName)}</span></p>
-                        )}
-                        {(appData as Record<string, Record<string, unknown>>).financial?.monthlyIncome && (
-                          <p>Income: <span className="text-[#555] font-medium">{formatCurrency(Number((appData as Record<string, Record<string, unknown>>).financial.monthlyIncome))}/mo</span></p>
-                        )}
-                      </div>
-                    )}
+                    {appData && (() => {
+                      const ad = appData as Record<string, Record<string, unknown>>;
+                      const employer = ad.employment?.employerName ? String(ad.employment.employerName) : null;
+                      const income = ad.financial?.monthlyIncome ? Number(ad.financial.monthlyIncome) : null;
+                      return (employer || income) ? (
+                        <div className="mt-1.5 text-[10px] text-[#999] space-y-0.5">
+                          {employer && <p>Employer: <span className="text-[#555] font-medium">{employer}</span></p>}
+                          {income ? <p>Income: <span className="text-[#555] font-medium">{formatCurrency(income)}/mo</span></p> : null}
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                   <div className="text-right flex-shrink-0 ml-3">
                     <p className="text-sm font-bold text-[#333]">{formatCurrency(Number(l.principalAmount))}</p>
