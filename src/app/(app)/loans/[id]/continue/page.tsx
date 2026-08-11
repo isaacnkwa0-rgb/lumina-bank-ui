@@ -65,7 +65,33 @@ const EMPLOYMENT_STATUSES = [
 ];
 
 const MARITAL_STATUSES = ["Single", "Married", "Civil Partnership", "Divorced", "Widowed", "Separated"];
-const ID_TYPES = ["Passport", "UK Driving Licence", "National ID Card", "Residence Permit"];
+
+const NATIONALITIES = [
+  "Afghan","Albanian","Algerian","American","Andorran","Angolan","Antiguan","Argentine","Armenian",
+  "Australian","Austrian","Azerbaijani","Bahamian","Bahraini","Bangladeshi","Barbadian","Belarusian",
+  "Belgian","Belizean","Beninese","Bhutanese","Bolivian","Bosnian","Botswanan","Brazilian","Bruneian",
+  "Bulgarian","Burkinabe","Burundian","Cambodian","Cameroonian","Canadian","Cape Verdean","Central African",
+  "Chadian","Chilean","Chinese","Colombian","Comoran","Congolese","Costa Rican","Croatian","Cuban",
+  "Cypriot","Czech","Danish","Djiboutian","Dominican","Dutch","East Timorese","Ecuadorian","Egyptian",
+  "Emirati","Equatorial Guinean","Eritrean","Estonian","Ethiopian","Fijian","Finnish","French","Gabonese",
+  "Gambian","Georgian","German","Ghanaian","Greek","Grenadian","Guatemalan","Guinean","Guinea-Bissauan",
+  "Guyanese","Haitian","Honduran","Hungarian","Icelandic","Indian","Indonesian","Iranian","Iraqi","Irish",
+  "Israeli","Italian","Ivorian","Jamaican","Japanese","Jordanian","Kazakhstani","Kenyan","Kiribatian",
+  "Kuwaiti","Kyrgyzstani","Laotian","Latvian","Lebanese","Lesothan","Liberian","Libyan","Liechtensteiner",
+  "Lithuanian","Luxembourgish","Macedonian","Malagasy","Malawian","Malaysian","Maldivian","Malian",
+  "Maltese","Marshallese","Mauritanian","Mauritian","Mexican","Micronesian","Moldovan","Monacan",
+  "Mongolian","Montenegrin","Moroccan","Mozambican","Namibian","Nauruan","Nepalese","New Zealander",
+  "Nicaraguan","Nigerian","Nigerien","Norwegian","Omani","Pakistani","Palauan","Palestinian","Panamanian",
+  "Papua New Guinean","Paraguayan","Peruvian","Philippine","Polish","Portuguese","Qatari","Romanian",
+  "Russian","Rwandan","Saint Kitts and Nevis","Saint Lucian","Saint Vincentian","Samoan","San Marinese",
+  "Sao Tomean","Saudi","Senegalese","Serbian","Seychellois","Sierra Leonean","Singaporean","Slovak",
+  "Slovenian","Solomon Islander","Somali","South African","South Korean","South Sudanese","Spanish",
+  "Sri Lankan","Sudanese","Surinamese","Swazi","Swedish","Swiss","Syrian","Taiwanese","Tajikistani",
+  "Tanzanian","Thai","Togolese","Tongan","Trinidadian","Tunisian","Turkish","Turkmen","Tuvaluan",
+  "Ugandan","Ukrainian","Uruguayan","Uzbekistani","Vanuatuan","Venezuelan","Vietnamese","Yemeni",
+  "Zambian","Zimbabwean","British","Other",
+];
+const ID_TYPES = ["Passport", "Driving Licence", "National ID Card", "Residence Permit", "Other Government ID"];
 const RELATIONSHIPS = ["Parent", "Sibling", "Spouse / Partner", "Friend", "Colleague", "Other"];
 
 // ── Field helpers ──────────────────────────────────────────────────────────────
@@ -142,18 +168,18 @@ function PersonalStep({ data, onChange }: { data: PersonalData; onChange: (d: Pe
       </div>
       <Input label="Date of birth" type="date" value={data.dateOfBirth} onChange={u("dateOfBirth")} />
       <div className="grid grid-cols-2 gap-3">
-        <Select label="Nationality" options={["British", "Irish", "EU National", "Other"]} value={data.nationality} onChange={u("nationality")} />
+        <Select label="Nationality" options={NATIONALITIES} value={data.nationality} onChange={u("nationality")} />
         <Select label="Marital status" options={MARITAL_STATUSES} value={data.maritalStatus} onChange={u("maritalStatus")} />
       </div>
-      <Input label="Phone number" type="tel" value={data.phone} onChange={u("phone")} placeholder="+44 7700 000000" />
+      <Input label="Phone number" type="tel" value={data.phone} onChange={u("phone")} placeholder="+1 555 000 0000" />
       <div className="pt-1 border-t border-[#F0F0F0]">
         <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest mb-3">Current Address</p>
         <div className="space-y-3">
-          <Input label="Address line 1" value={data.addressLine1} onChange={u("addressLine1")} placeholder="123 High Street" />
-          <Input label="Address line 2 (optional)" value={data.addressLine2} onChange={u("addressLine2")} placeholder="Flat 4B" />
+          <Input label="Address line 1" value={data.addressLine1} onChange={u("addressLine1")} placeholder="123 Main Street" />
+          <Input label="Address line 2 (optional)" value={data.addressLine2} onChange={u("addressLine2")} placeholder="Apt 4B" />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="City / Town" value={data.city} onChange={u("city")} placeholder="London" />
-            <Input label="Postcode" value={data.postcode} onChange={u("postcode")} placeholder="SW1A 1AA" />
+            <Input label="City / Town" value={data.city} onChange={u("city")} placeholder="New York" />
+            <Input label="Postal code" value={data.postcode} onChange={u("postcode")} placeholder="10001" />
           </div>
           <Select label="Years at this address" options={["Less than 1 year", "1–2 years", "3–5 years", "5–10 years", "10+ years"]} value={data.yearsAtAddress} onChange={u("yearsAtAddress")} />
         </div>
@@ -202,7 +228,7 @@ function EmploymentStep({ data, onChange }: { data: EmploymentData; onChange: (d
       )}
 
       {isStudent && (
-        <Input label="Institution / University (optional)" value={data.employerName} onChange={u("employerName")} placeholder="e.g. University of London" />
+        <Input label="Institution / University (optional)" value={data.employerName} onChange={u("employerName")} placeholder="e.g. MIT, University of Toronto" />
       )}
 
       <div>
@@ -257,7 +283,7 @@ function FinancialStep({ data, onChange }: { data: FinancialData; onChange: (d: 
         );
       })}
       <RadioGroup
-        label="Have you ever been declared bankrupt or had a CCJ?"
+        label="Have you ever been declared bankrupt or had a court judgment against you?"
         options={[{ value: "no", label: "No" }, { value: "yes", label: "Yes" }]}
         value={data.bankruptcyHistory}
         onChange={(v) => onChange({ ...data, bankruptcyHistory: v })}
@@ -431,7 +457,7 @@ function DocumentsStep({
                 type="text"
                 value={data[noteField] as string}
                 onChange={(e) => onChange({ ...data, [noteField]: e.target.value })}
-                placeholder="e.g. I have a UK passport ready"
+                placeholder="e.g. I have a valid passport ready"
                 className="w-full px-3 py-2 border border-[#E3E3E3] rounded-xl text-sm text-[#333] focus:outline-none focus:border-[#DB0011]"
               />
             </div>
@@ -450,7 +476,7 @@ function GuarantorStep({ data, onChange }: { data: GuarantorData; onChange: (d: 
     <div className="space-y-4">
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5">
         <p className="text-xs text-amber-700 font-medium">
-          A guarantor agrees to repay the loan if you are unable to. They must be over 18, a UK resident, and have a good credit history.
+          A guarantor agrees to repay the loan if you are unable to. They must be over 18 and have a good credit history. Guarantors may be based anywhere in the world.
         </p>
       </div>
 
@@ -459,15 +485,15 @@ function GuarantorStep({ data, onChange }: { data: GuarantorData; onChange: (d: 
         <Select label="Relationship to you" options={RELATIONSHIPS} value={data.relationship} onChange={u("relationship")} />
       </div>
       <Input label="Email address" type="email" value={data.email} onChange={u("email")} placeholder="jane.smith@example.com" />
-      <Input label="Phone number" type="tel" value={data.phone} onChange={u("phone")} placeholder="+44 7700 000000" />
+      <Input label="Phone number" type="tel" value={data.phone} onChange={u("phone")} placeholder="+1 555 000 0000" />
 
       <div className="pt-1 border-t border-[#F0F0F0]">
         <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest mb-3">Guarantor&apos;s Address</p>
         <div className="space-y-3">
-          <Input label="Address" value={data.addressLine1} onChange={u("addressLine1")} placeholder="123 High Street, London" />
+          <Input label="Address" value={data.addressLine1} onChange={u("addressLine1")} placeholder="123 Main Street" />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="City" value={data.city} onChange={u("city")} placeholder="London" />
-            <Input label="Postcode" value={data.postcode} onChange={u("postcode")} placeholder="SW1A 1AA" />
+            <Input label="City" value={data.city} onChange={u("city")} placeholder="Lagos" />
+            <Input label="Postal code" value={data.postcode} onChange={u("postcode")} placeholder="100001" />
           </div>
         </div>
       </div>
