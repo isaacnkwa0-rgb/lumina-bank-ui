@@ -12,25 +12,25 @@ export default function LandingPage() {
   const { t } = useLanguage();
 
   const products = [
-    { labelKey: "products.currentAccounts" as const, href: "/register" },
-    { labelKey: "products.savingsAccounts" as const, href: "/register" },
-    { labelKey: "products.creditCards" as const, href: "/register" },
-    { labelKey: "products.loans" as const, href: "/register" },
-    { labelKey: "products.mortgages" as const, href: "/register" },
-    { labelKey: "products.investments" as const, href: "/register" },
-    { labelKey: "products.internationalBanking" as const, href: "/register" },
-    { labelKey: "products.insurance" as const, href: "/register" },
+    { labelKey: "products.currentAccounts" as const, href: "/current-account" },
+    { labelKey: "products.savingsAccounts" as const, href: "/savings" },
+    { labelKey: "products.creditCards" as const, href: "/credit-cards" },
+    { labelKey: "products.loans" as const, href: "/personal-loans" },
+    { labelKey: "products.mortgages" as const, href: "/mortgages" },
+    { labelKey: "products.investments" as const, href: "/wealth" },
+    { labelKey: "products.internationalBanking" as const, href: "/international" },
+    { labelKey: "products.insurance" as const, href: "/insurance-products" },
   ];
 
   const menuLinks = [
-    { key: "menu.currentAccounts", href: "/register" },
-    { key: "menu.savings",         href: "/register" },
-    { key: "menu.creditCards",     href: "/register" },
-    { key: "menu.loans",           href: "/register" },
-    { key: "menu.mortgages",       href: "/register" },
-    { key: "menu.investments",     href: "/register" },
-    { key: "menu.international",   href: "/register" },
-    { key: "menu.insurance",       href: "/register" },
+    { key: "menu.currentAccounts", href: "/current-account" },
+    { key: "menu.savings",         href: "/savings" },
+    { key: "menu.creditCards",     href: "/credit-cards" },
+    { key: "menu.loans",           href: "/personal-loans" },
+    { key: "menu.mortgages",       href: "/mortgages" },
+    { key: "menu.investments",     href: "/wealth" },
+    { key: "menu.international",   href: "/international" },
+    { key: "menu.insurance",       href: "/insurance-products" },
     { key: "menu.helpSupport",     href: "mailto:support@luminabank.online" },
   ] as const;
 
@@ -134,9 +134,9 @@ export default function LandingPage() {
           </Link>
           <p className="text-[12px] text-[#555] mt-3 leading-[1.7]">
             {t("hero.disclaimer")}{" "}
-            <a href="#" className="underline text-[#555]">
+            <Link href="/terms" className="underline text-[#555]">
               {t("hero.viewTerms")}
-            </a>{" "}
+            </Link>{" "}
             {t("hero.offerMayBeWithdrawn")}
           </p>
         </div>
@@ -459,29 +459,30 @@ export default function LandingPage() {
             <div>
               <p className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-3">{t("footer.banking")}</p>
               {([
-                "footer.currentAccounts",
-                "footer.savings",
-                "footer.creditCards",
-                "footer.mortgages",
-                "footer.loans",
-                "footer.investments",
-                "footer.international",
-              ] as const).map(l => (
-                <p key={l} className="text-white/75 text-[13px] mb-2.5 hover:text-white cursor-pointer" style={{ lineHeight: "1.4" }}>{t(l)}</p>
+                { key: "footer.currentAccounts", href: "/current-account" },
+                { key: "footer.savings",          href: "/savings" },
+                { key: "footer.creditCards",      href: "/credit-cards" },
+                { key: "footer.mortgages",        href: "/mortgages" },
+                { key: "footer.loans",            href: "/personal-loans" },
+                { key: "footer.investments",      href: "/wealth" },
+                { key: "footer.international",    href: "/international" },
+                { key: "footer.insurance",        href: "/insurance-products" },
+              ] as const).map(({ key, href }) => (
+                <Link key={key} href={href} className="block text-white/75 text-[13px] mb-2.5 hover:text-white transition-colors" style={{ lineHeight: "1.4" }}>{t(key)}</Link>
               ))}
             </div>
             <div>
               <p className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-3">{t("footer.company")}</p>
               {([
-                "footer.aboutLumina",
-                "footer.helpFaqs",
-                "footer.securityCentre",
-                "footer.careers",
-                "footer.privacyPolicy",
-                "footer.termsOfUse",
-                "footer.complaints",
-              ] as const).map(l => (
-                <p key={l} className="text-white/75 text-[13px] mb-2.5 hover:text-white cursor-pointer" style={{ lineHeight: "1.4" }}>{t(l)}</p>
+                { key: "footer.aboutLumina",    href: "/about" },
+                { key: "footer.helpFaqs",       href: "/login" },
+                { key: "footer.securityCentre", href: "/security" },
+                { key: "footer.careers",        href: "/careers" },
+                { key: "footer.privacyPolicy",  href: "/privacy" },
+                { key: "footer.termsOfUse",     href: "/terms" },
+                { key: "footer.complaints",     href: "/complaints" },
+              ] as const).map(({ key, href }) => (
+                <Link key={key} href={href} className="block text-white/75 text-[13px] mb-2.5 hover:text-white transition-colors" style={{ lineHeight: "1.4" }}>{t(key)}</Link>
               ))}
             </div>
           </div>

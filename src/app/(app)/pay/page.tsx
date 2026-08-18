@@ -414,7 +414,7 @@ const CATEGORIES: Category[] = [
         plans: [
           { name: "Colour (monthly)",     amount: 14.13, detail: "£169.50/year · Pay monthly", badge: "Popular" },
           { name: "Colour (quarterly)",   amount: 42.38, detail: "£169.50/year · Pay quarterly"               },
-          { name: "Colour (annual)",      amount: 169.50, detail: "Full year payment — save vs monthly"        },
+          { name: "Colour (annual)",      amount: 169.50, detail: "Full year payment (save vs monthly)"        },
           { name: "Black & White",        amount: 53.50, detail: "Annual · Black & white TV only"             },
         ],
       },

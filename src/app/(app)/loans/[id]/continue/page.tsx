@@ -681,8 +681,25 @@ export default function LoanContinuePage() {
   }
 
   async function saveAndNext() {
-    setSaving(true);
     setError("");
+
+    // Validate required fields before saving
+    if (currentStep === 2 && !employment.employmentStatus) {
+      setError("Please select your employment status before continuing.");
+      return;
+    }
+    if (currentStep === 5) {
+      if (!guarantor.fullName.trim()) {
+        setError("Please enter the guarantor's full name.");
+        return;
+      }
+      if (!guarantor.email.trim()) {
+        setError("Please enter the guarantor's email address.");
+        return;
+      }
+    }
+
+    setSaving(true);
     const stepData: Record<string, unknown> = {};
     if (currentStep === 1) stepData.personal = personal;
     if (currentStep === 2) stepData.employment = employment;

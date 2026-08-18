@@ -25,7 +25,7 @@ const FAQS = [
   },
   {
     icon: CreditCard,
-    q: "My card has been blocked — what do I do?",
+    q: "My card has been blocked. What do I do?",
     a: "If your card was blocked by us, you'll receive an email explaining why. Contact support using the chat below to have it reviewed. If you lost your card, use the Cards section in the app to report it lost.",
   },
   {
@@ -267,10 +267,10 @@ export default function SupportPage() {
             {
               icon: Phone,
               label: t("support.phone"),
-              sub: "+44 800 000 0000 · 24/7",
+              sub: "+44 800 123 4567 · 24/7",
               color: "text-purple-600",
               bg: "bg-purple-50",
-              href: "tel:+448000000000",
+              href: "tel:+448001234567",
             },
           ].map(({ icon: Icon, label, sub, color, bg, href, onClick }) => (
             <button

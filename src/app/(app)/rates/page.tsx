@@ -15,7 +15,7 @@ const CURRENCIES = [
   { code: "CAD", name: "Canadian Dollar", flag: "🇨🇦" },
   { code: "AUD", name: "Australian Dollar", flag: "🇦🇺" },
   { code: "AED", name: "UAE Dirham", flag: "🇦🇪" },
-  { code: "NGN", name: "Nigerian Naira", flag: "🇳🇬" },
+  { code: "PLN", name: "Polish Zloty", flag: "🇵🇱" },
   { code: "INR", name: "Indian Rupee", flag: "🇮🇳" },
 ];
 
