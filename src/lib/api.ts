@@ -440,6 +440,8 @@ export const adminApi = {
     api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/loans/${id}/request-info`, { message }),
   revertLoanToPending: (id: string, reason: string) =>
     api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/loans/${id}/revert-to-pending`, { reason }),
+  moveLoanToUnderReview: (id: string) =>
+    api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/loans/${id}/move-to-under-review`),
   disputes: (status?: string) =>
     api.get<ApiResponse<AdminDispute[]>>("/admin/disputes", { params: status ? { status } : undefined }),
   reviewDispute: (id: string) =>

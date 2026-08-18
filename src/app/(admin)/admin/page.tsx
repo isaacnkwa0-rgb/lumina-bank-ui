@@ -347,6 +347,15 @@ function LoansTab({ loanType }: { loanType?: "MORTGAGE" }) {
     finally { setActionId(""); }
   }
 
+  async function moveToUnderReview(id: string) {
+    setActionId(id + ":review");
+    try {
+      await adminApi.moveLoanToUnderReview(id);
+      setItems((p) => p.map((l) => l.id === id ? { ...l, status: "UNDER_REVIEW" as AdminLoan["status"] } : l));
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -445,11 +454,13 @@ function LoansTab({ loanType }: { loanType?: "MORTGAGE" }) {
                 {l.status === "PENDING" && (
                   <div className="flex gap-2 mt-3">
                     <ActButton label="Acknowledge" variant="approve" onClick={() => acknowledge(l.id)} loading={isActing} />
+                    <ActButton label="Move to Under Review" variant="neutral" onClick={() => moveToUnderReview(l.id)} loading={isActing} />
                     <ActButton label="Reject" variant="reject" onClick={() => reject(l.id)} loading={isActing} />
                   </div>
                 )}
                 {l.status === "ACKNOWLEDGED" && (
                   <div className="flex gap-2 mt-3">
+                    <ActButton label="Move to Under Review" variant="neutral" onClick={() => moveToUnderReview(l.id)} loading={isActing} />
                     <ActButton label="Revert to Pending" variant="neutral" onClick={() => revertToPending(l.id)} loading={isActing} />
                   </div>
                 )}
