@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { QRCodeSVG } from "qrcode.react";
 import {
   ArrowDownToLine, Copy, CheckCircle2, Clock, XCircle,
   BadgeCheck, ChevronDown, RefreshCw, Building2, Bitcoin,
@@ -68,12 +69,23 @@ function StatusBadge({ status }: { status: Deposit["status"] }) {
   );
 }
 
-function CopyButton({ text }: { text: string }) {
+function CopyButton({ text, fullWidth }: { text: string; fullWidth?: boolean }) {
   const [copied, setCopied] = useState(false);
   async function copy() {
     await navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+  if (fullWidth) {
+    return (
+      <button
+        onClick={copy}
+        className={`mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold transition-colors ${copied ? "bg-green-50 text-green-700 border border-green-200" : "bg-[#DB0011] text-white hover:bg-[#b0000d]"}`}
+      >
+        {copied ? <CheckCircle2 size={15} strokeWidth={2.5} /> : <Copy size={15} strokeWidth={2} />}
+        {copied ? "Copied!" : "Tap to Copy Address"}
+      </button>
+    );
   }
   return (
     <button onClick={copy} className="ml-1.5 text-[#DB0011] hover:text-[#b0000d] transition-colors">
@@ -321,7 +333,21 @@ function CryptoTab({ accounts }: { accounts: Account[] }) {
           <DetailRow label="Network"        value={walletInfo.network} />
           <DetailRow label="Amount to send" value={`${walletInfo.coinAmount} ${walletInfo.coin}`} />
           <DetailRow label="GBP value"      value={`£${walletInfo.amountGbp.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
-          <DetailRow label="Wallet address" value={walletInfo.address} />
+        </div>
+
+        {/* QR Code */}
+        <div className="bg-white rounded-xl border border-[#E8E8E8] p-4 flex flex-col items-center gap-3">
+          <p className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider">Scan to get wallet address</p>
+          <div className="p-3 bg-white rounded-xl border border-[#F0F0F0]">
+            <QRCodeSVG value={walletInfo.address} size={180} bgColor="#FFFFFF" fgColor="#111111" level="M" />
+          </div>
+          <div className="w-full">
+            <p className="text-[10px] text-[#AAAAAA] mb-1.5 text-center">Wallet address</p>
+            <div className="flex items-center gap-2 bg-[#F8F8F8] border border-[#E8E8E8] rounded-xl px-3 py-2.5">
+              <p className="flex-1 text-[11px] font-mono text-[#333] break-all leading-relaxed">{walletInfo.address}</p>
+            </div>
+            <CopyButton text={walletInfo.address} fullWidth />
+          </div>
         </div>
 
         <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800">
