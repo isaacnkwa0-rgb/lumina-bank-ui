@@ -165,6 +165,17 @@ function TransfersTab() {
     finally { setActionId(""); }
   }
 
+  async function revertToPending(id: string) {
+    const reason = prompt("Reason for returning to pending (required — included in email to user):");
+    if (!reason?.trim()) { if (reason !== null) alert("A reason is required."); return; }
+    setActionId(id);
+    try {
+      await adminApi.revertTransferToPending(id, reason.trim());
+      setItems((p) => p.map((t) => t.id === id ? { ...t, status: "PENDING" } : t));
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
   return (
     <div>
       <FilterBar filters={["PENDING","ALL"]} active={filter} onSelect={(f) => setFilter(f as any)} labels={{ PENDING: "Pending", ALL: "All" }} />
@@ -196,6 +207,12 @@ function TransfersTab() {
               {t.status === "COMPLETED" && (
                 <div className="flex gap-2 mt-3">
                   <ActButton label="Reverse" variant="reject" onClick={() => reverse(t.id)} loading={actionId === t.id} />
+                  <ActButton label="Revert to Pending" variant="neutral" onClick={() => revertToPending(t.id)} loading={actionId === t.id} />
+                </div>
+              )}
+              {(t.status === "FAILED" || t.status === "CANCELLED") && (
+                <div className="flex gap-2 mt-3">
+                  <ActButton label="Revert to Pending" variant="neutral" onClick={() => revertToPending(t.id)} loading={actionId === t.id} />
                 </div>
               )}
             </div>
