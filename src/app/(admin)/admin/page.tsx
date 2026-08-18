@@ -336,6 +336,17 @@ function LoansTab({ loanType }: { loanType?: "MORTGAGE" }) {
     finally { setActionId(""); }
   }
 
+  async function revertToPending(id: string) {
+    const reason = prompt("Reason for returning to pending (required — included in email to user):");
+    if (!reason?.trim()) { if (reason !== null) alert("A reason is required."); return; }
+    setActionId(id + ":revert");
+    try {
+      await adminApi.revertLoanToPending(id, reason.trim());
+      setItems((p) => p.map((l) => l.id === id ? { ...l, status: "PENDING" as AdminLoan["status"] } : l));
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -437,10 +448,16 @@ function LoansTab({ loanType }: { loanType?: "MORTGAGE" }) {
                     <ActButton label="Reject" variant="reject" onClick={() => reject(l.id)} loading={isActing} />
                   </div>
                 )}
+                {l.status === "ACKNOWLEDGED" && (
+                  <div className="flex gap-2 mt-3">
+                    <ActButton label="Revert to Pending" variant="neutral" onClick={() => revertToPending(l.id)} loading={isActing} />
+                  </div>
+                )}
                 {l.status === "UNDER_REVIEW" && (
                   <div className="flex gap-2 mt-3 flex-wrap">
                     <ActButton label="Approve & Disburse" variant="approve" onClick={() => approve(l.id)} loading={isActing} />
                     <ActButton label="Request Info" variant="neutral" onClick={() => requestInfo(l.id)} loading={isActing} />
+                    <ActButton label="Revert to Pending" variant="neutral" onClick={() => revertToPending(l.id)} loading={isActing} />
                     <ActButton label="Reject" variant="reject" onClick={() => reject(l.id)} loading={isActing} />
                   </div>
                 )}
