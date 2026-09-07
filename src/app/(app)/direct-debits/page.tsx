@@ -126,7 +126,7 @@ export default function DirectDebitsPage() {
 
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-8">
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white lg:px-10 lg:py-8">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <Building size={18} className="text-white/80" />
@@ -166,7 +166,7 @@ export default function DirectDebitsPage() {
         </div>
       )}
 
-      <div className="px-4 -mt-6 space-y-3">
+      <div className="px-4 -mt-6 space-y-3 lg:max-w-5xl lg:mx-auto">
         {loading ? (
           Array.from({ length: 2 }).map((_, i) => <SkeletonBlock key={i} className="h-36 w-full rounded-2xl" />)
         ) : debits.length === 0 ? (

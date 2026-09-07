@@ -199,10 +199,10 @@ export default function AccountDetailPage() {
   };
 
   return (
-    <div className="max-w-lg mx-auto lg:max-w-none">
+    <div className="max-w-lg mx-auto lg:max-w-5xl">
       {/* Header */}
       <div className="bg-white border-b border-[#E3E3E3]">
-        <div className="flex items-center gap-3 px-4 py-3">
+        <div className="flex items-center gap-3 px-4 py-3 lg:px-10">
           <button
             onClick={() => router.back()}
             className="text-[#333333] hover:text-[#DB0011] transition-colors -ml-1"
@@ -214,7 +214,7 @@ export default function AccountDetailPage() {
 
         {account && (
           <div
-            className={`${typeColors[account.type] || "bg-[#DB0011]"} px-5 py-6 text-white`}
+            className={`${typeColors[account.type] || "bg-[#DB0011]"} px-5 py-6 text-white lg:px-10`}
           >
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -253,7 +253,7 @@ export default function AccountDetailPage() {
 
       {/* Account details for receiving payments */}
       {account && (
-        <div className="bg-white border-b border-[#E3E3E3] px-4 py-4">
+        <div className="bg-white border-b border-[#E3E3E3] px-4 py-4 lg:px-10">
           <p className="text-xs font-medium text-[#767676] uppercase tracking-wide mb-3">
             {t("accountDetail.receiveMoney")}
           </p>
@@ -268,7 +268,7 @@ export default function AccountDetailPage() {
       )}
 
       {/* Search + Filter */}
-      <div className="bg-white border-b border-[#E3E3E3] px-4 py-3 space-y-3">
+      <div className="bg-white border-b border-[#E3E3E3] px-4 py-3 space-y-3 lg:px-10">
         <div className="flex gap-2">
           <div className="flex-1 relative">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#767676]" />

@@ -128,7 +128,7 @@ export default function MortgageApplyPage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-5 pb-10 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-5 pb-10 text-white lg:px-10">
         <button
           onClick={() => router.back()}
           className="flex items-center gap-1 text-white/70 hover:text-white text-sm mb-5 transition-colors"
@@ -145,7 +145,7 @@ export default function MortgageApplyPage() {
         </p>
       </div>
 
-      <div className="px-4 -mt-6 space-y-4">
+      <div className="px-4 -mt-6 space-y-4 lg:max-w-2xl lg:mx-auto">
         {/* Property details */}
         <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-5 space-y-4">
           <p className="text-xs font-bold text-[#AAAAAA] uppercase tracking-widest">

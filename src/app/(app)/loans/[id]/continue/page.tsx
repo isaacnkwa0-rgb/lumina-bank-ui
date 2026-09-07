@@ -785,7 +785,7 @@ export default function LoanContinuePage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-5 pb-10 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-5 pb-10 text-white lg:px-10">
         <button
           onClick={() => currentStep > 1 ? setCurrentStep((s) => s - 1) : router.push("/loans")}
           className="flex items-center gap-1 text-white/70 hover:text-white text-sm mb-5 transition-colors"
@@ -801,7 +801,7 @@ export default function LoanContinuePage() {
         <p className="text-white/60 text-sm">Step {currentStep} of {STEPS.length} — {step.title}</p>
       </div>
 
-      <div className="px-4 -mt-6">
+      <div className="px-4 -mt-6 lg:max-w-2xl lg:mx-auto">
         {/* Progress bar */}
         <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-4 mb-4">
           <div className="flex items-center gap-1 mb-3">

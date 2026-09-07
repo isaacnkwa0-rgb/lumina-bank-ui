@@ -122,9 +122,9 @@ export default function TransferPinPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-lg mx-auto lg:max-w-2xl">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-12 pb-8 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-12 pb-8 text-white lg:px-10">
         <button onClick={() => router.back()} className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center mb-5">
           <ArrowLeft size={16} className="text-white" />
         </button>

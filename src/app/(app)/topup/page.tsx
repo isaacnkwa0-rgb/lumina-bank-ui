@@ -137,7 +137,7 @@ export default function TopUpPage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white lg:px-10 lg:py-8">
         <div className="flex items-center gap-2 mb-4">
           <PlusCircle size={18} className="text-white/80" />
           <h1 className="text-lg font-bold">{t("topup.title")}</h1>
@@ -161,7 +161,7 @@ export default function TopUpPage() {
         )}
       </div>
 
-      <div className="px-4 -mt-6 space-y-4">
+      <div className="px-4 -mt-6 space-y-4 lg:max-w-2xl lg:mx-auto">
         {/* Section label */}
         <div className="flex items-center gap-2 pt-2">
           <Landmark size={14} className="text-[#AAAAAA]" />

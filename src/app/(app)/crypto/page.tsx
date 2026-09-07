@@ -444,7 +444,7 @@ export default function CryptoPage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* ── Dark header ── */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white lg:px-10 lg:py-8">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <Bitcoin size={20} className="text-[#F7931A]" />
@@ -480,7 +480,7 @@ export default function CryptoPage() {
       </div>
 
       {/* ── Search + tabs (overlaps header) ── */}
-      <div className="mx-4 -mt-10 space-y-3 relative z-10">
+      <div className="mx-4 -mt-10 space-y-3 relative z-10 lg:max-w-5xl lg:mx-auto">
         {/* Search */}
         <div className="flex items-center gap-2.5 bg-white rounded-2xl shadow-lg border border-[#E8E8E8] px-4 h-12">
           <Search size={16} className="text-[#AAAAAA] flex-shrink-0" />
@@ -531,7 +531,7 @@ export default function CryptoPage() {
       )}
 
       {/* ── Coin list ── */}
-      <div className="px-4 mt-4 space-y-3">
+      <div className="px-4 mt-4 space-y-3 lg:max-w-5xl lg:mx-auto">
         {loading ? (
           Array.from({ length: 5 }).map((_, i) => (
             <SkeletonBlock key={i} className="h-[110px] w-full rounded-2xl" />
@@ -612,7 +612,7 @@ export default function CryptoPage() {
 
       {/* My Orders */}
       {orders.length > 0 && (
-        <div className="px-4 mt-6">
+        <div className="px-4 mt-6 lg:max-w-5xl lg:mx-auto">
           <p className="text-xs font-bold text-[#999] uppercase tracking-widest mb-3">{t("crypto.myOrders")}</p>
           <div className="space-y-2">
             {orders.map((order) => {
@@ -645,7 +645,7 @@ export default function CryptoPage() {
       )}
 
       {/* Disclaimer */}
-      <p className="mx-4 mt-6 text-[10px] text-[#CCCCCC] leading-relaxed">
+      <p className="mx-4 mt-6 text-[10px] text-[#CCCCCC] leading-relaxed lg:max-w-5xl lg:mx-auto lg:px-0">
         {t("crypto.pricesSource")}
       </p>
 

@@ -115,7 +115,7 @@ export default function NotificationsPage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-8">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white lg:px-10 lg:py-8">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Bell size={18} className="text-white/80" />
@@ -157,7 +157,7 @@ export default function NotificationsPage() {
         </div>
       )}
 
-      <div className="-mt-8 mx-4 bg-white rounded-2xl shadow-lg border border-[#E8E8E8] overflow-hidden">
+      <div className="-mt-8 mx-4 bg-white rounded-2xl shadow-lg border border-[#E8E8E8] overflow-hidden lg:mx-auto lg:max-w-5xl">
         {loading ? (
           <SkeletonList count={8} />
         ) : notifications.length === 0 ? (

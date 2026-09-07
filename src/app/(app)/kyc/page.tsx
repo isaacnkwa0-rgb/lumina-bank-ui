@@ -148,7 +148,7 @@ export default function KycPage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white lg:px-10">
         <div className="flex items-center gap-2 mb-2">
           <Shield size={18} className="text-white/80" />
           <h1 className="text-lg font-bold">{t("kyc.title")}</h1>
@@ -158,7 +158,7 @@ export default function KycPage() {
         </p>
       </div>
 
-      <div className="px-4 -mt-6 space-y-4">
+      <div className="px-4 -mt-6 space-y-4 lg:max-w-2xl lg:mx-auto">
         <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-5">
           {loading ? (
             <div className="animate-pulse space-y-3">

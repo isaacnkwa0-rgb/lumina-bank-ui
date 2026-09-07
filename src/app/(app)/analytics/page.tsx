@@ -169,7 +169,7 @@ export default function AnalyticsPage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* ── Header ── */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-16 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-16 text-white lg:px-10 lg:py-8">
         <div className="flex items-center gap-2 mb-4">
           <BarChart2 size={18} className="text-white/80" />
           <h1 className="text-lg font-bold">{t("analytics.title")}</h1>
@@ -195,7 +195,7 @@ export default function AnalyticsPage() {
       )}
 
       {/* ── Summary cards (float over header) ── */}
-      <div className="px-4 -mt-10 grid grid-cols-3 gap-2.5 relative z-10">
+      <div className="px-4 -mt-10 grid grid-cols-3 gap-2.5 relative z-10 lg:max-w-5xl lg:mx-auto">
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => (
             <SkeletonBlock key={i} className="h-24 w-full rounded-2xl" />
@@ -209,7 +209,7 @@ export default function AnalyticsPage() {
         )}
       </div>
 
-      <div className="px-4 mt-4 space-y-4">
+      <div className="px-4 mt-4 space-y-4 lg:max-w-5xl lg:mx-auto">
         {/* ── Cashflow chart ── */}
         <Section title={t("analytics.incomeVsExpenses")}>
           <div className="px-5 pt-4 pb-5">

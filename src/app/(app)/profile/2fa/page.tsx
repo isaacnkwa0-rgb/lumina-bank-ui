@@ -115,7 +115,7 @@ export default function TwoFAPage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white lg:px-10">
         <button onClick={() => router.back()} className="flex items-center gap-1 text-white/70 hover:text-white mb-4 text-sm">
           <ChevronLeft size={16} /> {t("profile2fa.back")}
         </button>
@@ -126,7 +126,7 @@ export default function TwoFAPage() {
         <p className="text-white/60 text-sm">{t("profile2fa.subtitle")}</p>
       </div>
 
-      <div className="px-4 -mt-6">
+      <div className="px-4 -mt-6 lg:max-w-2xl lg:mx-auto">
         <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-5 space-y-5">
 
           {/* ── Overview ── */}

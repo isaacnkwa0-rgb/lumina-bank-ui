@@ -405,7 +405,7 @@ function MyQuotes({
   if (quotes.length === 0) return null;
 
   return (
-    <div className="px-4 mt-4 space-y-5">
+    <div className="px-4 mt-4 space-y-5 lg:max-w-5xl lg:mx-auto">
       {active.length > 0 && (
         <div>
           <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-2">{t("insurance.active")}</p>
@@ -471,7 +471,7 @@ export default function InsurancePage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-8">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white lg:px-10 lg:py-8">
         <div className="flex items-center gap-2 mb-4">
           <ShieldCheck size={18} className="text-white/80" />
           <h1 className="text-lg font-bold">{t("insurance.title")}</h1>
@@ -493,7 +493,7 @@ export default function InsurancePage() {
       </div>
 
       {/* Trust badges */}
-      <div className="mx-4 -mt-8 bg-white rounded-2xl shadow-lg border border-[#E8E8E8] px-4 py-3.5 flex items-center justify-around relative z-10">
+      <div className="mx-4 -mt-8 bg-white rounded-2xl shadow-lg border border-[#E8E8E8] px-4 py-3.5 flex items-center justify-around relative z-10 lg:mx-auto lg:max-w-5xl">
         {[
           { label: t("insurance.fca"),        emoji: "✅" },
           { label: t("insurance.support247"), emoji: "📞" },
@@ -510,7 +510,7 @@ export default function InsurancePage() {
       <MyQuotes quotes={quotes} onAccept={handleAccept} onCancel={handleCancel} actioning={actioning} />
 
       {/* Product cards */}
-      <div className="px-4 mt-4 space-y-3">
+      <div className="px-4 mt-4 space-y-3 lg:max-w-5xl lg:mx-auto">
         {quotes.length === 0 && (
           <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-2">{t("insurance.browse")}</p>
         )}

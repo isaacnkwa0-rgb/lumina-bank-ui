@@ -97,7 +97,7 @@ export default function TransactionsPage() {
 
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-8">
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white lg:px-10 lg:py-8">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <ArrowLeftRight size={18} className="text-white/80" />
@@ -141,7 +141,7 @@ export default function TransactionsPage() {
         )}
       </div>
 
-      <div className="mx-4 -mt-8 relative z-10 bg-white rounded-2xl shadow-lg border border-[#E8E8E8] overflow-hidden">
+      <div className="mx-4 -mt-8 relative z-10 bg-white rounded-2xl shadow-lg border border-[#E8E8E8] overflow-hidden lg:mx-auto lg:max-w-5xl">
         <div className="flex items-center justify-between px-4 py-3.5">
           <div className="flex gap-1.5">
             {(["all", "debit", "credit"] as const).map((tab) => (
@@ -224,7 +224,7 @@ export default function TransactionsPage() {
         )}
       </div>
 
-      <div className="mx-4 mt-4 bg-white rounded-2xl shadow-sm border border-[#E8E8E8] overflow-hidden">
+      <div className="mx-4 mt-4 bg-white rounded-2xl shadow-sm border border-[#E8E8E8] overflow-hidden lg:mx-auto lg:max-w-5xl">
         {error && (
           <div className="mx-4 mt-4 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
             <p className="text-sm text-[#DB0011]">{error}</p>

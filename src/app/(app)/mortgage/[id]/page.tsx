@@ -196,7 +196,7 @@ export default function MortgageDetailPage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-2xl pb-8">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white lg:px-10">
         <button
           onClick={() => router.back()}
           className="flex items-center gap-1.5 text-white/80 hover:text-white text-sm mb-4 transition-colors"

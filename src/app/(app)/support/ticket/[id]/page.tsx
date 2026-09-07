@@ -119,7 +119,7 @@ export default function TicketPage() {
 
   if (loading) {
     return (
-      <div className="max-w-lg mx-auto lg:max-w-none h-full flex flex-col">
+      <div className="max-w-lg mx-auto lg:max-w-3xl h-full flex flex-col">
         <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-8 text-white">
           <div className="h-5 w-32 bg-white/20 rounded-full animate-pulse mb-2" />
           <div className="h-7 w-48 bg-white/20 rounded-full animate-pulse" />
@@ -146,9 +146,9 @@ export default function TicketPage() {
   const StatusIcon = sc.icon;
 
   return (
-    <div className="max-w-lg mx-auto lg:max-w-none flex flex-col" style={{ height: "calc(100vh - 64px)" }}>
+    <div className="max-w-lg mx-auto lg:max-w-3xl flex flex-col" style={{ height: "calc(100vh - 64px)" }}>
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-5 pb-5 text-white flex-shrink-0">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-5 pb-5 text-white flex-shrink-0 lg:px-10">
         <button
           onClick={() => router.push("/support")}
           className="flex items-center gap-1.5 text-white/70 hover:text-white text-sm mb-3 transition-colors"

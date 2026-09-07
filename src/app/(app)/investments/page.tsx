@@ -327,7 +327,7 @@ export default function InvestmentsPage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-8">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white lg:px-10 lg:py-8">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <LineChartIcon size={18} className="text-white/80" />
@@ -370,7 +370,7 @@ export default function InvestmentsPage() {
         </div>
       )}
 
-      <div className="px-4 -mt-8 space-y-4">
+      <div className="px-4 -mt-8 space-y-4 lg:max-w-5xl lg:mx-auto">
         {/* Performance chart */}
         <div className="bg-white rounded-2xl shadow-lg border border-[#E8E8E8] overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#F0F0F0]">

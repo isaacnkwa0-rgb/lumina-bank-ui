@@ -35,7 +35,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Sync language preference from user profile when user loads
   useEffect(() => {
     if (!user) return;
     const preferredLanguage = (user as { profile?: { preferredLanguage?: string } | null })
@@ -91,8 +90,9 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-lg mx-auto lg:max-w-none">
-      {/* Hero balance card */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-5 py-6">
+
+      {/* ── HERO BALANCE CARD ── */}
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-5 py-6 lg:px-10 lg:py-10 lg:flex lg:items-center lg:justify-between">
         {loading ? (
           <div>
             <SkeletonBlock className="h-3 w-32 mb-3 bg-white/30" />
@@ -100,23 +100,40 @@ export default function DashboardPage() {
             <SkeletonBlock className="h-3 w-24 bg-white/20" />
           </div>
         ) : (
-          <div>
-            <p className="text-white/70 text-xs font-medium uppercase tracking-wide mb-1">
-              {user ? t("dashboard.hello", { name: user.firstName }) : t("dashboard.totalBalance")}
-            </p>
-            <p className="text-white text-4xl font-bold mb-1">
-              {formatCurrency(totalBalance, primaryCurrency)}
-            </p>
-            <p className="text-white/60 text-xs">
-              {t("dashboard.across", { count: accountCount })} {accountWord}
-            </p>
-          </div>
+          <>
+            <div>
+              <p className="text-white/70 text-xs font-medium uppercase tracking-wide mb-1">
+                {user ? t("dashboard.hello", { name: user.firstName }) : t("dashboard.totalBalance")}
+              </p>
+              <p className="text-white text-4xl font-bold mb-1 lg:text-5xl">
+                {formatCurrency(totalBalance, primaryCurrency)}
+              </p>
+              <p className="text-white/60 text-xs">
+                {t("dashboard.across", { count: accountCount })} {accountWord}
+              </p>
+            </div>
+            {/* Desktop-only right section */}
+            <div className="hidden lg:flex items-center gap-3 mt-0">
+              <Link
+                href="/accounts"
+                className="text-sm font-semibold text-white/80 border border-white/30 px-5 py-2.5 hover:bg-white/10 transition-colors"
+              >
+                View Accounts
+              </Link>
+              <Link
+                href="/transfer"
+                className="text-sm font-semibold text-[#DB0011] bg-white px-5 py-2.5 hover:bg-white/90 transition-colors"
+              >
+                Send Money
+              </Link>
+            </div>
+          </>
         )}
       </div>
 
-      {/* Quick actions */}
-      <div className="bg-white border-b border-[#E3E3E3] px-4 py-5">
-        <div className="grid grid-cols-4 gap-2">
+      {/* ── QUICK ACTIONS ── */}
+      <div className="bg-white border-b border-[#E3E3E3] px-4 py-5 lg:px-10 lg:py-5">
+        <div className="grid grid-cols-4 gap-2 lg:max-w-sm">
           {quickActions.map(({ labelKey, icon: Icon, href }) =>
             href ? (
               <Link key={labelKey} href={href} className="flex flex-col items-center gap-2 group">
@@ -138,141 +155,139 @@ export default function DashboardPage() {
       </div>
 
       {error && (
-        <div className="mx-4 mt-4 bg-red-50 border-l-4 border-[#DB0011] p-4 rounded-sm">
+        <div className="mx-4 mt-4 bg-red-50 border-l-4 border-[#DB0011] p-4 rounded-sm lg:mx-0 lg:mt-5">
           <p className="text-sm text-[#DB0011]">{error}</p>
         </div>
       )}
 
-      {/* Your accounts */}
-      <div className="bg-white mt-3 border-y border-[#E3E3E3]">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#E3E3E3]">
-          <h2 className="text-sm font-semibold text-[#333333]">{t("dashboard.yourAccounts")}</h2>
-          <Link
-            href="/accounts"
-            className="text-xs text-[#DB0011] flex items-center gap-0.5 font-medium"
-          >
-            {t("dashboard.viewAll")} <ChevronRight size={14} />
-          </Link>
-        </div>
-        {loading ? (
-          <div className="grid grid-cols-2 gap-3 p-4">
-            <div className="skeleton rounded-sm h-[90px]" />
-            <div className="skeleton rounded-sm h-[90px]" />
-          </div>
-        ) : (
-          <div className={`grid gap-3 p-4 ${accountGridClass}`}>
-            {accounts.map((acc) => (
-              <Link key={acc.id} href={`/accounts/${acc.id}`} className="block">
-                <AccountMiniCard account={acc} cols={accountCols} />
+      {/* ── DESKTOP 2-COLUMN LAYOUT ── */}
+      <div className="lg:grid lg:grid-cols-[1fr_340px] lg:gap-5 lg:items-start lg:pt-5">
+
+        {/* LEFT COLUMN: Accounts + Transactions */}
+        <div>
+          {/* Your accounts */}
+          <div className="bg-white mt-3 border-y border-[#E3E3E3] lg:mt-0 lg:border lg:border-[#E3E3E3]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#E3E3E3]">
+              <h2 className="text-sm font-semibold text-[#333333]">{t("dashboard.yourAccounts")}</h2>
+              <Link href="/accounts" className="text-xs text-[#DB0011] flex items-center gap-0.5 font-medium">
+                {t("dashboard.viewAll")} <ChevronRight size={14} />
               </Link>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Recent transactions */}
-      <div className="bg-white mt-3 border-y border-[#E3E3E3]">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#E3E3E3]">
-          <h2 className="text-sm font-semibold text-[#333333]">
-            {t("dashboard.recentTransactions")}
-          </h2>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={fetchData}
-              className="text-[#767676] hover:text-[#DB0011] transition-colors"
-              aria-label="Refresh"
-            >
-              <RefreshCw size={14} />
-            </button>
-            <Link
-              href="/transactions"
-              className="text-xs text-[#DB0011] flex items-center gap-0.5 font-medium"
-            >
-              {t("dashboard.viewAll")} <ChevronRight size={14} />
-            </Link>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="p-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 py-3 border-b border-[#E3E3E3] last:border-0">
-                <div className="skeleton h-10 w-10 rounded-full" />
-                <div className="flex-1">
-                  <div className="skeleton h-3 w-1/2 mb-2" />
-                  <div className="skeleton h-2 w-1/3" />
-                </div>
-                <div className="skeleton h-3 w-16" />
+            </div>
+            {loading ? (
+              <div className="grid grid-cols-2 gap-3 p-4">
+                <div className="skeleton rounded-sm h-[90px]" />
+                <div className="skeleton rounded-sm h-[90px]" />
               </div>
-            ))}
-          </div>
-        ) : transactions.length === 0 ? (
-          <div className="py-8 text-center text-sm text-[#767676]">
-            {t("dashboard.noTransactions")}
-          </div>
-        ) : (
-          <div>
-            {transactions.map((tx) => (
-              <TransactionItem key={tx.id} transaction={tx} showDate />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Savings goals */}
-      {(goals.length > 0 || loading) && (
-        <div className="bg-white mt-3 border-y border-[#E3E3E3] mb-4">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[#E3E3E3]">
-            <h2 className="text-sm font-semibold text-[#333333]">
-              {t("dashboard.savingsGoals")}
-            </h2>
-            <Link
-              href="/goals"
-              className="text-xs text-[#DB0011] flex items-center gap-0.5 font-medium"
-            >
-              {t("dashboard.viewAll")} <ChevronRight size={14} />
-            </Link>
+            ) : (
+              <div className={`grid gap-3 p-4 ${accountGridClass}`}>
+                {accounts.map((acc) => (
+                  <Link key={acc.id} href={`/accounts/${acc.id}`} className="block">
+                    <AccountMiniCard account={acc} cols={accountCols} />
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="px-4 py-3 space-y-4">
-            {loading
-              ? Array.from({ length: 2 }).map((_, i) => (
-                  <SkeletonCard key={i} />
-                ))
-              : goals.slice(0, 3).map((goal) => {
-                  const progress = Math.min(
-                    (Number(goal.currentAmount) / Number(goal.targetAmount)) * 100,
-                    100
-                  );
-                  return (
-                    <div key={goal.id}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-sm font-medium text-[#333333] flex items-center gap-1.5">
-                          <span>{goal.emoji}</span>
-                          {goal.name}
-                        </span>
-                        <span className="text-xs text-[#767676]">
-                          {formatCurrency(Number(goal.currentAmount))} /{" "}
-                          {formatCurrency(Number(goal.targetAmount))}
-                        </span>
-                      </div>
-                      <div className="h-2 bg-[#E3E3E3] rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-[#DB0011] rounded-full transition-all duration-500"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                      {goal.targetDate && (
-                        <p className="text-xs text-[#767676] mt-1">
-                          {t("dashboard.target")} {new Date(goal.targetDate).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}
-                        </p>
-                      )}
+          {/* Recent transactions */}
+          <div className="bg-white mt-3 border-y border-[#E3E3E3] lg:mt-5 lg:border lg:border-[#E3E3E3]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#E3E3E3]">
+              <h2 className="text-sm font-semibold text-[#333333]">
+                {t("dashboard.recentTransactions")}
+              </h2>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={fetchData}
+                  className="text-[#767676] hover:text-[#DB0011] transition-colors"
+                  aria-label="Refresh"
+                >
+                  <RefreshCw size={14} />
+                </button>
+                <Link href="/transactions" className="text-xs text-[#DB0011] flex items-center gap-0.5 font-medium">
+                  {t("dashboard.viewAll")} <ChevronRight size={14} />
+                </Link>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="p-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 py-3 border-b border-[#E3E3E3] last:border-0">
+                    <div className="skeleton h-10 w-10 rounded-full" />
+                    <div className="flex-1">
+                      <div className="skeleton h-3 w-1/2 mb-2" />
+                      <div className="skeleton h-2 w-1/3" />
                     </div>
-                  );
-                })}
+                    <div className="skeleton h-3 w-16" />
+                  </div>
+                ))}
+              </div>
+            ) : transactions.length === 0 ? (
+              <div className="py-8 text-center text-sm text-[#767676]">
+                {t("dashboard.noTransactions")}
+              </div>
+            ) : (
+              <div>
+                {transactions.map((tx) => (
+                  <TransactionItem key={tx.id} transaction={tx} showDate />
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      )}
+
+        {/* RIGHT COLUMN: Savings Goals */}
+        <div>
+          {(goals.length > 0 || loading) && (
+            <div className="bg-white mt-3 border-y border-[#E3E3E3] mb-4 lg:mt-0 lg:border lg:border-[#E3E3E3] lg:mb-0">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[#E3E3E3]">
+                <h2 className="text-sm font-semibold text-[#333333]">
+                  {t("dashboard.savingsGoals")}
+                </h2>
+                <Link href="/goals" className="text-xs text-[#DB0011] flex items-center gap-0.5 font-medium">
+                  {t("dashboard.viewAll")} <ChevronRight size={14} />
+                </Link>
+              </div>
+
+              <div className="px-4 py-3 space-y-4">
+                {loading
+                  ? Array.from({ length: 2 }).map((_, i) => <SkeletonCard key={i} />)
+                  : goals.slice(0, 3).map((goal) => {
+                      const progress = Math.min(
+                        (Number(goal.currentAmount) / Number(goal.targetAmount)) * 100,
+                        100
+                      );
+                      return (
+                        <div key={goal.id}>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-sm font-medium text-[#333333] flex items-center gap-1.5">
+                              <span>{goal.emoji}</span>
+                              {goal.name}
+                            </span>
+                            <span className="text-xs text-[#767676]">
+                              {formatCurrency(Number(goal.currentAmount))} /{" "}
+                              {formatCurrency(Number(goal.targetAmount))}
+                            </span>
+                          </div>
+                          <div className="h-2 bg-[#E3E3E3] rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-[#DB0011] rounded-full transition-all duration-500"
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                          {goal.targetDate && (
+                            <p className="text-xs text-[#767676] mt-1">
+                              {t("dashboard.target")} {new Date(goal.targetDate).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -288,7 +303,6 @@ function AccountMiniCard({ account, cols }: { account: Account; cols: number }) 
   const gradient = colors[account.type] || colors["CURRENT"];
   const value = Number(account.balance);
   const sym = account.currency === "GBP" ? "£" : account.currency === "USD" ? "$" : account.currency === "EUR" ? "€" : account.currency + " ";
-  // On narrow 3-col cards abbreviate large numbers so all cards share the same font size
   const display =
     cols >= 3 && value >= 1_000_000 ? `${sym}${(value / 1_000_000).toFixed(1)}M`
     : cols >= 3 && value >= 10_000  ? `${sym}${Math.round(value / 1_000)}K`
@@ -296,19 +310,10 @@ function AccountMiniCard({ account, cols }: { account: Account; cols: number }) 
   const balanceSize = cols >= 3 ? "text-sm" : cols === 2 ? "text-base" : "text-lg";
 
   return (
-    <div
-      className={`bg-gradient-to-br ${gradient} rounded-sm p-4 text-white h-[90px] w-full overflow-hidden`}
-    >
-      <p className="text-[10px] font-medium opacity-70 uppercase tracking-wide mb-2">
-        {account.type}
-      </p>
-      <p className={`${balanceSize} font-bold mb-1 leading-tight`}>
-        {display}
-      </p>
-      <p className="text-[10px] opacity-60">
-        ••••{account.accountNumber.slice(-4)}
-      </p>
+    <div className={`bg-gradient-to-br ${gradient} rounded-sm p-4 text-white h-[90px] w-full overflow-hidden`}>
+      <p className="text-[10px] font-medium opacity-70 uppercase tracking-wide mb-2">{account.type}</p>
+      <p className={`${balanceSize} font-bold mb-1 leading-tight`}>{display}</p>
+      <p className="text-[10px] opacity-60">••••{account.accountNumber.slice(-4)}</p>
     </div>
   );
 }
-

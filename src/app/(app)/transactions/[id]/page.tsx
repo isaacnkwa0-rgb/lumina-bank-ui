@@ -221,7 +221,7 @@ export default function TransactionDetailPage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* Hero header */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-16 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-16 text-white lg:px-10">
         <button
           onClick={() => router.back()}
           className="h-8 w-8 rounded-full bg-white/15 flex items-center justify-center mb-6"
@@ -261,7 +261,7 @@ export default function TransactionDetailPage() {
       </div>
 
       {/* Cards */}
-      <div className="-mt-6 pt-0 space-y-0">
+      <div className="-mt-6 pt-0 space-y-0 lg:max-w-2xl lg:mx-auto">
         {/* Transaction info */}
         <SectionCard title={t("tx.txDetails")}>
           <DetailRow label={t("tx.reference")} value={tx.reference} mono copyable />

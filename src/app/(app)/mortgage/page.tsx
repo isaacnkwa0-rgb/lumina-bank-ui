@@ -168,7 +168,7 @@ export default function MortgagePage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-8">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white lg:px-10 lg:py-8">
         <div className="flex items-center gap-2 mb-4">
           <Home size={18} className="text-white/80" />
           <h1 className="text-lg font-bold">{t("mortgage.title")}</h1>
@@ -190,7 +190,7 @@ export default function MortgagePage() {
         </div>
       )}
 
-      <div className="px-4 -mt-8 space-y-4">
+      <div className="px-4 -mt-8 space-y-4 lg:max-w-5xl lg:mx-auto">
         {loading ? (
           Array.from({ length: 1 }).map((_, i) => (
             <SkeletonBlock key={i} className="h-64 w-full rounded-2xl" />

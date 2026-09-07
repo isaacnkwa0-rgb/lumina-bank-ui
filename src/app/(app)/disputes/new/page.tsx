@@ -53,13 +53,13 @@ function NewDisputeForm() {
   if (done) {
     return (
       <div className="max-w-lg mx-auto lg:max-w-none pb-10">
-        <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white">
+        <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white lg:px-10">
           <button onClick={() => router.back()} className="flex items-center gap-1 text-white/70 hover:text-white mb-4 text-sm">
             <ChevronLeft size={16} /> {t("disputes.back")}
           </button>
           <h1 className="text-lg font-bold">{t("disputes.reportTitle")}</h1>
         </div>
-        <div className="px-4 -mt-6">
+        <div className="px-4 -mt-6 lg:max-w-2xl lg:mx-auto">
           <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm p-6 text-center">
             <div className="flex justify-center mb-4">
               <div className="h-16 w-16 rounded-full bg-green-50 flex items-center justify-center">

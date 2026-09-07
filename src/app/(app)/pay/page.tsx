@@ -1178,7 +1178,7 @@ export default function PayPage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-5 pb-10 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-5 pb-10 text-white lg:px-10 lg:py-8">
         {selectedCategory ? (
           <button
             onClick={() => { setSelectedCategory(null); setSearch(""); }}
@@ -1208,7 +1208,7 @@ export default function PayPage() {
         )}
       </div>
 
-      <div className="px-4 -mt-5 space-y-4">
+      <div className="px-4 -mt-5 space-y-4 lg:max-w-5xl lg:mx-auto">
         {/* Search */}
         <div className="relative">
           <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#AAAAAA]" />
@@ -1243,7 +1243,7 @@ export default function PayPage() {
 
         {/* Category grid */}
         {!selectedCategory && (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3 lg:grid-cols-5">
             {filteredCategories.map((cat) => {
               const Icon = cat.icon;
               return (

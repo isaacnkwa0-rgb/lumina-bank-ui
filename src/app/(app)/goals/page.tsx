@@ -370,7 +370,7 @@ export default function GoalsPage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-16 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-16 text-white lg:px-10 lg:py-10">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Target size={18} className="text-white/80" />
@@ -409,7 +409,7 @@ export default function GoalsPage() {
       )}
 
       {/* Cards */}
-      <div className="px-4 -mt-8 space-y-3">
+      <div className="px-4 -mt-8 space-y-3 lg:max-w-5xl lg:mx-auto">
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => (
             <SkeletonBlock key={i} className="h-28 w-full rounded-2xl" />

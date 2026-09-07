@@ -270,7 +270,7 @@ function TransferPageInner() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none">
       {/* Header */}
-      <div className="bg-white border-b border-[#E3E3E3] px-4 py-4">
+      <div className="bg-white border-b border-[#E3E3E3] px-4 py-4 lg:px-10">
         <h1 className="text-lg font-semibold text-[#333333]">{t("transfer.title")}</h1>
         <p className="text-xs text-[#767676] mt-0.5">{t("transfer.subtitle")}</p>
       </div>
@@ -294,7 +294,7 @@ function TransferPageInner() {
       </div>
 
       {/* Forms */}
-      <div className="px-4 py-5 space-y-3">
+      <div className="px-4 py-5 space-y-3 lg:max-w-2xl lg:mx-auto">
         {error && (
           <div className="bg-red-50 border-l-4 border-[#DB0011] p-4 rounded-sm">
             <p className="text-sm text-[#DB0011]">{error}</p>

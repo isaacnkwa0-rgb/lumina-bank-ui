@@ -233,7 +233,7 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-8">
-      <div className="bg-gradient-to-br from-[#DB0011] via-[#C4000F] to-[#8B000A] px-4 pt-8 pb-16">
+      <div className="bg-gradient-to-br from-[#DB0011] via-[#C4000F] to-[#8B000A] px-4 pt-8 pb-16 lg:px-10">
         <div className="flex flex-col items-center gap-3">
           <div className="h-24 w-24 rounded-full bg-white/25 border-2 border-white/50 flex items-center justify-center shadow-lg">
             <GenderAvatarLarge gender={user?.gender} />
@@ -258,7 +258,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="-mt-10 space-y-3">
+      <div className="-mt-10 space-y-3 lg:max-w-3xl lg:mx-auto">
         {/* Personal info */}
         <Card>
           <div className="flex items-center justify-between px-4 pt-4 pb-2">

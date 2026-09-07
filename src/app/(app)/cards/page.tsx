@@ -59,7 +59,7 @@ export default function CardsPage() {
 
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-8">
-      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white">
+      <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white lg:px-10 lg:py-8">
         <div className="flex items-center gap-2 mb-4">
           <CreditCard size={18} className="text-white/80" />
           <h1 className="text-lg font-bold">{t("cards.myCards")}</h1>
@@ -94,7 +94,7 @@ export default function CardsPage() {
         </div>
       )}
 
-      <div className="px-4 -mt-8 space-y-6">
+      <div className="px-4 -mt-8 space-y-6 lg:max-w-5xl lg:mx-auto">
         {loading ? (
           Array.from({ length: 2 }).map((_, i) => <SkeletonCard key={i} />)
         ) : cards.length === 0 ? (
