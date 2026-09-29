@@ -742,7 +742,7 @@ function CardDepositForm({ accounts, displayCurrency, rates }: { accounts: Accou
         </label>
         <div className="relative">
           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-[#AAAAAA]">£</span>
-          <Input {...register("amount")} type="number" min="10" step="0.01" placeholder="0.00" className="pl-7" />
+          <Input {...register("amount")} type="number" min="0.01" step="0.01" placeholder="0.00" className="pl-7" />
         </div>
         {errors.amount && <p className="text-[11px] text-[#DB0011] mt-1">{errors.amount.message}</p>}
         <ExchangeHint amountGbp={amountVal} displayCurrency={displayCurrency} rates={rates} />
