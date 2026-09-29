@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { standingOrdersApi, accountsApi, type StandingOrder, type Account } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { RefreshCw, Plus, X, Pause, Play, XCircle, Calendar } from "lucide-react";
+import { RefreshCw, Plus, X, Pause, Play, XCircle, Calendar, ChevronLeft } from "lucide-react";
 import { useLanguage, type TranslationKey } from "@/lib/i18n";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -28,6 +29,7 @@ function statusBadge(status: string) {
 
 export default function StandingOrdersPage() {
   const { t } = useLanguage();
+  const router = useRouter();
   const [orders, setOrders] = useState<StandingOrder[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,14 +117,21 @@ export default function StandingOrdersPage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-8">
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white lg:px-10 lg:py-8">
-        <div className="flex items-center justify-between mb-1">
+        <div className="relative flex items-center justify-center mb-1">
+          <button
+            onClick={() => router.back()}
+            className="absolute left-0 flex items-center justify-center h-8 w-8 rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+            aria-label="Back"
+          >
+            <ChevronLeft size={18} className="text-white" />
+          </button>
           <div className="flex items-center gap-2">
             <RefreshCw size={18} className="text-white/80" />
             <h1 className="text-lg font-bold">{t("standingOrders.title")}</h1>
           </div>
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 h-8 rounded-full transition-colors"
+            className="absolute right-0 flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 h-8 rounded-full transition-colors"
           >
             <Plus size={13} />
             {t("standingOrders.setUp")}

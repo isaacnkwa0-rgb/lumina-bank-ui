@@ -219,7 +219,7 @@ export const transfersApi = {
     transferOtp: string;
   }) => api.post<ApiResponse<Transfer>>("/transfers/international", data),
   quote: (params: { fromCurrency: string; toCurrency: string; amount: number }) =>
-    api.get<ApiResponse<FxQuote>>("/transfers/quote", { params }),
+    api.post<ApiResponse<FxQuote>>("/transfers/quote", params),
   getScheduled: () => api.get<ApiResponse<Transfer[]>>("/transfers/scheduled"),
   cancelScheduled: (id: string) => api.delete<ApiResponse<null>>(`/transfers/${id}/cancel`),
   schedule: (data: {
@@ -592,6 +592,10 @@ export const depositsApi = {
   list: () => api.get<ApiResponse<Deposit[]>>("/deposits"),
   get: (id: string) => api.get<ApiResponse<Deposit>>(`/deposits/${id}`),
   getSupportedCoins: () => api.get<ApiResponse<{ coin: string; network: string }[]>>("/deposits/coins"),
+  createCardPaymentIntent: (data: { accountId: string; amount: number }) =>
+    api.post<ApiResponse<{ clientSecret: string; reference: string }>>("/deposits/card/payment-intent", data),
+  confirmCardDeposit: (data: { paymentIntentId: string; accountId: string; amount: number }) =>
+    api.post<ApiResponse<Deposit>>("/deposits/card/confirm", data),
 };
 
 export const ratesApi = {
@@ -1011,9 +1015,9 @@ export interface AdminTransfer extends Transfer {
 export interface FxQuote {
   fromCurrency: string;
   toCurrency: string;
-  rate: number;
+  customerRate: number;
   convertedAmount: number;
-  fee: number;
+  fxFee: number;
 }
 
 export interface Dispute {

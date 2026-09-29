@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { disputesApi, type Dispute } from "@/lib/api";
-import { AlertCircle, CheckCircle2, Clock, XCircle, Search, Plus } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, XCircle, Search, Plus, ChevronLeft } from "lucide-react";
 import { useLanguage, type TranslationKey } from "@/lib/i18n";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -44,14 +44,21 @@ export default function DisputesPage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-8">
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white lg:px-10 lg:py-8">
-        <div className="flex items-center justify-between mb-1">
+        <div className="relative flex items-center justify-center mb-1">
+          <button
+            onClick={() => router.back()}
+            className="absolute left-0 flex items-center justify-center h-8 w-8 rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+            aria-label="Back"
+          >
+            <ChevronLeft size={18} className="text-white" />
+          </button>
           <div className="flex items-center gap-2">
             <AlertCircle size={18} className="text-white/80" />
             <h1 className="text-lg font-bold">{t("disputes.title")}</h1>
           </div>
           <button
             onClick={() => router.push("/disputes/new")}
-            className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 h-8 rounded-full transition-colors"
+            className="absolute right-0 flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 h-8 rounded-full transition-colors"
           >
             <Plus size={13} />
             {t("disputes.report")}

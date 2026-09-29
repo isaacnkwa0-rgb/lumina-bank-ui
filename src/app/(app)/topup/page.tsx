@@ -7,7 +7,7 @@ import { formatCurrency } from "@/lib/utils";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
 import {
   PlusCircle, Copy, Check, Clock,
-  Landmark, CreditCard, Zap, Info, ChevronRight,
+  Landmark, CreditCard, Zap, Info, ChevronRight, ChevronLeft,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 
@@ -138,9 +138,18 @@ export default function TopUpPage() {
     <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* Header */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white lg:px-10 lg:py-8">
-        <div className="flex items-center gap-2 mb-4">
-          <PlusCircle size={18} className="text-white/80" />
-          <h1 className="text-lg font-bold">{t("topup.title")}</h1>
+        <div className="relative flex items-center justify-center mb-4">
+          <button
+            onClick={() => router.back()}
+            className="absolute left-0 flex items-center justify-center h-8 w-8 rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+            aria-label="Back"
+          >
+            <ChevronLeft size={18} className="text-white" />
+          </button>
+          <div className="flex items-center gap-2">
+            <PlusCircle size={18} className="text-white/80" />
+            <h1 className="text-lg font-bold">{t("topup.title")}</h1>
+          </div>
         </div>
         {!loading && accounts.length > 0 && (
           <div>
@@ -203,50 +212,6 @@ export default function TopUpPage() {
           </div>
         </div>
 
-        {/* Card top-up — coming soon */}
-        <div className="bg-white rounded-2xl border border-[#E8E8E8] shadow-sm overflow-hidden opacity-70">
-          <div className="flex items-center justify-between px-5 py-4">
-            <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
-                <CreditCard size={16} className="text-purple-500" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-[#333]">{t("topup.cardTopup")}</p>
-                <p className="text-xs text-[#AAAAAA]">{t("topup.cardDesc")}</p>
-              </div>
-            </div>
-            <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-1 rounded-full">
-              {t("topup.comingSoon")}
-            </span>
-          </div>
-        </div>
-
-        {/* Loan CTA */}
-        <button
-          onClick={() => router.push("/loans/apply")}
-          className="w-full bg-white rounded-2xl border border-[#E8E8E8] shadow-sm overflow-hidden"
-        >
-          <div className="px-5 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
-                <span className="text-lg">💳</span>
-              </div>
-              <div className="text-left">
-                <p className="text-sm font-bold text-[#333]">{t("topup.applyLoan")}</p>
-                <p className="text-xs text-[#AAAAAA]">{t("topup.loanDesc")}</p>
-              </div>
-            </div>
-            <ChevronRight size={16} className="text-[#AAAAAA] flex-shrink-0" />
-          </div>
-        </button>
-
-        {/* FSCS note */}
-        <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3.5">
-          <Info size={14} className="text-blue-500 mt-0.5 flex-shrink-0" />
-          <p className="text-xs text-blue-700 leading-relaxed">
-            {t("topup.fscs")}
-          </p>
-        </div>
       </div>
     </div>
   );

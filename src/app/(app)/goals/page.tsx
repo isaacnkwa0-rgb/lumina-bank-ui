@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { goalsApi, accountsApi, type Goal, type Account } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
 import {
   Plus, X, Target, ChevronDown, CheckCircle2,
-  Calendar, Sparkles, PiggyBank, AlertCircle,
+  Calendar, Sparkles, PiggyBank, AlertCircle, ChevronLeft,
 } from "lucide-react";
 
 // ── Progress ring ──────────────────────────────────────────────────────────────
@@ -343,6 +344,7 @@ function GoalCard({ goal, onContribute }: { goal: Goal; onContribute: () => void
 
 export default function GoalsPage() {
   const { t } = useLanguage();
+  const router = useRouter();
   const [goals, setGoals]         = useState<Goal[]>([]);
   const [accounts, setAccounts]   = useState<Account[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -371,13 +373,20 @@ export default function GoalsPage() {
     <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* Header */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-16 text-white lg:px-10 lg:py-10">
-        <div className="flex items-center justify-between mb-4">
+        <div className="relative flex items-center justify-center mb-4">
+          <button
+            onClick={() => router.back()}
+            className="absolute left-0 flex items-center justify-center h-8 w-8 rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+            aria-label="Back"
+          >
+            <ChevronLeft size={18} className="text-white" />
+          </button>
           <div className="flex items-center gap-2">
             <Target size={18} className="text-white/80" />
             <h1 className="text-lg font-bold">{t("goals.title")}</h1>
           </div>
           <button onClick={() => setShowAdd(true)}
-            className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white text-xs font-bold px-3 py-2 rounded-full hover:bg-white/25 transition-colors">
+            className="absolute right-0 flex items-center gap-1.5 bg-white/15 border border-white/20 text-white text-xs font-bold px-3 py-2 rounded-full hover:bg-white/25 transition-colors">
             <Plus size={13} /> {t("goals.new")}
           </button>
         </div>

@@ -7,7 +7,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
 import {
   Home, ChevronDown, ChevronUp, CheckCircle2,
-  Clock, AlertCircle, Calendar, Percent, Banknote, Star, TrendingDown, ChevronRight,
+  Clock, AlertCircle, Calendar, Percent, Banknote, Star, TrendingDown, ChevronRight, ChevronLeft,
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useLanguage } from "@/lib/i18n";
@@ -169,9 +169,18 @@ export default function MortgagePage() {
     <div className="max-w-lg mx-auto lg:max-w-none pb-8">
       {/* Header */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white lg:px-10 lg:py-8">
-        <div className="flex items-center gap-2 mb-4">
-          <Home size={18} className="text-white/80" />
-          <h1 className="text-lg font-bold">{t("mortgage.title")}</h1>
+        <div className="relative flex items-center justify-center mb-4">
+          <button
+            onClick={() => router.back()}
+            className="absolute left-0 flex items-center justify-center h-8 w-8 rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+            aria-label="Back"
+          >
+            <ChevronLeft size={18} className="text-white" />
+          </button>
+          <div className="flex items-center gap-2">
+            <Home size={18} className="text-white/80" />
+            <h1 className="text-lg font-bold">{t("mortgage.title")}</h1>
+          </div>
         </div>
         {!loading && mortgages.length > 0 && (
           <div>

@@ -6,7 +6,7 @@ import {
   User, Mail, Phone, Shield, ChevronRight,
   LogOut, Lock, Smartphone, HelpCircle, BadgeCheck,
   Star, type LucideIcon, FileCheck, Edit3, X, MapPin,
-  Calendar, Globe, Briefcase, Trash2, Monitor, Tablet, KeyRound,
+  Calendar, Globe, Briefcase, Trash2, Monitor, Tablet, KeyRound, ChevronLeft,
 } from "lucide-react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { kycApi, usersApi, type Device } from "@/lib/api";
@@ -234,6 +234,15 @@ export default function ProfilePage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-8">
       <div className="bg-gradient-to-br from-[#DB0011] via-[#C4000F] to-[#8B000A] px-4 pt-8 pb-16 lg:px-10">
+        <div className="relative flex items-center justify-center mb-4">
+          <button
+            onClick={() => router.back()}
+            className="absolute left-0 flex items-center justify-center h-8 w-8 rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+            aria-label="Back"
+          >
+            <ChevronLeft size={18} className="text-white" />
+          </button>
+        </div>
         <div className="flex flex-col items-center gap-3">
           <div className="h-24 w-24 rounded-full bg-white/25 border-2 border-white/50 flex items-center justify-center shadow-lg">
             <GenderAvatarLarge gender={user?.gender} />

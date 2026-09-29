@@ -24,6 +24,7 @@ import { useLanguage } from "@/lib/i18n";
 type Tab = "own" | "domestic" | "international";
 
 const UK_BANKS = [
+  { code: "LMN", name: "Lumina Bank" },
   { code: "BARC", name: "Barclays" },
   { code: "HSBC", name: "HSBC UK" },
   { code: "LOYD", name: "Lloyds Bank" },
@@ -33,7 +34,6 @@ const UK_BANKS = [
   { code: "RVLT", name: "Revolut" },
   { code: "STRL", name: "Starling Bank" },
   { code: "SANT", name: "Santander UK" },
-  { code: "LMN", name: "Lumina Bank" },
 ];
 
 const CURRENCIES = ["USD", "EUR", "GBP", "CHF", "JPY", "AED", "CAD", "AUD", "PLN", "SGD"];
@@ -45,6 +45,15 @@ const COUNTRIES = [
   { code: "SG", name: "Singapore" }, { code: "CH", name: "Switzerland" },
   { code: "IN", name: "India" }, { code: "TR", name: "Turkey" },
 ];
+
+const COUNTRY_CURRENCY: Record<string, string> = {
+  FR: "EUR", DE: "EUR", US: "USD", PL: "PLN", AE: "AED",
+  JP: "JPY", CA: "CAD", AU: "AUD", SG: "SGD", CH: "CHF",
+};
+const CURRENCY_COUNTRY: Record<string, string> = {
+  USD: "US", EUR: "FR", CHF: "CH", JPY: "JP", AED: "AE",
+  CAD: "CA", AUD: "AU", PLN: "PL", SGD: "SG",
+};
 
 const ACCOUNT_COLORS: Record<string, string> = {
   CURRENT: "#DB0011",
@@ -871,13 +880,24 @@ function InternationalForm({
   const [otpError, setOtpError] = useState("");
 
   const {
-    register, handleSubmit, watch,
+    register, handleSubmit, watch, setValue,
     formState: { errors, isSubmitting },
   } = useForm<InternationalFormValues>({ resolver: zodResolver(internationalSchema) });
 
   const fromAccountId = watch("fromAccountId") ?? "";
+  const toCountry = watch("toCountry");
   const toCurrency = watch("toCurrency");
   const amount = watch("amount");
+
+  useEffect(() => {
+    const currency = COUNTRY_CURRENCY[toCountry ?? ""];
+    if (currency) setValue("toCurrency", currency, { shouldValidate: true });
+  }, [toCountry, setValue]);
+
+  useEffect(() => {
+    const country = CURRENCY_COUNTRY[toCurrency ?? ""];
+    if (country) setValue("toCountry", country, { shouldValidate: true });
+  }, [toCurrency, setValue]);
 
   async function getQuote() {
     if (!toCurrency || !amount || isNaN(Number(amount))) return;
@@ -1045,10 +1065,10 @@ function InternationalForm({
           </div>
           <div className="px-4 py-3 space-y-2.5">
             {[
-              { id: "rate",           label: "Rate",                         value: `1 GBP = ${fxQuote.rate.toFixed(4)} ${fxQuote.toCurrency}` },
+              { id: "rate",           label: "Rate",                         value: `1 GBP = ${fxQuote.customerRate.toFixed(4)} ${fxQuote.toCurrency}` },
               { id: "you-send",       label: "You send",                     value: formatCurrency(Number(amount), "GBP") },
               { id: "recipient-gets", label: t("transfer.recipientGets"),    value: `${fxQuote.convertedAmount.toFixed(2)} ${fxQuote.toCurrency}` },
-              { id: "fees",           label: "Fees",                         value: formatCurrency(fxQuote.fee, "GBP") },
+              { id: "fees",           label: "Fees",                         value: formatCurrency(fxQuote.fxFee, "GBP") },
             ].map(({ id, label, value }) => (
               <div key={id} className="flex justify-between items-center">
                 <span className="text-xs text-[#767676]">{label}</span>

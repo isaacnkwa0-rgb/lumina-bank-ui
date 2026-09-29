@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useLanguage } from "@/lib/i18n";
 import {
   ShieldCheck, Heart, Home, Car, Plane, Briefcase,
-  ChevronRight, CheckCircle2, X, FileText, Clock, XCircle, BadgeCheck,
+  ChevronRight, CheckCircle2, X, FileText, Clock, XCircle, BadgeCheck, ChevronLeft,
 } from "lucide-react";
 import { insuranceApi, type InsuranceQuote } from "@/lib/api";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -438,6 +439,7 @@ function MyQuotes({
 
 export default function InsurancePage() {
   const { t } = useLanguage();
+  const router = useRouter();
   const [selected, setSelected] = useState<Product | null>(null);
   const [quotes, setQuotes] = useState<InsuranceQuote[]>([]);
   const [actioning, setActioning] = useState("");
@@ -472,9 +474,18 @@ export default function InsurancePage() {
     <div className="max-w-lg mx-auto lg:max-w-none pb-8">
       {/* Header */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white lg:px-10 lg:py-8">
-        <div className="flex items-center gap-2 mb-4">
-          <ShieldCheck size={18} className="text-white/80" />
-          <h1 className="text-lg font-bold">{t("insurance.title")}</h1>
+        <div className="relative flex items-center justify-center mb-4">
+          <button
+            onClick={() => router.back()}
+            className="absolute left-0 flex items-center justify-center h-8 w-8 rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+            aria-label="Back"
+          >
+            <ChevronLeft size={18} className="text-white" />
+          </button>
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={18} className="text-white/80" />
+            <h1 className="text-lg font-bold">{t("insurance.title")}</h1>
+          </div>
         </div>
         <div>
           <p className="text-white/50 text-xs uppercase tracking-widest mb-1">{t("insurance.protect")}</p>

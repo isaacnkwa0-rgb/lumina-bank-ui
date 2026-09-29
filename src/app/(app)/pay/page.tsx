@@ -9,7 +9,7 @@ import {
   ArrowLeft, Search, ChevronRight, CheckCircle2, X,
   Zap, Wifi, Phone, Droplets, Home, ShieldCheck,
   Landmark, Music, Play, ShoppingBag, Car, GraduationCap,
-  Receipt, Globe, Check,
+  Receipt, Globe, Check, ChevronLeft,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -1188,9 +1188,18 @@ export default function PayPage() {
             {t("pay.back")}
           </button>
         ) : (
-          <div className="flex items-center gap-2 mb-4">
-            <Receipt size={18} className="text-white/80" />
-            <h1 className="text-lg font-bold">{t("pay.title")}</h1>
+          <div className="relative flex items-center justify-center mb-4">
+            <button
+              onClick={() => router.back()}
+              className="absolute left-0 flex items-center justify-center h-8 w-8 rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+              aria-label="Back"
+            >
+              <ChevronLeft size={18} className="text-white" />
+            </button>
+            <div className="flex items-center gap-2">
+              <Receipt size={18} className="text-white/80" />
+              <h1 className="text-lg font-bold">{t("pay.title")}</h1>
+            </div>
           </div>
         )}
         {selectedCategory ? (

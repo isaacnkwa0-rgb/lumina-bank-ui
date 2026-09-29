@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useLanguage } from "@/lib/i18n";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -15,7 +16,7 @@ import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
 import {
   TrendingUp, TrendingDown, AlertCircle, Info,
   BarChart2, ShoppingBag, Star, ArrowUpRight, ArrowDownLeft,
-  Wallet,
+  Wallet, ChevronLeft,
 } from "lucide-react";
 
 // ── Colour palette ────────────────────────────────────────────────────────────
@@ -126,6 +127,7 @@ function InsightCard({ insight }: { insight: Insight }) {
 
 export default function AnalyticsPage() {
   const { t } = useLanguage();
+  const router = useRouter();
   const [cashflow, setCashflow]   = useState<CashflowData[]>([]);
   const [spending, setSpending]   = useState<SpendingCategory[]>([]);
   const [insights, setInsights]   = useState<Insight[]>([]);
@@ -170,9 +172,18 @@ export default function AnalyticsPage() {
     <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* ── Header ── */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-16 text-white lg:px-10 lg:py-8">
-        <div className="flex items-center gap-2 mb-4">
-          <BarChart2 size={18} className="text-white/80" />
-          <h1 className="text-lg font-bold">{t("analytics.title")}</h1>
+        <div className="relative flex items-center justify-center mb-4">
+          <button
+            onClick={() => router.back()}
+            className="absolute left-0 flex items-center justify-center h-8 w-8 rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+            aria-label="Back"
+          >
+            <ChevronLeft size={18} className="text-white" />
+          </button>
+          <div className="flex items-center gap-2">
+            <BarChart2 size={18} className="text-white/80" />
+            <h1 className="text-lg font-bold">{t("analytics.title")}</h1>
+          </div>
         </div>
         {!loading && cashflow.length > 0 && (
           <div>

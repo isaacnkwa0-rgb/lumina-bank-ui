@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { RefreshCw, Filter, X, ArrowLeftRight, Download } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { RefreshCw, Filter, X, ArrowLeftRight, Download, ChevronLeft } from "lucide-react";
 import { transactionsApi, type Transaction } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 import { formatDate } from "@/lib/utils";
@@ -19,6 +20,7 @@ const PAGE_SIZE = 25;
 
 export default function TransactionsPage() {
   const { t } = useLanguage();
+  const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -98,47 +100,36 @@ export default function TransactionsPage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-8">
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white lg:px-10 lg:py-8">
-        <div className="flex items-center justify-between mb-4">
+        <div className="relative flex items-center justify-center mb-4">
+          <button
+            onClick={() => router.back()}
+            className="absolute left-0 flex items-center justify-center h-8 w-8 rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+            aria-label="Back"
+          >
+            <ChevronLeft size={18} className="text-white" />
+          </button>
           <div className="flex items-center gap-2">
             <ArrowLeftRight size={18} className="text-white/80" />
             <h1 className="text-lg font-bold">{t("transactions.title")}</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="absolute right-0 flex items-center gap-2">
             <button
               onClick={handleExport}
-              className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white text-xs font-semibold px-3 py-2 rounded-full hover:bg-white/25 transition-colors"
+              aria-label={t("transactions.export")}
+              className="flex items-center justify-center h-8 w-8 bg-white/15 border border-white/20 text-white rounded-full hover:bg-white/25 transition-colors"
             >
-              <Download size={12} />
-              {t("transactions.export")}
+              <Download size={14} />
             </button>
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white text-xs font-semibold px-3 py-2 rounded-full hover:bg-white/25 transition-colors disabled:opacity-50"
+              aria-label={t("transactions.refresh")}
+              className="flex items-center justify-center h-8 w-8 bg-white/15 border border-white/20 text-white rounded-full hover:bg-white/25 transition-colors disabled:opacity-50"
             >
-              <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
-              {t("transactions.refresh")}
+              <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
             </button>
           </div>
         </div>
-        {!loading && transactions.length > 0 && (
-          <div className="flex items-center gap-4">
-            <div>
-              <p className="text-3xl font-bold">{transactions.length}</p>
-              <p className="text-white/40 text-xs">{t("transactions.loaded")}</p>
-            </div>
-            <div className="h-8 w-px bg-white/10" />
-            <div>
-              <p className="text-xl font-bold text-green-400">{creditCount}</p>
-              <p className="text-white/40 text-xs">{t("transactions.credits")}</p>
-            </div>
-            <div className="h-8 w-px bg-white/10" />
-            <div>
-              <p className="text-xl font-bold text-white">{debitCount}</p>
-              <p className="text-white/40 text-xs">{t("transactions.debits")}</p>
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="mx-4 -mt-8 relative z-10 bg-white rounded-2xl shadow-lg border border-[#E8E8E8] overflow-hidden lg:mx-auto lg:max-w-5xl">

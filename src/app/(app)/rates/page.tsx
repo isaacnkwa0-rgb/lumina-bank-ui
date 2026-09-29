@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ratesApi, type Rate, type ConversionResult } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
-import { ArrowLeftRight, RefreshCw, TrendingUp, Globe } from "lucide-react";
+import { ArrowLeftRight, RefreshCw, TrendingUp, Globe, ChevronLeft } from "lucide-react";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
 
 const CURRENCIES = [
@@ -25,6 +26,7 @@ function getCurrencyMeta(code: string) {
 
 export default function RatesPage() {
   const { t } = useLanguage();
+  const router = useRouter();
   const [rates, setRates] = useState<Rate[]>([]);
   const [loading, setLoading] = useState(true);
   const [fromCurrency, setFromCurrency] = useState("GBP");
@@ -80,7 +82,14 @@ export default function RatesPage() {
     <div className="max-w-lg mx-auto lg:max-w-none pb-8">
       {/* Header */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white lg:px-10 lg:py-10">
-        <div className="flex items-center justify-between mb-4">
+        <div className="relative flex items-center justify-center mb-4">
+          <button
+            onClick={() => router.back()}
+            className="absolute left-0 flex items-center justify-center h-8 w-8 rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+            aria-label="Back"
+          >
+            <ChevronLeft size={18} className="text-white" />
+          </button>
           <div className="flex items-center gap-2">
             <Globe size={18} className="text-white/80" />
             <h1 className="text-lg font-bold">{t("rates.title")}</h1>
@@ -88,7 +97,7 @@ export default function RatesPage() {
           <button
             onClick={fetchRates}
             disabled={loading}
-            className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white text-xs font-semibold px-3 py-2 rounded-full hover:bg-white/25 transition-colors disabled:opacity-50"
+            className="absolute right-0 flex items-center gap-1.5 bg-white/15 border border-white/20 text-white text-xs font-semibold px-3 py-2 rounded-full hover:bg-white/25 transition-colors disabled:opacity-50"
             aria-label="Refresh rates"
           >
             <RefreshCw size={12} className={loading ? "animate-spin" : ""} />

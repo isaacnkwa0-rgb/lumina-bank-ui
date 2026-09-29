@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Bell, Shield, Info, CreditCard, Gift,
   CheckCheck, ArrowDownLeft, ArrowUpRight,
-  ArrowLeftRight, Clock, type LucideIcon,
+  ArrowLeftRight, Clock, ChevronLeft, type LucideIcon,
 } from "lucide-react";
 import { notificationsApi, type Notification } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
@@ -71,6 +71,7 @@ const GROUP_ORDER = ["today", "yesterday", "thisWeek", "earlier"] as const;
 
 export default function NotificationsPage() {
   const { t } = useLanguage();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
@@ -117,38 +118,30 @@ export default function NotificationsPage() {
       {/* Header */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white lg:px-10 lg:py-8">
         <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center justify-center h-8 w-8 rounded-full bg-white/15 hover:bg-white/25 transition-colors flex-shrink-0"
+            aria-label="Back"
+          >
+            <ChevronLeft size={18} className="text-white" />
+          </button>
           <div className="flex items-center gap-2">
             <Bell size={18} className="text-white/80" />
             <h1 className="text-lg font-bold">{t("notifications.title")}</h1>
           </div>
-          {unreadCount > 0 && (
+          {unreadCount > 0 ? (
             <button
               onClick={markAllRead}
               disabled={markingAll}
-              className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white text-xs font-semibold px-3 py-2 rounded-full hover:bg-white/25 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white text-xs font-semibold px-3 py-2 rounded-full hover:bg-white/25 transition-colors disabled:opacity-50 flex-shrink-0"
             >
               <CheckCheck size={13} />
               {markingAll ? t("notifications.marking") : t("notifications.markAllRead")}
             </button>
+          ) : (
+            <div className="w-8" />
           )}
         </div>
-        {!loading && (
-          <div className="flex items-center gap-4">
-            <div>
-              <p className="text-3xl font-bold">{notifications.length}</p>
-              <p className="text-white/40 text-xs">{t("notifications.total")}</p>
-            </div>
-            {unreadCount > 0 && (
-              <>
-                <div className="h-8 w-px bg-white/10" />
-                <div>
-                  <p className="text-xl font-bold text-white">{unreadCount}</p>
-                  <p className="text-white/40 text-xs">{t("notifications.unread")}</p>
-                </div>
-              </>
-            )}
-          </div>
-        )}
       </div>
 
       {error && (

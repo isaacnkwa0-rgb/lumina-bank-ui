@@ -40,10 +40,8 @@ export function useAuth(): UseAuthReturn {
   useEffect(() => {
     const storedToken = getToken();
     const storedUser = getUser();
-    if (storedToken && storedUser) {
-      setTokenState(storedToken);
-      setUserState(storedUser);
-    }
+    if (storedUser) setUserState(storedUser);
+    if (storedToken) setTokenState(storedToken);
     setIsLoading(false);
   }, []);
 

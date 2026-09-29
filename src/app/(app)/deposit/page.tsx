@@ -5,10 +5,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { QRCodeSVG } from "qrcode.react";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import {
   ArrowDownToLine, Copy, CheckCircle2, Clock, XCircle,
-  BadgeCheck, ChevronDown, RefreshCw, Building2, Bitcoin,
-  AlertCircle,
+  BadgeCheck, ChevronDown, Building2, Bitcoin,
+  AlertCircle, CreditCard,
 } from "lucide-react";
 import {
   accountsApi, depositsApi, ratesApi,
@@ -18,6 +20,8 @@ import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PK!);
 
 // ── Coin configs ───────────────────────────────────────────────────────────────
 
@@ -446,6 +450,186 @@ function CryptoTab({ accounts }: { accounts: Account[] }) {
   );
 }
 
+// ── Card Deposit Tab ───────────────────────────────────────────────────────────
+
+const cardSchema = z.object({
+  accountId: z.string().min(1, "Select an account"),
+  amount: z.string().min(1, "Enter amount").refine((v) => !isNaN(Number(v)) && Number(v) >= 10, "Minimum £10"),
+});
+type CardForm = z.infer<typeof cardSchema>;
+
+function CardDepositForm({ accounts }: { accounts: Account[] }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [clientSecret, setClientSecret] = useState("");
+  const [paymentIntentId, setPaymentIntentId] = useState("");
+  const [step, setStep] = useState<"form" | "pay" | "done">("form");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [confirmedAmount, setConfirmedAmount] = useState(0);
+
+  const { register, handleSubmit, formState: { errors }, watch } = useForm<CardForm>({
+    resolver: zodResolver(cardSchema),
+    defaultValues: { accountId: accounts[0]?.id ?? "" },
+  });
+
+  const accountId = watch("accountId");
+
+  async function onGetIntent(data: CardForm) {
+    setSubmitting(true);
+    setError("");
+    try {
+      const res = await depositsApi.createCardPaymentIntent({ accountId: data.accountId, amount: Number(data.amount) });
+      setClientSecret(res.data.data.clientSecret);
+      setPaymentIntentId(res.data.data.clientSecret.split("_secret_")[0]);
+      setConfirmedAmount(Number(data.amount));
+      setStep("pay");
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setError(e?.response?.data?.message ?? "Could not create payment. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function onPayCard(e: React.FormEvent) {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+    setSubmitting(true);
+    setError("");
+    const card = elements.getElement(CardElement);
+    if (!card) return;
+    const { error: stripeErr, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: { card },
+    });
+    if (stripeErr) {
+      setError(stripeErr.message ?? "Payment failed.");
+      setSubmitting(false);
+      return;
+    }
+    if (paymentIntent?.status === "succeeded") {
+      try {
+        await depositsApi.confirmCardDeposit({ paymentIntentId: paymentIntent.id, accountId, amount: confirmedAmount });
+        setStep("done");
+      } catch {
+        setError("Payment succeeded but we could not credit your account. Please contact support.");
+      }
+    }
+    setSubmitting(false);
+  }
+
+  if (step === "done") {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-green-50 border border-green-200">
+          <CheckCircle2 size={18} strokeWidth={2} className="text-green-600 flex-shrink-0" />
+          <div>
+            <p className="text-[13px] font-semibold text-green-800">Card deposit successful</p>
+            <p className="text-[11px] text-green-700 mt-0.5">
+              £{confirmedAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })} has been added to your account.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => { setStep("form"); setClientSecret(""); setPaymentIntentId(""); }}
+          className="w-full text-[13px] text-[#DB0011] font-medium underline underline-offset-2"
+        >
+          Make another deposit
+        </button>
+      </div>
+    );
+  }
+
+  if (step === "pay") {
+    return (
+      <form onSubmit={onPayCard} className="space-y-4">
+        <div className="bg-[#F8F8F8] rounded-xl px-4 py-3 text-[13px] text-[#555]">
+          Depositing <span className="font-bold text-[#222]">£{confirmedAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</span>
+        </div>
+        <div>
+          <label className="block text-[11px] font-semibold text-[#555555] uppercase tracking-wider mb-1.5">
+            Card details
+          </label>
+          <div className="px-3.5 py-3 border border-[#E0E0E0] rounded-xl bg-white focus-within:border-[#DB0011] focus-within:ring-1 focus-within:ring-[#DB0011]/20">
+            <CardElement options={{
+              style: {
+                base: { fontSize: "14px", color: "#222222", fontFamily: "inherit", "::placeholder": { color: "#AAAAAA" } },
+                invalid: { color: "#DB0011" },
+              },
+            }} />
+          </div>
+        </div>
+        {error && (
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-[#DB0011] text-[12px]">
+            <AlertCircle size={14} strokeWidth={2} className="flex-shrink-0" />
+            {error}
+          </div>
+        )}
+        <Button type="submit" disabled={submitting || !stripe} className="w-full">
+          {submitting ? "Processing…" : `Pay £${confirmedAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}`}
+        </Button>
+        <button type="button" onClick={() => { setStep("form"); setError(""); }} className="w-full text-[12px] text-[#AAAAAA]">
+          ← Change amount
+        </button>
+      </form>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onGetIntent)} className="space-y-4">
+      <div>
+        <label className="block text-[11px] font-semibold text-[#555555] uppercase tracking-wider mb-1.5">
+          Credit to account
+        </label>
+        <div className="relative">
+          <select
+            {...register("accountId")}
+            className="w-full appearance-none pl-3.5 pr-8 py-2.5 text-[13px] bg-white border border-[#E0E0E0] rounded-xl text-[#222222] focus:outline-none focus:border-[#DB0011] focus:ring-1 focus:ring-[#DB0011]/20"
+          >
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {accountLabel(a)} — {formatCurrency(Number(a.balance))}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#AAAAAA] pointer-events-none" />
+        </div>
+        {errors.accountId && <p className="text-[11px] text-[#DB0011] mt-1">{errors.accountId.message}</p>}
+      </div>
+      <div>
+        <label className="block text-[11px] font-semibold text-[#555555] uppercase tracking-wider mb-1.5">
+          Amount (GBP)
+        </label>
+        <div className="relative">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-[#AAAAAA]">£</span>
+          <Input {...register("amount")} type="number" min="10" step="0.01" placeholder="0.00" className="pl-7" />
+        </div>
+        {errors.amount && <p className="text-[11px] text-[#DB0011] mt-1">{errors.amount.message}</p>}
+      </div>
+      {error && (
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-[#DB0011] text-[12px]">
+          <AlertCircle size={14} strokeWidth={2} className="flex-shrink-0" />
+          {error}
+        </div>
+      )}
+      <Button type="submit" disabled={submitting} className="w-full">
+        {submitting ? "Setting up…" : "Continue to Card Payment"}
+      </Button>
+      <p className="text-[10px] text-[#AAAAAA] text-center">
+        Secured by Stripe · Visa · Mastercard · Amex
+      </p>
+    </form>
+  );
+}
+
+function CardDepositTab({ accounts }: { accounts: Account[] }) {
+  return (
+    <Elements stripe={stripePromise}>
+      <CardDepositForm accounts={accounts} />
+    </Elements>
+  );
+}
+
 // ── History ────────────────────────────────────────────────────────────────────
 
 function DepositHistory({ deposits, loading }: { deposits: Deposit[]; loading: boolean }) {
@@ -465,14 +649,18 @@ function DepositHistory({ deposits, loading }: { deposits: Deposit[]; loading: b
         {deposits.map((d) => (
           <div key={d.id} className="bg-white rounded-xl border border-[#E8E8E8] px-4 py-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className={`h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0 ${d.method === "CRYPTO" ? "bg-orange-50" : "bg-blue-50"}`}>
+              <div className={`h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                d.method === "CRYPTO" ? "bg-orange-50" : d.method === "CARD" ? "bg-purple-50" : "bg-blue-50"
+              }`}>
                 {d.method === "CRYPTO"
                   ? <Bitcoin size={15} strokeWidth={1.8} className="text-orange-500" />
+                  : d.method === "CARD"
+                  ? <CreditCard size={15} strokeWidth={1.8} className="text-purple-600" />
                   : <Building2 size={15} strokeWidth={1.8} className="text-blue-600" />}
               </div>
               <div className="min-w-0">
                 <p className="text-[13px] font-semibold text-[#222222] truncate">
-                  {d.method === "CRYPTO" ? `${d.coin} Crypto` : "Bank Transfer"}
+                  {d.method === "CRYPTO" ? `${d.coin} Crypto` : d.method === "CARD" ? "Card Deposit" : "Bank Transfer"}
                 </p>
                 <p className="text-[11px] text-[#AAAAAA] truncate">
                   {new Date(d.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
@@ -494,7 +682,7 @@ function DepositHistory({ deposits, loading }: { deposits: Deposit[]; loading: b
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-type Tab = "bank" | "crypto";
+type Tab = "bank" | "crypto" | "card";
 
 export default function DepositPage() {
   const [tab, setTab]           = useState<Tab>("bank");
@@ -532,19 +720,21 @@ export default function DepositPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-[#E8E8E8] overflow-hidden">
           {/* Tabs */}
           <div className="flex border-b border-[#E8E8E8]">
-            {(["bank", "crypto"] as Tab[]).map((t) => (
+            {([
+              { key: "bank",   label: "Bank",   icon: <Building2 size={13} strokeWidth={2} /> },
+              { key: "card",   label: "Card",   icon: <CreditCard size={13} strokeWidth={2} /> },
+              { key: "crypto", label: "Crypto", icon: <Bitcoin size={13} strokeWidth={2} /> },
+            ] as { key: Tab; label: string; icon: React.ReactNode }[]).map(({ key, label, icon }) => (
               <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-[13px] font-semibold transition-colors ${
-                  tab === t
+                key={key}
+                onClick={() => setTab(key)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-3.5 text-[12px] font-semibold transition-colors ${
+                  tab === key
                     ? "text-[#DB0011] border-b-2 border-[#DB0011]"
                     : "text-[#AAAAAA] hover:text-[#666666]"
                 }`}
               >
-                {t === "bank"
-                  ? <><Building2 size={14} strokeWidth={2} /> Bank Transfer</>
-                  : <><Bitcoin size={14} strokeWidth={2} /> Crypto</>}
+                {icon}{label}
               </button>
             ))}
           </div>
@@ -562,6 +752,8 @@ export default function DepositPage() {
               </div>
             ) : tab === "bank" ? (
               <BankTransferTab accounts={creditAccounts} />
+            ) : tab === "card" ? (
+              <CardDepositTab accounts={creditAccounts} />
             ) : (
               <CryptoTab accounts={creditAccounts} />
             )}

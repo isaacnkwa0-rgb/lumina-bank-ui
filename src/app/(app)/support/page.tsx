@@ -6,10 +6,10 @@ import { useLanguage } from "@/lib/i18n";
 import { supportApi, type SupportTicket } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import {
-  ArrowLeft, HelpCircle, MessageSquare, Mail, Phone,
+  HelpCircle, MessageSquare, Mail, Phone,
   ChevronDown, ChevronUp, ShieldCheck, CreditCard,
   ArrowLeftRight, Lock, FileCheck, AlertCircle, Plus,
-  X, ChevronRight, Clock, CheckCircle2, MessageCircle,
+  X, ChevronRight, Clock, CheckCircle2, MessageCircle, ChevronLeft,
 } from "lucide-react";
 
 const FAQS = [
@@ -124,21 +124,20 @@ export default function SupportPage() {
   return (
     <div className="max-w-lg mx-auto lg:max-w-none pb-8">
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-12 text-white lg:px-10 lg:py-10">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-1.5 text-white/70 hover:text-white text-sm mb-5 transition-colors"
-        >
-          <ArrowLeft size={16} /> Back
-        </button>
-        <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center">
-            <HelpCircle size={22} className="text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold">{t("support.title")}</h1>
-            <p className="text-white/60 text-xs mt-0.5">{t("support.subtitle")}</p>
+        <div className="relative flex items-center justify-center mb-4">
+          <button
+            onClick={() => router.back()}
+            className="absolute left-0 flex items-center justify-center h-8 w-8 rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+            aria-label="Back"
+          >
+            <ChevronLeft size={18} className="text-white" />
+          </button>
+          <div className="flex items-center gap-2">
+            <HelpCircle size={18} className="text-white/80" />
+            <h1 className="text-lg font-bold">{t("support.title")}</h1>
           </div>
         </div>
+        <p className="text-white/60 text-xs text-center">{t("support.subtitle")}</p>
       </div>
 
       <div className="px-4 -mt-8 space-y-4 lg:max-w-5xl lg:mx-auto">

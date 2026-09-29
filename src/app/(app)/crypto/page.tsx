@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { accountsApi, cryptoApi, type Account, type CryptoOrder } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
 import { useLanguage } from "@/lib/i18n";
 import {
   RefreshCw, Search, Bitcoin, X, ChevronDown,
-  ShieldCheck, Clock, Info, AlertTriangle,
+  ShieldCheck, Clock, Info, AlertTriangle, ChevronLeft,
 } from "lucide-react";
 
 // ── Coin config ────────────────────────────────────────────────────────────────
@@ -358,6 +359,7 @@ type Tab = "all" | "stable";
 
 export default function CryptoPage() {
   const { t } = useLanguage();
+  const router = useRouter();
   const [coins, setCoins]             = useState<CoinMarket[]>([]);
   const [accounts, setAccounts]       = useState<Account[]>([]);
   const [orders, setOrders]           = useState<CryptoOrder[]>([]);
@@ -445,7 +447,14 @@ export default function CryptoPage() {
     <div className="max-w-lg mx-auto lg:max-w-none pb-10">
       {/* ── Dark header ── */}
       <div className="bg-gradient-to-br from-[#DB0011] to-[#8B000A] px-4 pt-6 pb-14 text-white lg:px-10 lg:py-8">
-        <div className="flex items-center justify-between mb-1">
+        <div className="relative flex items-center justify-center mb-1">
+          <button
+            onClick={() => router.back()}
+            className="absolute left-0 flex items-center justify-center h-8 w-8 rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+            aria-label="Back"
+          >
+            <ChevronLeft size={18} className="text-white" />
+          </button>
           <div className="flex items-center gap-2">
             <Bitcoin size={20} className="text-[#F7931A]" />
             <h1 className="text-lg font-bold tracking-tight">{t("crypto.title")}</h1>
@@ -453,7 +462,7 @@ export default function CryptoPage() {
           <button
             onClick={() => fetchMarket(true)}
             disabled={refreshing}
-            className="h-8 w-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            className="absolute right-0 h-8 w-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
           >
             <RefreshCw size={14} className={`text-white/70 ${refreshing ? "animate-spin" : ""}`} />
           </button>
