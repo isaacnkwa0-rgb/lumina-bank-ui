@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import {
   accountsApi, depositsApi, ratesApi,
-  type Account, type Deposit, type BankReceivingDetails,
+  type Account, type Deposit, type BankReceivingDetails, type Rate,
 } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
@@ -22,6 +22,55 @@ import { Input } from "@/components/ui/Input";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PK!);
+
+// ── Exchange rate helpers ──────────────────────────────────────────────────────
+
+const DISPLAY_CURRENCIES = [
+  { code: "USD", flag: "🇺🇸", name: "US Dollar" },
+  { code: "EUR", flag: "🇪🇺", name: "Euro" },
+  { code: "GHS", flag: "🇬🇭", name: "Ghanaian Cedi" },
+  { code: "NGN", flag: "🇳🇬", name: "Nigerian Naira" },
+  { code: "KES", flag: "🇰🇪", name: "Kenyan Shilling" },
+  { code: "ZAR", flag: "🇿🇦", name: "S. African Rand" },
+  { code: "CAD", flag: "🇨🇦", name: "Canadian Dollar" },
+  { code: "AUD", flag: "🇦🇺", name: "Australian Dollar" },
+  { code: "JPY", flag: "🇯🇵", name: "Japanese Yen" },
+  { code: "INR", flag: "🇮🇳", name: "Indian Rupee" },
+];
+
+function convertGBP(amountGbp: number, toCurrency: string, rates: Rate[]): number | null {
+  if (toCurrency === "GBP") return amountGbp;
+  const r = rates.find((r) => r.from === "GBP" && r.to === toCurrency)
+         ?? rates.find((r) => r.from === toCurrency && r.to === "GBP");
+  if (!r) return null;
+  const rate = r.from === "GBP" ? r.rate : 1 / r.rate;
+  return amountGbp * rate;
+}
+
+function fmtLocal(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency", currency, maximumFractionDigits: currency === "JPY" ? 0 : 2,
+    }).format(amount);
+  } catch {
+    return `${currency} ${amount.toFixed(2)}`;
+  }
+}
+
+function ExchangeHint({ amountGbp, displayCurrency, rates }: {
+  amountGbp: string; displayCurrency: string; rates: Rate[];
+}) {
+  if (!amountGbp || isNaN(Number(amountGbp)) || Number(amountGbp) <= 0 || displayCurrency === "GBP") return null;
+  const converted = convertGBP(Number(amountGbp), displayCurrency, rates);
+  if (!converted) return null;
+  const cur = DISPLAY_CURRENCIES.find((c) => c.code === displayCurrency);
+  return (
+    <p className="text-[11px] text-[#888] mt-1.5 flex items-center gap-1">
+      <span className="text-[12px]">{cur?.flag}</span>
+      <span>≈ <span className="font-semibold text-[#555]">{fmtLocal(converted, displayCurrency)}</span> at today&apos;s rate</span>
+    </p>
+  );
+}
 
 // ── Coin configs ───────────────────────────────────────────────────────────────
 
@@ -130,7 +179,7 @@ type CryptoForm = z.infer<typeof cryptoSchema>;
 
 // ── Bank Transfer Tab ──────────────────────────────────────────────────────────
 
-function BankTransferTab({ accounts }: { accounts: Account[] }) {
+function BankTransferTab({ accounts, displayCurrency, rates }: { accounts: Account[]; displayCurrency: string; rates: Rate[] }) {
   const [bankDetails, setBankDetails] = useState<BankReceivingDetails | null>(null);
   const [depositRef, setDepositRef]   = useState("");
   const [submitting, setSubmitting]   = useState(false);
@@ -232,6 +281,7 @@ function BankTransferTab({ accounts }: { accounts: Account[] }) {
           />
         </div>
         {errors.amount && <p className="text-[11px] text-[#DB0011] mt-1">{errors.amount.message}</p>}
+        <ExchangeHint amountGbp={watch("amount")} displayCurrency={displayCurrency} rates={rates} />
       </div>
 
       {/* Optional fields */}
@@ -266,7 +316,7 @@ function BankTransferTab({ accounts }: { accounts: Account[] }) {
 
 // ── Crypto Tab ─────────────────────────────────────────────────────────────────
 
-function CryptoTab({ accounts }: { accounts: Account[] }) {
+function CryptoTab({ accounts, displayCurrency, rates }: { accounts: Account[]; displayCurrency: string; rates: Rate[] }) {
   const [walletInfo, setWalletInfo] = useState<{
     address: string; coin: string; network: string; coinAmount: string; amountGbp: number;
   } | null>(null);
@@ -433,6 +483,7 @@ function CryptoTab({ accounts }: { accounts: Account[] }) {
             <span className="ml-2 text-[#AAAAAA]">(1 {selectedCoin.coin} = £{priceGbp.toLocaleString("en-GB", { maximumFractionDigits: 2 })})</span>
           </p>
         ) : null}
+        <ExchangeHint amountGbp={watch("amountGbp")} displayCurrency={displayCurrency} rates={rates} />
         {errors.amountGbp && <p className="text-[11px] text-[#DB0011] mt-1">{errors.amountGbp.message}</p>}
       </div>
 
@@ -470,7 +521,7 @@ const stripeElementStyle = {
   invalid: { color: "#DB0011" },
 };
 
-function CardDepositForm({ accounts }: { accounts: Account[] }) {
+function CardDepositForm({ accounts, displayCurrency, rates }: { accounts: Account[]; displayCurrency: string; rates: Rate[] }) {
   const stripe = useStripe();
   const elements = useElements();
   const [clientSecret, setClientSecret] = useState("");
@@ -585,6 +636,13 @@ function CardDepositForm({ accounts }: { accounts: Account[] }) {
             <div className="text-right">
               <p className="text-[9px] text-white/40 uppercase tracking-widest mb-0.5">Amount</p>
               <p className="text-[15px] font-bold">£{confirmedAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
+              {(() => {
+                const cv = convertGBP(confirmedAmount, displayCurrency, rates);
+                const cur = DISPLAY_CURRENCIES.find((c) => c.code === displayCurrency);
+                return cv && displayCurrency !== "GBP" ? (
+                  <p className="text-[10px] text-white/50 mt-0.5">{cur?.flag} ≈ {fmtLocal(cv, displayCurrency)}</p>
+                ) : null;
+              })()}
             </div>
           </div>
         </div>
@@ -687,9 +745,7 @@ function CardDepositForm({ accounts }: { accounts: Account[] }) {
           <Input {...register("amount")} type="number" min="10" step="0.01" placeholder="0.00" className="pl-7" />
         </div>
         {errors.amount && <p className="text-[11px] text-[#DB0011] mt-1">{errors.amount.message}</p>}
-        {amountVal && !isNaN(Number(amountVal)) && Number(amountVal) >= 10 && (
-          <p className="text-[11px] text-[#AAAAAA] mt-1">You will be charged £{Number(amountVal).toLocaleString("en-GB", { minimumFractionDigits: 2 })} now</p>
-        )}
+        <ExchangeHint amountGbp={amountVal} displayCurrency={displayCurrency} rates={rates} />
       </div>
 
       {error && (
@@ -720,10 +776,10 @@ function CardDepositForm({ accounts }: { accounts: Account[] }) {
   );
 }
 
-function CardDepositTab({ accounts }: { accounts: Account[] }) {
+function CardDepositTab({ accounts, displayCurrency, rates }: { accounts: Account[]; displayCurrency: string; rates: Rate[] }) {
   return (
     <Elements stripe={stripePromise}>
-      <CardDepositForm accounts={accounts} />
+      <CardDepositForm accounts={accounts} displayCurrency={displayCurrency} rates={rates} />
     </Elements>
   );
 }
@@ -783,15 +839,26 @@ function DepositHistory({ deposits, loading }: { deposits: Deposit[]; loading: b
 type Tab = "bank" | "crypto" | "card";
 
 export default function DepositPage() {
-  const [tab, setTab]           = useState<Tab>("bank");
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [deposits, setDeposits] = useState<Deposit[]>([]);
+  const [tab, setTab]                   = useState<Tab>("bank");
+  const [accounts, setAccounts]         = useState<Account[]>([]);
+  const [deposits, setDeposits]         = useState<Deposit[]>([]);
   const [loadingAccts, setLoadingAccts] = useState(true);
   const [loadingDeps, setLoadingDeps]   = useState(true);
+  const [rates, setRates]               = useState<Rate[]>([]);
+  const [displayCurrency, setDisplayCurrency] = useState("USD");
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
 
   useEffect(() => {
     accountsApi.list().then((r) => setAccounts(r.data.data)).finally(() => setLoadingAccts(false));
     depositsApi.list().then((r) => setDeposits(r.data.data)).finally(() => setLoadingDeps(false));
+    ratesApi.list().then((r) => setRates(r.data.data)).catch(() => {});
+    // Auto-detect browser locale currency
+    try {
+      const detected = Intl.NumberFormat().resolvedOptions().currency?.toUpperCase();
+      if (detected && detected !== "GBP" && DISPLAY_CURRENCIES.some((c) => c.code === detected)) {
+        setDisplayCurrency(detected);
+      }
+    } catch { /* fallback to USD */ }
   }, []);
 
   const creditAccounts = accounts.filter((a) => a.type !== "CREDIT");
@@ -837,6 +904,39 @@ export default function DepositPage() {
             ))}
           </div>
 
+          {/* Currency selector */}
+          {rates.length > 0 && (
+            <div className="px-5 py-2.5 border-b border-[#F0F0F0] bg-[#FAFAFA]">
+              <div className="relative">
+                <button
+                  onClick={() => setShowCurrencyPicker((p) => !p)}
+                  className="flex items-center gap-1.5 text-[11px] font-semibold text-[#555] hover:text-[#333] transition-colors"
+                >
+                  <span className="text-[13px]">{DISPLAY_CURRENCIES.find((c) => c.code === displayCurrency)?.flag}</span>
+                  View in {displayCurrency}
+                  <ChevronDown size={11} className={`transition-transform ${showCurrencyPicker ? "rotate-180" : ""}`} />
+                </button>
+                {showCurrencyPicker && (
+                  <div className="absolute top-7 left-0 z-20 bg-white border border-[#E8E8E8] rounded-xl shadow-lg py-1 min-w-[200px]">
+                    {DISPLAY_CURRENCIES.map((c) => (
+                      <button
+                        key={c.code}
+                        onClick={() => { setDisplayCurrency(c.code); setShowCurrencyPicker(false); }}
+                        className={`w-full text-left flex items-center gap-2.5 px-3.5 py-2 text-[12px] hover:bg-[#F8F8F8] transition-colors ${
+                          displayCurrency === c.code ? "font-bold text-[#DB0011]" : "text-[#333]"
+                        }`}
+                      >
+                        <span>{c.flag}</span>
+                        <span>{c.code}</span>
+                        <span className="text-[#AAA] font-normal ml-auto">{c.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="p-5">
             {loadingAccts ? (
               <div className="space-y-3">
@@ -849,11 +949,11 @@ export default function DepositPage() {
                 No accounts available. Please open an account first.
               </div>
             ) : tab === "bank" ? (
-              <BankTransferTab accounts={creditAccounts} />
+              <BankTransferTab accounts={creditAccounts} displayCurrency={displayCurrency} rates={rates} />
             ) : tab === "card" ? (
-              <CardDepositTab accounts={creditAccounts} />
+              <CardDepositTab accounts={creditAccounts} displayCurrency={displayCurrency} rates={rates} />
             ) : (
-              <CryptoTab accounts={creditAccounts} />
+              <CryptoTab accounts={creditAccounts} displayCurrency={displayCurrency} rates={rates} />
             )}
           </div>
         </div>
