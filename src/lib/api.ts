@@ -1219,7 +1219,7 @@ export interface Deposit {
   id: string;
   userId: string;
   accountId: string;
-  method: "BANK_TRANSFER" | "CRYPTO";
+  method: "BANK_TRANSFER" | "CRYPTO" | "CARD";
   amount: string;
   currency: string;
   reference: string;
@@ -1269,7 +1269,7 @@ export interface AdminCryptoOrder extends CryptoOrder {
 
 export interface AdminDeposit {
   id: string;
-  method: "BANK_TRANSFER" | "CRYPTO";
+  method: "BANK_TRANSFER" | "CRYPTO" | "CARD";
   amount: string;
   currency: string;
   reference: string;
