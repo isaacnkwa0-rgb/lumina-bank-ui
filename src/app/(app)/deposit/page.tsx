@@ -163,7 +163,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 
 const bankSchema = z.object({
   accountId:  z.string().min(1, "Select an account"),
-  amount:     z.string().min(1, "Enter amount").refine((v) => !isNaN(Number(v)) && Number(v) >= 10, "Minimum £10"),
+  amount:     z.string().min(1, "Enter amount").refine((v) => !isNaN(Number(v)) && Number(v) > 0, "Amount must be greater than 0"),
   senderName: z.string().optional(),
   senderBank: z.string().optional(),
 });
@@ -171,7 +171,7 @@ const bankSchema = z.object({
 const cryptoSchema = z.object({
   accountId:  z.string().min(1, "Select an account"),
   coinIndex:  z.string().min(1, "Select a coin"),
-  amountGbp:  z.string().min(1, "Enter amount").refine((v) => !isNaN(Number(v)) && Number(v) >= 10, "Minimum £10"),
+  amountGbp:  z.string().min(1, "Enter amount").refine((v) => !isNaN(Number(v)) && Number(v) > 0, "Amount must be greater than 0"),
 });
 
 type BankForm   = z.infer<typeof bankSchema>;
@@ -274,7 +274,7 @@ function BankTransferTab({ accounts, displayCurrency, rates }: { accounts: Accou
           <Input
             {...register("amount")}
             type="number"
-            min="10"
+            min="0.01"
             step="0.01"
             placeholder="0.00"
             className="pl-7"
@@ -469,7 +469,7 @@ function CryptoTab({ accounts, displayCurrency, rates }: { accounts: Account[]; 
           <Input
             {...register("amountGbp")}
             type="number"
-            min="10"
+            min="0.01"
             step="0.01"
             placeholder="0.00"
             className="pl-7"
@@ -505,7 +505,7 @@ function CryptoTab({ accounts, displayCurrency, rates }: { accounts: Account[]; 
 
 const cardSchema = z.object({
   accountId: z.string().min(1, "Select an account"),
-  amount: z.string().min(1, "Enter amount").refine((v) => !isNaN(Number(v)) && Number(v) >= 10, "Minimum £10"),
+  amount: z.string().min(1, "Enter amount").refine((v) => !isNaN(Number(v)) && Number(v) > 0, "Amount must be greater than 0"),
   cardholderName: z.string().min(2, "Enter cardholder name"),
 });
 type CardForm = z.infer<typeof cardSchema>;
