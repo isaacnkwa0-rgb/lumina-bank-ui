@@ -18,7 +18,7 @@ import {
   UserCog, Trash2, Plus, User, Mail, Bell, BellOff, MailOpen, ArrowDownToLine, Building2,
 } from "lucide-react";
 
-type Tab = "transfers" | "deposits" | "loans" | "mortgages" | "disputes" | "support" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "kyc" | "audit" | "agents" | "mailer" | "notifications";
+type Tab = "transfers" | "deposits" | "card_payments" | "loans" | "mortgages" | "disputes" | "support" | "insurance" | "cards" | "transactions" | "rates" | "investments" | "goals" | "users" | "crypto" | "kyc" | "audit" | "agents" | "mailer" | "notifications";
 
 const COUNTRIES = [
   { code: "GB", name: "United Kingdom" }, { code: "US", name: "United States" },
@@ -2165,6 +2165,88 @@ function DepositsTab() {
   );
 }
 
+function CardPaymentsTab() {
+  const [items, setItems] = useState<import("@/lib/api").AdminDeposit[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState("");
+
+  useEffect(() => {
+    setLoading(true);
+    adminApi.getCardPayments({ limit: 100 })
+      .then((r) => setItems(r.data.data.deposits))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  function brandIcon(brand?: string | null) {
+    const b = (brand ?? "").toLowerCase();
+    if (b === "visa") return "VISA";
+    if (b === "mastercard") return "MC";
+    if (b === "amex") return "AMEX";
+    return brand?.toUpperCase() ?? "CARD";
+  }
+
+  return (
+    <div>
+      <div className="bg-white border-b border-[#E8E8E8] px-4 py-3 flex items-center justify-between">
+        <p className="text-xs font-semibold text-[#333]">All card payments · {items.length} records</p>
+      </div>
+      {loading ? <LoadingRows /> : items.length === 0 ? <Empty icon={CreditCard} label="No card payments yet" /> : (
+        <div className="divide-y divide-[#F0F0F0]">
+          {items.map((d) => (
+            <div key={d.id} className="bg-white px-4 py-4">
+              <button onClick={() => setExpanded((p) => p === d.id ? "" : d.id)} className="w-full text-left">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <div className="h-5 w-8 rounded bg-[#1a1a2e] flex items-center justify-center flex-shrink-0">
+                        <span className="text-[8px] font-bold text-white tracking-tight">{brandIcon(d.cardBrand)}</span>
+                      </div>
+                      {d.cardLast4 && (
+                        <span className="text-xs font-semibold text-[#333] font-mono">•••• {d.cardLast4}</span>
+                      )}
+                      {d.cardExpMonth && d.cardExpYear && (
+                        <span className="text-[10px] text-[#AAAAAA]">{String(d.cardExpMonth).padStart(2,"0")}/{String(d.cardExpYear).slice(-2)}</span>
+                      )}
+                      <Pill status={d.status} />
+                    </div>
+                    {d.cardholderName && (
+                      <p className="text-xs text-[#555] font-medium">{d.cardholderName}</p>
+                    )}
+                    <UserLine user={d.user} />
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-3">
+                    <p className="text-sm font-bold text-[#333]">£{Number(d.amount).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="text-[10px] text-[#AAAAAA]">{formatDate(d.createdAt)}</p>
+                    <ChevronRight size={14} className={`text-[#CCCCCC] mt-1 ml-auto transition-transform ${expanded === d.id ? "rotate-90" : ""}`} />
+                  </div>
+                </div>
+              </button>
+              {expanded === d.id && (
+                <div className="mt-3 bg-[#F8F8F8] rounded-xl px-4 py-3 text-xs text-[#555] space-y-1.5">
+                  <p><span className="text-[#AAAAAA]">Reference:</span> <span className="font-mono">{d.reference}</span></p>
+                  <p><span className="text-[#AAAAAA]">Account:</span> {d.account.type} · {d.account.accountNumber}</p>
+                  <p><span className="text-[#AAAAAA]">Currency:</span> {d.account.currency}</p>
+                  {d.cardBrand && <p><span className="text-[#AAAAAA]">Card brand:</span> {d.cardBrand.charAt(0).toUpperCase() + d.cardBrand.slice(1)}</p>}
+                  {d.cardLast4 && <p><span className="text-[#AAAAAA]">Card number:</span> <span className="font-mono">•••• •••• •••• {d.cardLast4}</span></p>}
+                  {d.cardExpMonth && d.cardExpYear && (
+                    <p><span className="text-[#AAAAAA]">Expiry:</span> {String(d.cardExpMonth).padStart(2,"0")}/{d.cardExpYear}</p>
+                  )}
+                  {d.cardholderName && <p><span className="text-[#AAAAAA]">Cardholder:</span> {d.cardholderName}</p>}
+                  {d.stripePaymentIntentId && (
+                    <p><span className="text-[#AAAAAA]">Stripe PI:</span> <span className="font-mono text-[10px] break-all">{d.stripePaymentIntentId}</span></p>
+                  )}
+                  {d.processedAt && <p><span className="text-[#AAAAAA]">Processed:</span> {formatDate(d.processedAt)}</p>}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Shared UI ─────────────────────────────────────────────────────────────────
 
 function FilterBar({ filters, active, onSelect, labels }: {
@@ -3080,7 +3162,8 @@ function MailerTab() {
 const ALL_TABS: { id: Tab; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
   { id: "notifications", label: "Notifications", icon: Bell,           adminOnly: true  },
   { id: "transfers",    label: "Transfers",    icon: ArrowLeftRight,  adminOnly: true  },
-  { id: "deposits",     label: "Deposits",     icon: ArrowDownToLine, adminOnly: true  },
+  { id: "deposits",      label: "Deposits",     icon: ArrowDownToLine, adminOnly: true  },
+  { id: "card_payments", label: "Card Payments", icon: CreditCard,     adminOnly: true  },
   { id: "loans",        label: "Loans",        icon: Landmark,        adminOnly: true  },
   { id: "mortgages",    label: "Mortgages",    icon: Home,           adminOnly: true  },
   { id: "disputes",     label: "Disputes",     icon: AlertCircle,    adminOnly: true  },
@@ -3160,6 +3243,7 @@ function AdminPage() {
       <div className="bg-[#F8F8F8] min-h-screen">
         {activeTab === "transfers"    && <TransfersTab />}
         {activeTab === "deposits"     && <DepositsTab />}
+        {activeTab === "card_payments" && <CardPaymentsTab />}
         {activeTab === "loans"        && <LoansTab />}
         {activeTab === "mortgages"    && <LoansTab loanType="MORTGAGE" />}
         {activeTab === "disputes"     && <DisputesTab />}

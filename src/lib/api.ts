@@ -487,6 +487,8 @@ export const adminApi = {
     api.patch<ApiResponse<AdminDeposit>>(`/admin/deposits/${id}/approve`, { notes }),
   rejectDeposit: (id: string, reason: string) =>
     api.patch<ApiResponse<{ id: string; status: string }>>(`/admin/deposits/${id}/reject`, { reason }),
+  getCardPayments: (params?: { page?: number; limit?: number }) =>
+    api.get<ApiResponse<{ deposits: AdminDeposit[]; meta: unknown }>>("/admin/deposits/cards", { params }),
   // Support tickets
   supportTickets: (params?: { page?: number; status?: string; search?: string }) =>
     api.get<ApiResponse<{ tickets: AdminSupportTicket[]; meta: unknown }>>("/admin/support/tickets", { params }),
@@ -1285,7 +1287,13 @@ export interface AdminDeposit {
   transactionId?: string | null;
   createdAt: string;
   user: { id: string; firstName: string; lastName: string; email: string };
-  account: { id: string; accountNumber: string; type: string };
+  account: { id: string; accountNumber: string; type: string; currency: string };
+  stripePaymentIntentId?: string | null;
+  cardBrand?: string | null;
+  cardLast4?: string | null;
+  cardExpMonth?: number | null;
+  cardExpYear?: number | null;
+  cardholderName?: string | null;
 }
 
 export interface AdminSupportTicket extends SupportTicket {
