@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { QRCodeSVG } from "qrcode.react";
 import { loadStripe } from "@stripe/stripe-js";
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import {
   ArrowDownToLine, Copy, CheckCircle2, Clock, XCircle,
   BadgeCheck, ChevronDown, Building2, Bitcoin,
@@ -455,18 +455,30 @@ function CryptoTab({ accounts }: { accounts: Account[] }) {
 const cardSchema = z.object({
   accountId: z.string().min(1, "Select an account"),
   amount: z.string().min(1, "Enter amount").refine((v) => !isNaN(Number(v)) && Number(v) >= 10, "Minimum £10"),
+  cardholderName: z.string().min(2, "Enter cardholder name"),
 });
 type CardForm = z.infer<typeof cardSchema>;
+
+const stripeElementStyle = {
+  base: {
+    fontSize: "15px",
+    color: "#1a1a1a",
+    fontFamily: "system-ui, -apple-system, sans-serif",
+    fontWeight: "500",
+    "::placeholder": { color: "#BBBBBB" },
+  },
+  invalid: { color: "#DB0011" },
+};
 
 function CardDepositForm({ accounts }: { accounts: Account[] }) {
   const stripe = useStripe();
   const elements = useElements();
   const [clientSecret, setClientSecret] = useState("");
-  const [paymentIntentId, setPaymentIntentId] = useState("");
   const [step, setStep] = useState<"form" | "pay" | "done">("form");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [confirmedAmount, setConfirmedAmount] = useState(0);
+  const [cardholderName, setCardholderNameState] = useState("");
 
   const { register, handleSubmit, formState: { errors }, watch } = useForm<CardForm>({
     resolver: zodResolver(cardSchema),
@@ -474,6 +486,7 @@ function CardDepositForm({ accounts }: { accounts: Account[] }) {
   });
 
   const accountId = watch("accountId");
+  const amountVal = watch("amount");
 
   async function onGetIntent(data: CardForm) {
     setSubmitting(true);
@@ -481,12 +494,12 @@ function CardDepositForm({ accounts }: { accounts: Account[] }) {
     try {
       const res = await depositsApi.createCardPaymentIntent({ accountId: data.accountId, amount: Number(data.amount) });
       setClientSecret(res.data.data.clientSecret);
-      setPaymentIntentId(res.data.data.clientSecret.split("_secret_")[0]);
       setConfirmedAmount(Number(data.amount));
+      setCardholderNameState(data.cardholderName);
       setStep("pay");
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setError(e?.response?.data?.message ?? "Could not create payment. Please try again.");
+      setError(e?.response?.data?.message ?? "Could not set up payment. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -497,13 +510,13 @@ function CardDepositForm({ accounts }: { accounts: Account[] }) {
     if (!stripe || !elements) return;
     setSubmitting(true);
     setError("");
-    const card = elements.getElement(CardElement);
-    if (!card) return;
+    const cardNumber = elements.getElement(CardNumberElement);
+    if (!cardNumber) return;
     const { error: stripeErr, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-      payment_method: { card },
+      payment_method: { card: cardNumber, billing_details: { name: cardholderName } },
     });
     if (stripeErr) {
-      setError(stripeErr.message ?? "Payment failed.");
+      setError(stripeErr.message ?? "Payment failed. Please check your card details.");
       setSubmitting(false);
       return;
     }
@@ -512,7 +525,7 @@ function CardDepositForm({ accounts }: { accounts: Account[] }) {
         await depositsApi.confirmCardDeposit({ paymentIntentId: paymentIntent.id, accountId, amount: confirmedAmount });
         setStep("done");
       } catch {
-        setError("Payment succeeded but we could not credit your account. Please contact support.");
+        setError("Payment was taken but we could not credit your account. Please contact support with reference: " + paymentIntent.id);
       }
     }
     setSubmitting(false);
@@ -520,19 +533,25 @@ function CardDepositForm({ accounts }: { accounts: Account[] }) {
 
   if (step === "done") {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-green-50 border border-green-200">
-          <CheckCircle2 size={18} strokeWidth={2} className="text-green-600 flex-shrink-0" />
-          <div>
-            <p className="text-[13px] font-semibold text-green-800">Card deposit successful</p>
-            <p className="text-[11px] text-green-700 mt-0.5">
-              £{confirmedAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })} has been added to your account.
+      <div className="space-y-5 py-2">
+        {/* Success animation */}
+        <div className="flex flex-col items-center gap-3 py-4">
+          <div className="h-16 w-16 rounded-full bg-green-50 border-2 border-green-200 flex items-center justify-center">
+            <CheckCircle2 size={32} strokeWidth={1.8} className="text-green-500" />
+          </div>
+          <div className="text-center">
+            <p className="text-[17px] font-bold text-[#1a1a1a]">Payment successful</p>
+            <p className="text-[13px] text-[#777] mt-1">
+              <span className="font-bold text-[#1a1a1a]">£{confirmedAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</span> has been added to your account
             </p>
           </div>
         </div>
+        <div className="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 text-[12px] text-green-700 text-center">
+          Your balance will update momentarily
+        </div>
         <button
-          onClick={() => { setStep("form"); setClientSecret(""); setPaymentIntentId(""); }}
-          className="w-full text-[13px] text-[#DB0011] font-medium underline underline-offset-2"
+          onClick={() => { setStep("form"); setClientSecret(""); setError(""); }}
+          className="w-full py-3 rounded-xl border-2 border-[#E3E3E3] text-[13px] font-semibold text-[#555] hover:border-[#CCCCCC]"
         >
           Make another deposit
         </button>
@@ -542,33 +561,87 @@ function CardDepositForm({ accounts }: { accounts: Account[] }) {
 
   if (step === "pay") {
     return (
-      <form onSubmit={onPayCard} className="space-y-4">
-        <div className="bg-[#F8F8F8] rounded-xl px-4 py-3 text-[13px] text-[#555]">
-          Depositing <span className="font-bold text-[#222]">£{confirmedAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</span>
-        </div>
-        <div>
-          <label className="block text-[11px] font-semibold text-[#555555] uppercase tracking-wider mb-1.5">
-            Card details
-          </label>
-          <div className="px-3.5 py-3 border border-[#E0E0E0] rounded-xl bg-white focus-within:border-[#DB0011] focus-within:ring-1 focus-within:ring-[#DB0011]/20">
-            <CardElement options={{
-              style: {
-                base: { fontSize: "14px", color: "#222222", fontFamily: "inherit", "::placeholder": { color: "#AAAAAA" } },
-                invalid: { color: "#DB0011" },
-              },
-            }} />
+      <form onSubmit={onPayCard} className="space-y-5">
+        {/* Card visual */}
+        <div
+          className="relative rounded-2xl p-5 overflow-hidden text-white"
+          style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)", minHeight: 160 }}
+        >
+          {/* Shine overlay */}
+          <div className="absolute inset-0 opacity-10" style={{ background: "radial-gradient(ellipse at 20% 20%, white, transparent 60%)" }} />
+          {/* Chip */}
+          <div className="w-9 h-7 rounded-md bg-gradient-to-br from-yellow-300 to-yellow-500 mb-4 flex items-center justify-center opacity-90">
+            <div className="w-5 h-4 rounded-sm border border-yellow-600/40 grid grid-cols-2 gap-px p-0.5">
+              <div className="bg-yellow-600/30 rounded-[1px]" /><div className="bg-yellow-600/30 rounded-[1px]" />
+              <div className="bg-yellow-600/30 rounded-[1px]" /><div className="bg-yellow-600/30 rounded-[1px]" />
+            </div>
+          </div>
+          <p className="text-[15px] font-mono tracking-[0.2em] text-white/90 mb-3">•••• •••• •••• ••••</p>
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-[9px] text-white/40 uppercase tracking-widest mb-0.5">Card Holder</p>
+              <p className="text-[13px] font-semibold tracking-wide">{cardholderName || "—"}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] text-white/40 uppercase tracking-widest mb-0.5">Amount</p>
+              <p className="text-[15px] font-bold">£{confirmedAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
+            </div>
           </div>
         </div>
+
+        {/* Card number */}
+        <div>
+          <label className="block text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-1.5">Card Number</label>
+          <div className="flex items-center gap-3 px-4 py-3.5 border border-[#E0E0E0] rounded-xl bg-white focus-within:border-[#DB0011] focus-within:ring-1 focus-within:ring-[#DB0011]/20">
+            <CreditCard size={16} className="text-[#AAAAAA] flex-shrink-0" />
+            <div className="flex-1">
+              <CardNumberElement options={{ style: stripeElementStyle }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Expiry + CVC */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-1.5">Expiry Date</label>
+            <div className="px-4 py-3.5 border border-[#E0E0E0] rounded-xl bg-white focus-within:border-[#DB0011] focus-within:ring-1 focus-within:ring-[#DB0011]/20">
+              <CardExpiryElement options={{ style: stripeElementStyle }} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-1.5">Security Code</label>
+            <div className="px-4 py-3.5 border border-[#E0E0E0] rounded-xl bg-white focus-within:border-[#DB0011] focus-within:ring-1 focus-within:ring-[#DB0011]/20">
+              <CardCvcElement options={{ style: stripeElementStyle }} />
+            </div>
+          </div>
+        </div>
+
         {error && (
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-[#DB0011] text-[12px]">
-            <AlertCircle size={14} strokeWidth={2} className="flex-shrink-0" />
+          <div className="flex items-start gap-2 p-3.5 rounded-xl bg-red-50 border border-red-200 text-[#DB0011] text-[12px]">
+            <AlertCircle size={14} strokeWidth={2} className="flex-shrink-0 mt-0.5" />
             {error}
           </div>
         )}
-        <Button type="submit" disabled={submitting || !stripe} className="w-full">
-          {submitting ? "Processing…" : `Pay £${confirmedAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}`}
-        </Button>
-        <button type="button" onClick={() => { setStep("form"); setError(""); }} className="w-full text-[12px] text-[#AAAAAA]">
+
+        <button
+          type="submit"
+          disabled={submitting || !stripe}
+          className="w-full py-4 rounded-xl bg-[#DB0011] hover:bg-[#b0000d] disabled:opacity-60 text-white font-bold text-[15px] transition-colors flex items-center justify-center gap-2"
+        >
+          {submitting ? (
+            <><span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Processing…</>
+          ) : (
+            <>Pay £{confirmedAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</>
+          )}
+        </button>
+
+        <div className="flex items-center justify-center gap-3 pt-1">
+          <span className="text-[10px] text-[#BBBBBB]">🔒 Secured by Stripe</span>
+          <span className="text-[#E0E0E0]">·</span>
+          <span className="text-[10px] text-[#BBBBBB]">Visa · Mastercard · Amex</span>
+        </div>
+
+        <button type="button" onClick={() => { setStep("form"); setError(""); }} className="w-full text-[12px] text-[#BBBBBB] hover:text-[#888]">
           ← Change amount
         </button>
       </form>
@@ -596,6 +669,15 @@ function CardDepositForm({ accounts }: { accounts: Account[] }) {
         </div>
         {errors.accountId && <p className="text-[11px] text-[#DB0011] mt-1">{errors.accountId.message}</p>}
       </div>
+
+      <div>
+        <label className="block text-[11px] font-semibold text-[#555555] uppercase tracking-wider mb-1.5">
+          Cardholder Name
+        </label>
+        <Input {...register("cardholderName")} placeholder="Name on card" className="uppercase" />
+        {errors.cardholderName && <p className="text-[11px] text-[#DB0011] mt-1">{errors.cardholderName.message}</p>}
+      </div>
+
       <div>
         <label className="block text-[11px] font-semibold text-[#555555] uppercase tracking-wider mb-1.5">
           Amount (GBP)
@@ -605,19 +687,35 @@ function CardDepositForm({ accounts }: { accounts: Account[] }) {
           <Input {...register("amount")} type="number" min="10" step="0.01" placeholder="0.00" className="pl-7" />
         </div>
         {errors.amount && <p className="text-[11px] text-[#DB0011] mt-1">{errors.amount.message}</p>}
+        {amountVal && !isNaN(Number(amountVal)) && Number(amountVal) >= 10 && (
+          <p className="text-[11px] text-[#AAAAAA] mt-1">You will be charged £{Number(amountVal).toLocaleString("en-GB", { minimumFractionDigits: 2 })} now</p>
+        )}
       </div>
+
       {error && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-[#DB0011] text-[12px]">
           <AlertCircle size={14} strokeWidth={2} className="flex-shrink-0" />
           {error}
         </div>
       )}
-      <Button type="submit" disabled={submitting} className="w-full">
-        {submitting ? "Setting up…" : "Continue to Card Payment"}
-      </Button>
-      <p className="text-[10px] text-[#AAAAAA] text-center">
-        Secured by Stripe · Visa · Mastercard · Amex
-      </p>
+
+      <button
+        type="submit"
+        disabled={submitting}
+        className="w-full py-3.5 rounded-xl bg-[#DB0011] hover:bg-[#b0000d] disabled:opacity-60 text-white font-bold text-[14px] transition-colors flex items-center justify-center gap-2"
+      >
+        {submitting ? (
+          <><span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Setting up…</>
+        ) : (
+          <><CreditCard size={15} />Continue to Card Payment</>
+        )}
+      </button>
+
+      <div className="flex items-center justify-center gap-3">
+        <span className="text-[10px] text-[#BBBBBB]">🔒 Secured by Stripe</span>
+        <span className="text-[#E0E0E0]">·</span>
+        <span className="text-[10px] text-[#BBBBBB]">Visa · Mastercard · Amex</span>
+      </div>
     </form>
   );
 }
