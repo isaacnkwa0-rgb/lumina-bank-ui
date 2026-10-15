@@ -107,7 +107,10 @@ export interface ApiResponse<T> {
 // API helper functions
 export const authApi = {
   login: (identifier: string, password: string) =>
-    api.post<ApiResponse<{ token: string; user: unknown }>>("/auth/login", { identifier, password }),
+    api.post<ApiResponse<
+      | { requiresTwoFactor: true; tempToken: string }
+      | { requiresTwoFactor: false; accessToken: string; refreshToken: string; expiresIn: number; user: unknown }
+    >>("/auth/login", { identifier, password }),
   register: (data: {
     firstName: string;
     lastName: string;
@@ -146,8 +149,8 @@ export const authApi = {
     api.post<ApiResponse<{ recoveryCodes: string[] }>>("/auth/2fa/regenerate-recovery-codes"),
   disable2FA: (token: string) =>
     api.post<ApiResponse<{ message: string }>>("/auth/2fa/disable", { token }),
-  verify2FA: (token: string) =>
-    api.post<ApiResponse<{ accessToken: string }>>("/auth/2fa/verify", { token }),
+  verify2FA: (tempToken: string, token: string) =>
+    api.post<ApiResponse<{ accessToken: string; refreshToken: string; expiresIn: number }>>("/auth/2fa/verify", { tempToken, token }),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post<ApiResponse<{ message: string }>>("/auth/change-password", { currentPassword, newPassword }),
   verifyPassword: (password: string) =>

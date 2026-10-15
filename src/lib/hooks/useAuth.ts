@@ -7,12 +7,15 @@ import { useRouter } from "next/navigation";
 
 const INACTIVITY_MS = 15 * 60 * 1000; // 15 minutes
 
+const TWO_FA_TEMP_KEY = "lumina_2fa_temp";
+
 interface UseAuthReturn {
   user: AuthUser | null;
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (identifier: string, password: string) => Promise<void>;
+  verifyTwoFactor: (code: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -68,17 +71,41 @@ export function useAuth(): UseAuthReturn {
 
   const login = useCallback(async (identifier: string, password: string) => {
     const response = await authApi.login(identifier, password);
-    const data = response.data.data as unknown as {
-      accessToken: string;
-      refreshToken: string;
-      user: AuthUser;
-    };
-    setToken(data.accessToken);
-    setRefreshToken(data.refreshToken);
-    setUser(data.user);
-    setTokenState(data.accessToken);
-    setUserState(data.user);
-    router.push(data.user.role === "ADMIN" || data.user.role === "AGENT" ? "/admin" : "/dashboard");
+    const data = response.data.data;
+
+    if (data.requiresTwoFactor) {
+      sessionStorage.setItem(TWO_FA_TEMP_KEY, data.tempToken);
+      router.push("/verify-2fa");
+      return;
+    }
+
+    const { accessToken, refreshToken, user } = data as { accessToken: string; refreshToken: string; user: AuthUser };
+    setToken(accessToken);
+    setRefreshToken(refreshToken);
+    setUser(user);
+    setTokenState(accessToken);
+    setUserState(user);
+    router.push(user.role === "ADMIN" || user.role === "AGENT" ? "/admin" : "/dashboard");
+  }, [router]);
+
+  const verifyTwoFactor = useCallback(async (code: string) => {
+    const tempToken = sessionStorage.getItem(TWO_FA_TEMP_KEY);
+    if (!tempToken) throw new Error("Session expired. Please log in again.");
+
+    const response = await authApi.verify2FA(tempToken, code);
+    const { accessToken, refreshToken } = response.data.data;
+
+    setToken(accessToken);
+    setRefreshToken(refreshToken);
+    sessionStorage.removeItem(TWO_FA_TEMP_KEY);
+
+    const meResponse = await authApi.me();
+    const userData = meResponse.data.data as AuthUser;
+    setUser(userData);
+    setTokenState(accessToken);
+    setUserState(userData);
+
+    router.push(userData.role === "ADMIN" || userData.role === "AGENT" ? "/admin" : "/dashboard");
   }, [router]);
 
   return {
@@ -87,6 +114,7 @@ export function useAuth(): UseAuthReturn {
     isLoading,
     isAuthenticated: !!token,
     login,
+    verifyTwoFactor,
     logout,
   };
 }
