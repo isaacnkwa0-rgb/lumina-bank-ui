@@ -16,6 +16,8 @@ interface UseAuthReturn {
   isAuthenticated: boolean;
   login: (identifier: string, password: string) => Promise<void>;
   verifyTwoFactor: (code: string) => Promise<void>;
+  verifyTwoFactorWithRecovery: (recoveryCode: string) => Promise<void>;
+  logoutAll: () => Promise<void>;
   logout: () => void;
 }
 
@@ -88,24 +90,41 @@ export function useAuth(): UseAuthReturn {
     router.push(user.role === "ADMIN" || user.role === "AGENT" ? "/admin" : "/dashboard");
   }, [router]);
 
-  const verifyTwoFactor = useCallback(async (code: string) => {
-    const tempToken = sessionStorage.getItem(TWO_FA_TEMP_KEY);
-    if (!tempToken) throw new Error("Session expired. Please log in again.");
-
-    const response = await authApi.verify2FA(tempToken, code);
-    const { accessToken, refreshToken } = response.data.data;
-
+  const finishTwoFactorLogin = useCallback(async (accessToken: string, refreshToken: string) => {
     setToken(accessToken);
     setRefreshToken(refreshToken);
     sessionStorage.removeItem(TWO_FA_TEMP_KEY);
-
     const meResponse = await authApi.me();
     const userData = meResponse.data.data as AuthUser;
     setUser(userData);
     setTokenState(accessToken);
     setUserState(userData);
-
     router.push(userData.role === "ADMIN" || userData.role === "AGENT" ? "/admin" : "/dashboard");
+  }, [router]);
+
+  const verifyTwoFactor = useCallback(async (code: string) => {
+    const tempToken = sessionStorage.getItem(TWO_FA_TEMP_KEY);
+    if (!tempToken) throw new Error("Session expired. Please log in again.");
+    const response = await authApi.verify2FA(tempToken, code);
+    const { accessToken, refreshToken } = response.data.data;
+    await finishTwoFactorLogin(accessToken, refreshToken);
+  }, [finishTwoFactorLogin]);
+
+  const verifyTwoFactorWithRecovery = useCallback(async (recoveryCode: string) => {
+    const tempToken = sessionStorage.getItem(TWO_FA_TEMP_KEY);
+    if (!tempToken) throw new Error("Session expired. Please log in again.");
+    const response = await authApi.verify2FAWithRecovery(tempToken, recoveryCode);
+    const { accessToken, refreshToken } = response.data.data;
+    await finishTwoFactorLogin(accessToken, refreshToken);
+  }, [finishTwoFactorLogin]);
+
+  const logoutAll = useCallback(async () => {
+    await authApi.logoutAll().catch(() => {});
+    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    removeToken();
+    setTokenState(null);
+    setUserState(null);
+    router.push("/login");
   }, [router]);
 
   return {
@@ -115,6 +134,8 @@ export function useAuth(): UseAuthReturn {
     isAuthenticated: !!token,
     login,
     verifyTwoFactor,
+    verifyTwoFactorWithRecovery,
+    logoutAll,
     logout,
   };
 }

@@ -118,7 +118,8 @@ const SUPPORTED_LANGUAGES: { code: Language; label: string; flag: string }[] = [
 ];
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth();
+  const { user, logout, logoutAll } = useAuth();
+  const [logoutAllLoading, setLogoutAllLoading] = useState(false);
   const router = useRouter();
   const { lang, setLang } = useLanguage();
   const [kycStatus, setKycStatus] = useState<string | null>(null);
@@ -379,11 +380,22 @@ export default function ProfilePage() {
         </Card>
 
         {/* Sign out */}
-        <div className="mx-4">
+        <div className="mx-4 space-y-2">
           <button onClick={logout}
             className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl border-2 border-[#DB0011] text-[#DB0011] text-sm font-semibold hover:bg-red-50 active:bg-red-100 transition-colors"
           >
             <LogOut size={16} /> Sign out
+          </button>
+          <button
+            onClick={async () => {
+              if (!confirm("This will sign you out of all devices and sessions. Continue?")) return;
+              setLogoutAllLoading(true);
+              await logoutAll().finally(() => setLogoutAllLoading(false));
+            }}
+            disabled={logoutAllLoading}
+            className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl border border-[#E3E3E3] text-[#767676] text-sm font-medium hover:border-[#DB0011] hover:text-[#DB0011] disabled:opacity-50 transition-colors"
+          >
+            <LogOut size={14} /> {logoutAllLoading ? "Signing out…" : "Sign out all devices"}
           </button>
         </div>
         <p className="text-center text-[10px] text-[#CCCCCC] pt-1">Lumina Bank · v1.0.0 · © 2026</p>
