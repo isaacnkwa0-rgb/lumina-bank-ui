@@ -12,6 +12,8 @@ export interface AuthUser {
   gender?: string;
   dateOfBirth?: string;
   nationality?: string;
+  twoFactorEnabled?: boolean;
+  twoFactorMethod?: string;
 }
 
 export function getToken(): string | null {

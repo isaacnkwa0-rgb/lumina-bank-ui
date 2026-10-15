@@ -108,7 +108,7 @@ export interface ApiResponse<T> {
 export const authApi = {
   login: (identifier: string, password: string) =>
     api.post<ApiResponse<
-      | { requiresTwoFactor: true; tempToken: string }
+      | { requiresTwoFactor: true; tempToken: string; twoFactorMethod: string }
       | { requiresTwoFactor: false; accessToken: string; refreshToken: string; expiresIn: number; user: unknown }
     >>("/auth/login", { identifier, password }),
   register: (data: {
@@ -141,14 +141,16 @@ export const authApi = {
     api.post<ApiResponse<{ message: string }>>("/auth/forgot-password", { email }),
   resetPassword: (data: { email: string; code: string; newPassword: string }) =>
     api.post<ApiResponse<{ message: string }>>("/auth/reset-password", data),
-  setup2FA: () =>
-    api.post<ApiResponse<{ qrCode: string; secret: string }>>("/auth/2fa/setup"),
-  enable2FA: (token: string) =>
-    api.post<ApiResponse<{ message: string; recoveryCodes?: string[] }>>("/auth/2fa/enable", { token }),
+  setup2FA: (method: "TOTP" | "EMAIL" | "BOTH" = "TOTP") =>
+    api.post<ApiResponse<{ method: string; qrCode?: string; secret?: string; maskedEmail?: string }>>("/auth/2fa/setup", { method }),
+  enable2FA: (token: string, method?: "TOTP" | "EMAIL" | "BOTH") =>
+    api.post<ApiResponse<{ message: string; recoveryCodes?: string[] }>>("/auth/2fa/enable", { token, ...(method ? { method } : {}) }),
   regenerateRecoveryCodes: () =>
     api.post<ApiResponse<{ recoveryCodes: string[] }>>("/auth/2fa/regenerate-recovery-codes"),
-  disable2FA: (token: string) =>
-    api.post<ApiResponse<{ message: string }>>("/auth/2fa/disable", { token }),
+  disable2FA: (token: string, password: string) =>
+    api.post<ApiResponse<{ message: string }>>("/auth/2fa/disable", { token, password }),
+  resend2FA: (tempToken: string) =>
+    api.post<ApiResponse<{ sent: boolean }>>("/auth/2fa/resend", { tempToken }),
   verify2FA: (tempToken: string, token: string) =>
     api.post<ApiResponse<{ accessToken: string; refreshToken: string; expiresIn: number }>>("/auth/2fa/verify", { tempToken, token }),
   verify2FAWithRecovery: (tempToken: string, recoveryCode: string) =>

@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 const INACTIVITY_MS = 15 * 60 * 1000; // 15 minutes
 
 const TWO_FA_TEMP_KEY = "lumina_2fa_temp";
+const TWO_FA_METHOD_KEY = "lumina_2fa_method";
 
 interface UseAuthReturn {
   user: AuthUser | null;
@@ -17,6 +18,7 @@ interface UseAuthReturn {
   login: (identifier: string, password: string) => Promise<void>;
   verifyTwoFactor: (code: string) => Promise<void>;
   verifyTwoFactorWithRecovery: (recoveryCode: string) => Promise<void>;
+  refreshUser: () => Promise<void>;
   logoutAll: () => Promise<void>;
   logout: () => void;
 }
@@ -77,6 +79,7 @@ export function useAuth(): UseAuthReturn {
 
     if (data.requiresTwoFactor) {
       sessionStorage.setItem(TWO_FA_TEMP_KEY, data.tempToken);
+      sessionStorage.setItem(TWO_FA_METHOD_KEY, data.twoFactorMethod ?? "TOTP");
       router.push("/verify-2fa");
       return;
     }
@@ -94,6 +97,7 @@ export function useAuth(): UseAuthReturn {
     setToken(accessToken);
     setRefreshToken(refreshToken);
     sessionStorage.removeItem(TWO_FA_TEMP_KEY);
+    sessionStorage.removeItem(TWO_FA_METHOD_KEY);
     const meResponse = await authApi.me();
     const userData = meResponse.data.data as AuthUser;
     setUser(userData);
@@ -118,6 +122,13 @@ export function useAuth(): UseAuthReturn {
     await finishTwoFactorLogin(accessToken, refreshToken);
   }, [finishTwoFactorLogin]);
 
+  const refreshUser = useCallback(async () => {
+    const meResponse = await authApi.me();
+    const userData = meResponse.data.data as AuthUser;
+    setUser(userData);
+    setUserState(userData);
+  }, []);
+
   const logoutAll = useCallback(async () => {
     await authApi.logoutAll().catch(() => {});
     if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
@@ -135,6 +146,7 @@ export function useAuth(): UseAuthReturn {
     login,
     verifyTwoFactor,
     verifyTwoFactorWithRecovery,
+    refreshUser,
     logoutAll,
     logout,
   };
