@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { QRCodeSVG } from "qrcode.react";
-import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+import { PayPalScriptProvider, PayPalButtons, usePayPalScriptReducer } from "@paypal/react-paypal-js";
 import {
   ArrowDownToLine, Copy, CheckCircle2, Clock, XCircle,
   BadgeCheck, ChevronDown, Building2, Bitcoin,
@@ -500,6 +500,56 @@ function CryptoTab({ accounts, displayCurrency, rates }: { accounts: Account[]; 
 
 // ── PayPal Deposit Tab ─────────────────────────────────────────────────────────
 
+function PayPalButtonsInner({ accountId, amount, onSuccess, onError }: {
+  accountId: string; amount: number;
+  onSuccess: () => void; onError: (msg: string) => void;
+}) {
+  const [{ isPending, isRejected }] = usePayPalScriptReducer();
+
+  if (isRejected) return (
+    <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-[#DB0011] text-[12px] text-center">
+      Failed to load PayPal. Please refresh and try again.
+    </div>
+  );
+
+  if (isPending) return (
+    <div className="flex items-center justify-center py-6 gap-2 text-[#888] text-[13px]">
+      <span className="h-4 w-4 border-2 border-[#E0E0E0] border-t-[#888] rounded-full animate-spin" />
+      Loading PayPal…
+    </div>
+  );
+
+  return (
+    <PayPalButtons
+      style={{ layout: "vertical", color: "gold", shape: "rect", label: "pay" }}
+      createOrder={async () => {
+        const res = await depositsApi.createPaypalOrder({ accountId, amount });
+        return res.data.data.orderId;
+      }}
+      onApprove={async (data) => {
+        try {
+          await depositsApi.capturePaypalDeposit({ orderId: data.orderID, accountId, amount });
+          onSuccess();
+        } catch {
+          onError("Payment approved but account credit failed. Contact support with Order ID: " + data.orderID);
+        }
+      }}
+      onError={(err) => {
+        const msg = (err as { message?: string }).message ?? "Payment failed";
+        depositsApi.logPaypalAttempt({
+          orderId: `failed_${Date.now()}`,
+          accountId,
+          amount,
+          status: "FAILED",
+          errorMessage: msg,
+        }).catch(() => {});
+        onError(msg);
+      }}
+      onCancel={() => onError("Payment cancelled")}
+    />
+  );
+}
+
 function PayPalButtonsWrapper({ accountId, amount, onSuccess, onError }: {
   accountId: string; amount: number;
   onSuccess: () => void; onError: (msg: string) => void;
@@ -510,35 +560,7 @@ function PayPalButtonsWrapper({ accountId, amount, onSuccess, onError }: {
       currency: "GBP",
       intent: "capture",
     }}>
-      <PayPalButtons
-        style={{ layout: "vertical", color: "gold", shape: "rect", label: "pay" }}
-        createOrder={async () => {
-          const res = await depositsApi.createPaypalOrder({ accountId, amount });
-          return res.data.data.orderId;
-        }}
-        onApprove={async (data) => {
-          try {
-            await depositsApi.capturePaypalDeposit({ orderId: data.orderID, accountId, amount });
-            onSuccess();
-          } catch {
-            onError("Payment approved but account credit failed. Contact support with Order ID: " + data.orderID);
-          }
-        }}
-        onError={(err) => {
-          const msg = (err as { message?: string }).message ?? "Payment failed";
-          depositsApi.logPaypalAttempt({
-            orderId: `failed_${Date.now()}`,
-            accountId,
-            amount,
-            status: "FAILED",
-            errorMessage: msg,
-          }).catch(() => {});
-          onError(msg);
-        }}
-        onCancel={() => {
-          onError("Payment cancelled");
-        }}
-      />
+      <PayPalButtonsInner accountId={accountId} amount={amount} onSuccess={onSuccess} onError={onError} />
     </PayPalScriptProvider>
   );
 }
