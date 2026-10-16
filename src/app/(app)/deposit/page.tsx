@@ -695,7 +695,7 @@ function PayPalTab({ accounts, displayCurrency, rates }: { accounts: Account[]; 
         disabled={submitting}
         className="w-full py-3.5 rounded-xl bg-[#DB0011] hover:bg-[#b0000d] disabled:opacity-60 text-white font-bold text-[14px] transition-colors flex items-center justify-center gap-2"
       >
-        <CreditCard size={15} />Continue to PayPal
+        <CreditCard size={15} />Continue to payment
       </button>
 
       <div className="flex items-center justify-center gap-3">
