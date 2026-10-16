@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Wifi, SnowflakeIcon, AlertCircle, CreditCard, ChevronRight } from "lucide-react";
-import { cardsApi, type Card, type CardControls } from "@/lib/api";
+import { Wifi, SnowflakeIcon, AlertCircle, CreditCard, ChevronRight, Plus } from "lucide-react";
+import { cardsApi, accountsApi, type Card, type CardControls, type Account } from "@/lib/api";
 import { useLanguage, type TranslationKey } from "@/lib/i18n";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -15,15 +15,19 @@ export default function CardsPage() {
   const router = useRouter();
   const { t } = useLanguage();
   const [cards, setCards] = useState<Card[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
   const [actionLoading, setActionLoading] = useState<string>("");
+  const [showIssue, setShowIssue] = useState(false);
 
   useEffect(() => {
-    cardsApi
-      .list()
-      .then((r) => setCards(r.data.data))
+    Promise.all([cardsApi.list(), accountsApi.list()])
+      .then(([cardsRes, accountsRes]) => {
+        setCards(cardsRes.data.data);
+        setAccounts(accountsRes.data.data);
+      })
       .catch(() => setError(t("cards.couldNotLoad")))
       .finally(() => setLoading(false));
   }, []);
@@ -64,28 +68,36 @@ export default function CardsPage() {
           <CreditCard size={18} className="text-white/80" />
           <h1 className="text-lg font-bold">{t("cards.myCards")}</h1>
         </div>
-        {!loading && cards.length > 0 && (
-          <div className="flex items-center gap-6">
-            <div>
-              <p className="text-3xl font-bold">{cards.length}</p>
-              <p className="text-white/40 text-xs">{t("cards.totalCards")}</p>
-            </div>
-            <div className="h-8 w-px bg-white/10" />
-            <div>
-              <p className="text-xl font-bold text-green-400">{activeCount}</p>
-              <p className="text-white/40 text-xs">{t("cards.active")}</p>
-            </div>
-            {frozenCount > 0 && (
-              <>
-                <div className="h-8 w-px bg-white/10" />
-                <div>
-                  <p className="text-xl font-bold text-blue-400">{frozenCount}</p>
-                  <p className="text-white/40 text-xs">{t("cards.frozen")}</p>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+        <div className="flex items-center gap-6">
+          {!loading && cards.length > 0 && (
+            <>
+              <div>
+                <p className="text-3xl font-bold">{cards.length}</p>
+                <p className="text-white/40 text-xs">{t("cards.totalCards")}</p>
+              </div>
+              <div className="h-8 w-px bg-white/10" />
+              <div>
+                <p className="text-xl font-bold text-green-400">{activeCount}</p>
+                <p className="text-white/40 text-xs">{t("cards.active")}</p>
+              </div>
+              {frozenCount > 0 && (
+                <>
+                  <div className="h-8 w-px bg-white/10" />
+                  <div>
+                    <p className="text-xl font-bold text-blue-400">{frozenCount}</p>
+                    <p className="text-white/40 text-xs">{t("cards.frozen")}</p>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+          <button
+            onClick={() => setShowIssue(true)}
+            className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ml-auto"
+          >
+            <Plus size={12} /> Issue card
+          </button>
+        </div>
       </div>
 
       {(error || actionError) && (
@@ -116,6 +128,179 @@ export default function CardsPage() {
             />
           ))
         )}
+      </div>
+
+      {showIssue && (
+        <IssueCardSheet
+          accounts={accounts}
+          onClose={() => setShowIssue(false)}
+          onIssued={(card) => {
+            setCards((prev) => [...prev, card]);
+            setShowIssue(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function IssueCardSheet({
+  accounts,
+  onClose,
+  onIssued,
+}: {
+  accounts: Account[];
+  onClose: () => void;
+  onIssued: (card: Card) => void;
+}) {
+  const [cardKind, setCardKind] = useState<"physical" | "virtual">("physical");
+  const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
+  const [cardType, setCardType] = useState("DEBIT");
+  const [tier, setTier] = useState("STANDARD");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit() {
+    if (!accountId) {
+      setError("Please select an account.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      let res;
+      if (cardKind === "virtual") {
+        res = await cardsApi.issueVirtual(accountId);
+      } else {
+        res = await cardsApi.issue({ accountId, type: cardType, tier });
+      }
+      onIssued(res.data.data);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setError(e?.response?.data?.message || "Could not issue card. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+
+      {/* Sheet */}
+      <div className="relative bg-white rounded-t-3xl shadow-2xl px-5 pt-5 pb-10 max-h-[90vh] overflow-y-auto">
+        {/* Handle */}
+        <div className="w-10 h-1 bg-[#E3E3E3] rounded-full mx-auto mb-5" />
+
+        <h2 className="text-lg font-bold text-[#1a1a1a] mb-1">Issue new card</h2>
+        <p className="text-sm text-[#767676] mb-5">Choose a card type and link it to an account.</p>
+
+        {/* Card kind selector */}
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          {(["physical", "virtual"] as const).map((kind) => (
+            <button
+              key={kind}
+              onClick={() => setCardKind(kind)}
+              className={`rounded-2xl border-2 p-4 text-left transition-colors ${
+                cardKind === kind
+                  ? "border-[#DB0011] bg-[#DB0011]/5"
+                  : "border-[#E3E3E3] bg-white hover:border-[#DB0011]/40"
+              }`}
+            >
+              <div className="text-2xl mb-2">{kind === "physical" ? "💳" : "📱"}</div>
+              <p className={`text-sm font-semibold capitalize ${cardKind === kind ? "text-[#DB0011]" : "text-[#1a1a1a]"}`}>
+                {kind === "physical" ? "Physical card" : "Virtual card"}
+              </p>
+              <p className="text-xs text-[#767676] mt-0.5">
+                {kind === "physical" ? "Delivered to your address" : "Instant, digital only"}
+              </p>
+            </button>
+          ))}
+        </div>
+
+        {/* Account selector */}
+        <div className="mb-4">
+          <label className="block text-xs font-semibold text-[#767676] uppercase tracking-wide mb-1.5">
+            Link to account
+          </label>
+          {accounts.length === 0 ? (
+            <p className="text-sm text-[#767676]">No accounts found.</p>
+          ) : (
+            <select
+              value={accountId}
+              onChange={(e) => setAccountId(e.target.value)}
+              className="w-full border border-[#E3E3E3] rounded-xl px-3 py-2.5 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:border-[#DB0011] transition-colors"
+            >
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.type} — {acc.accountNumber} ({acc.currency})
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {/* Physical card extra options */}
+        {cardKind === "physical" && (
+          <>
+            <div className="mb-4">
+              <label className="block text-xs font-semibold text-[#767676] uppercase tracking-wide mb-1.5">
+                Card type
+              </label>
+              <div className="flex gap-2">
+                {["DEBIT", "CREDIT", "PREPAID"].map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setCardType(t)}
+                    className={`flex-1 py-2 rounded-xl border text-xs font-semibold transition-colors ${
+                      cardType === t
+                        ? "border-[#DB0011] bg-[#DB0011] text-white"
+                        : "border-[#E3E3E3] text-[#767676] hover:border-[#DB0011]/40"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <label className="block text-xs font-semibold text-[#767676] uppercase tracking-wide mb-1.5">
+                Tier
+              </label>
+              <div className="flex gap-2">
+                {["STANDARD", "GOLD", "PLATINUM"].map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTier(t)}
+                    className={`flex-1 py-2 rounded-xl border text-xs font-semibold transition-colors ${
+                      tier === t
+                        ? "border-[#DB0011] bg-[#DB0011] text-white"
+                        : "border-[#E3E3E3] text-[#767676] hover:border-[#DB0011]/40"
+                    }`}
+                  >
+                    {t === "STANDARD" ? "Standard" : t === "GOLD" ? "Gold" : "Platinum"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {error && (
+          <div className="mb-4 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+            <p className="text-sm text-[#DB0011]">{error}</p>
+          </div>
+        )}
+
+        <button
+          onClick={handleSubmit}
+          disabled={loading || !accountId}
+          className="w-full bg-[#DB0011] hover:bg-[#b0000d] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3.5 rounded-2xl transition-colors text-sm"
+        >
+          {loading ? "Issuing…" : `Issue ${cardKind === "virtual" ? "virtual" : "physical"} card`}
+        </button>
       </div>
     </div>
   );

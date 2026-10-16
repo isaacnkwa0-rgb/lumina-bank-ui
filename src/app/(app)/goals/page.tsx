@@ -168,6 +168,150 @@ function ContributeSheet({
   );
 }
 
+// ── Withdraw sheet ────────────────────────────────────────────────────────────
+
+function WithdrawSheet({
+  goal, accounts, onClose, onDone,
+}: {
+  goal: Goal; accounts: Account[]; onClose: () => void; onDone: (updated: Goal) => void;
+}) {
+  const { t } = useLanguage();
+  const [amount, setAmount]   = useState("");
+  const [accId, setAccId]     = useState(accounts[0]?.id ?? "");
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState("");
+  const [done, setDone]       = useState(false);
+
+  const num        = parseFloat(amount) || 0;
+  const maxAmount  = Number(goal.currentAmount);
+  const canSave    = num > 0 && num <= maxAmount && accId && !loading;
+
+  const quickPcts = [0.25, 0.5, 0.75, 1];
+
+  async function submit() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await goalsApi.withdraw(goal.id, num, accId);
+      setDone(true);
+      setTimeout(() => {
+        onDone(res.data.data.goal);
+      }, 1200);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string; error?: { message?: string } } } };
+      setError(
+        e?.response?.data?.error?.message ||
+        e?.response?.data?.message ||
+        "Could not process withdrawal. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full bg-white rounded-t-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="h-1 w-10 rounded-full bg-[#E0E0E0]" />
+        </div>
+
+        {done ? (
+          <div className="flex flex-col items-center py-12 px-6">
+            <div className="h-16 w-16 rounded-full bg-green-50 flex items-center justify-center mb-4">
+              <CheckCircle2 size={32} className="text-green-500" />
+            </div>
+            <p className="text-lg font-bold text-[#222]">Withdrawal successful</p>
+            <p className="text-sm text-[#999] mt-1">{formatCurrency(num)} withdrawn from {goal.name}</p>
+          </div>
+        ) : (
+          <div className="px-5 pt-3 pb-8 space-y-5">
+            {/* Header */}
+            <div className="flex items-center gap-3 border-b border-[#F5F5F5] pb-4">
+              <span className="text-3xl">{goal.emoji || "🎯"}</span>
+              <div>
+                <p className="text-sm font-bold text-[#222]">{goal.name}</p>
+                <p className="text-xs text-[#AAAAAA]">
+                  {formatCurrency(maxAmount)} available to withdraw
+                </p>
+              </div>
+            </div>
+
+            {/* Amount */}
+            <div>
+              <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest block mb-2">
+                Withdraw amount
+              </label>
+              <div className="flex items-center border-2 border-[#E3E3E3] rounded-2xl px-4 h-14 focus-within:border-[#DB0011] transition-colors">
+                <span className="text-xl font-bold text-[#BBBBBB] mr-1">£</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  max={maxAmount}
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="flex-1 text-2xl font-bold text-[#222] outline-none bg-transparent placeholder:text-[#DDDDDD]"
+                />
+              </div>
+              {num > maxAmount && (
+                <p className="text-xs text-[#DB0011] mt-1.5">Amount exceeds available savings.</p>
+              )}
+            </div>
+
+            {/* Quick percentage buttons */}
+            <div className="grid grid-cols-4 gap-2">
+              {quickPcts.map((pct) => {
+                const v = parseFloat((maxAmount * pct).toFixed(2));
+                const label = pct === 1 ? "All" : `${pct * 100}%`;
+                return (
+                  <button key={pct} onClick={() => setAmount(String(v))}
+                    className={`py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      num === v ? "bg-[#DB0011] text-white" : "bg-[#F5F5F5] text-[#444] hover:bg-[#EBEBEB]"
+                    }`}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Account picker */}
+            <div>
+              <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest block mb-2">
+                Credit to
+              </label>
+              <div className="relative">
+                <select value={accId} onChange={(e) => setAccId(e.target.value)}
+                  className="w-full h-12 pl-4 pr-10 border-2 border-[#E3E3E3] rounded-2xl text-sm text-[#222] font-medium appearance-none bg-white focus:border-[#DB0011] outline-none">
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.type} ••{a.accountNumber.slice(-4)} · {formatCurrency(Number(a.availableBalance), a.currency)}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#AAAAAA] pointer-events-none" />
+              </div>
+            </div>
+
+            {error && (
+              <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+                <AlertCircle size={14} className="text-[#DB0011] flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-[#DB0011]">{error}</p>
+              </div>
+            )}
+
+            <button onClick={submit} disabled={!canSave}
+              className="w-full py-4 rounded-2xl bg-[#DB0011] text-white font-bold text-sm hover:bg-[#b0000d] transition-colors disabled:opacity-40">
+              {loading ? "Processing…" : `Withdraw ${num > 0 ? formatCurrency(num) : "funds"}`}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Add goal sheet ─────────────────────────────────────────────────────────────
 
 function AddGoalSheet({ onClose, onCreated }: {
@@ -265,7 +409,7 @@ function AddGoalSheet({ onClose, onCreated }: {
 
 // ── Goal card ─────────────────────────────────────────────────────────────────
 
-function GoalCard({ goal, onContribute }: { goal: Goal; onContribute: () => void }) {
+function GoalCard({ goal, onContribute, onWithdraw }: { goal: Goal; onContribute: () => void; onWithdraw: () => void }) {
   const { t } = useLanguage();
   const current   = Number(goal.currentAmount);
   const target    = Number(goal.targetAmount);
@@ -304,7 +448,7 @@ function GoalCard({ goal, onContribute }: { goal: Goal; onContribute: () => void
           )}
         </div>
 
-        {/* % + button */}
+        {/* % + buttons */}
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
           <p className="text-sm font-bold" style={{ color }}>{pct.toFixed(0)}%</p>
           {!done && (
@@ -313,7 +457,13 @@ function GoalCard({ goal, onContribute }: { goal: Goal; onContribute: () => void
               <Plus size={10} /> {t("goals.add")}
             </button>
           )}
-          {done && (
+          {current > 0 && (
+            <button onClick={onWithdraw}
+              className="flex items-center gap-1 text-[11px] font-medium text-[#767676] bg-[#F5F5F5] rounded-full px-3 py-1.5 hover:bg-[#EBEBEB] transition-colors">
+              Withdraw
+            </button>
+          )}
+          {done && current === 0 && (
             <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">{t("goals.done")}</span>
           )}
         </div>
@@ -349,8 +499,9 @@ export default function GoalsPage() {
   const [accounts, setAccounts]   = useState<Account[]>([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState("");
-  const [showAdd, setShowAdd]     = useState(false);
+  const [showAdd, setShowAdd]       = useState(false);
   const [activeGoal, setActiveGoal] = useState<Goal | null>(null);
+  const [withdrawGoal, setWithdrawGoal] = useState<Goal | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -435,7 +586,7 @@ export default function GoalsPage() {
           </div>
         ) : (
           goals.map((goal) => (
-            <GoalCard key={goal.id} goal={goal} onContribute={() => setActiveGoal(goal)} />
+            <GoalCard key={goal.id} goal={goal} onContribute={() => setActiveGoal(goal)} onWithdraw={() => setWithdrawGoal(goal)} />
           ))
         )}
       </div>
@@ -456,6 +607,18 @@ export default function GoalsPage() {
           onDone={(updated) => {
             setGoals((prev) => prev.map((g) => g.id === updated.id ? updated : g));
             setActiveGoal(null);
+          }}
+        />
+      )}
+
+      {withdrawGoal && (
+        <WithdrawSheet
+          goal={withdrawGoal}
+          accounts={accounts}
+          onClose={() => setWithdrawGoal(null)}
+          onDone={(updated) => {
+            setGoals((prev) => prev.map((g) => g.id === updated.id ? updated : g));
+            setWithdrawGoal(null);
           }}
         />
       )}

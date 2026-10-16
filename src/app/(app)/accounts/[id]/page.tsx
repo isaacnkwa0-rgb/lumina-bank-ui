@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, Search, Filter, Copy, Check, Download } from "lucide-react";
+import { ChevronLeft, Search, Filter, Copy, Check, Download, Star } from "lucide-react";
 import { accountsApi, transactionsApi, type Account, type Transaction } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 import { formatCurrency, maskAccountNumber, formatDate } from "@/lib/utils";
@@ -34,6 +34,8 @@ export default function AccountDetailPage() {
   const [hasMore, setHasMore] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [settingDefault, setSettingDefault] = useState(false);
+  const [defaultSet, setDefaultSet] = useState(false);
 
   useEffect(() => {
     accountsApi
@@ -75,6 +77,21 @@ export default function AccountDetailPage() {
     fetchTransactions(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, category, startDate, endDate]);
+
+  async function handleSetDefault() {
+    if (!account || settingDefault) return;
+    setSettingDefault(true);
+    try {
+      const res = await accountsApi.setDefault(id);
+      setAccount(res.data.data);
+      setDefaultSet(true);
+      setTimeout(() => setDefaultSet(false), 2500);
+    } catch {
+      // silently fail
+    } finally {
+      setSettingDefault(false);
+    }
+  }
 
   async function downloadStatement() {
     if (!account) return;
@@ -225,14 +242,48 @@ export default function AccountDetailPage() {
                   {maskAccountNumber(account.accountNumber)}
                 </p>
               </div>
-              <button
-                onClick={downloadStatement}
-                disabled={downloading}
-                className="flex items-center gap-1.5 bg-white/15 border border-white/25 text-white text-xs font-semibold px-3 py-1.5 rounded-full hover:bg-white/25 transition-colors disabled:opacity-50"
-              >
-                <Download size={12} />
-                {downloading ? "Preparing…" : "Statement"}
-              </button>
+              <div className="flex flex-col items-end gap-2">
+                <button
+                  onClick={downloadStatement}
+                  disabled={downloading}
+                  className="flex items-center gap-1.5 bg-white/15 border border-white/25 text-white text-xs font-semibold px-3 py-1.5 rounded-full hover:bg-white/25 transition-colors disabled:opacity-50"
+                >
+                  <Download size={12} />
+                  {downloading ? "Preparing…" : "Statement"}
+                </button>
+
+                {account.isDefault ? (
+                  <span className="flex items-center gap-1.5 bg-white/20 border border-white/25 text-white text-xs font-semibold px-3 py-1.5 rounded-full">
+                    <Star size={11} className="fill-white" />
+                    Default account
+                  </span>
+                ) : (
+                  <button
+                    onClick={handleSetDefault}
+                    disabled={settingDefault}
+                    className="flex items-center gap-1.5 bg-white/15 border border-white/25 text-white text-xs font-semibold px-3 py-1.5 rounded-full hover:bg-white/25 transition-colors disabled:opacity-50"
+                  >
+                    {settingDefault ? (
+                      <>
+                        <svg className="animate-spin" width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round" />
+                        </svg>
+                        Setting…
+                      </>
+                    ) : defaultSet ? (
+                      <>
+                        <Check size={11} />
+                        Done!
+                      </>
+                    ) : (
+                      <>
+                        <Star size={11} />
+                        Set as default
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
             <p className="text-3xl font-bold">
               {formatCurrency(Number(account.balance), account.currency)}

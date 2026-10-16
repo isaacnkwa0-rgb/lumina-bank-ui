@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   User, Mail, Phone, Shield, ChevronRight,
   LogOut, Lock, Smartphone, HelpCircle, BadgeCheck,
   Star, type LucideIcon, FileCheck, Edit3, X, MapPin,
-  Calendar, Globe, Briefcase, Trash2, Monitor, Tablet, KeyRound, ChevronLeft,
+  Calendar, Globe, Briefcase, Trash2, Monitor, Tablet, KeyRound, ChevronLeft, Camera,
 } from "lucide-react";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { kycApi, usersApi, type Device } from "@/lib/api";
+import { kycApi, usersApi, authApi, type Device } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 import type { Language } from "@/lib/i18n";
 
@@ -131,6 +131,36 @@ export default function ProfilePage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [removingDevice, setRemovingDevice] = useState<string | null>(null);
 
+  // Avatar upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(
+    () => (user as { profile?: { avatarUrl?: string | null } | null } | null)?.profile?.avatarUrl ?? null
+  );
+  const [avatarLoading, setAvatarLoading] = useState(false);
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarLoading(true);
+    try {
+      const res = await usersApi.uploadAvatar(file);
+      setAvatarUrl(res.data.data.avatarUrl);
+    } catch {
+      // silent — avatar is cosmetic
+    } finally {
+      setAvatarLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  // Phone verification
+  const [showPhoneVerify, setShowPhoneVerify] = useState(false);
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+  const [phoneOtpCode, setPhoneOtpCode] = useState("");
+  const [phoneVerifyLoading, setPhoneVerifyLoading] = useState(false);
+  const [phoneVerifyError, setPhoneVerifyError] = useState("");
+  const [phoneVerified, setPhoneVerified] = useState(false);
+
   // Edit form
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName]   = useState("");
@@ -245,9 +275,32 @@ export default function ProfilePage() {
           </button>
         </div>
         <div className="flex flex-col items-center gap-3">
-          <div className="h-24 w-24 rounded-full bg-white/25 border-2 border-white/50 flex items-center justify-center shadow-lg">
-            <GenderAvatarLarge gender={user?.gender} />
-          </div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="relative h-24 w-24 rounded-full bg-white/25 border-2 border-white/50 flex items-center justify-center shadow-lg overflow-hidden hover:border-white/80 transition-colors"
+            aria-label="Change profile picture"
+          >
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+            ) : (
+              <GenderAvatarLarge gender={user?.gender} />
+            )}
+            {avatarLoading ? (
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                <svg className="animate-spin h-6 w-6 text-white" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              </div>
+            ) : (
+              <div className="absolute bottom-0 inset-x-0 bg-black/30 flex items-center justify-center py-1">
+                <Camera size={13} className="text-white" />
+              </div>
+            )}
+          </button>
+          <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleAvatarChange} />
           {user && (
             <div className="text-center">
               <p className="text-white text-xl font-bold tracking-tight">{user.firstName} {user.lastName}</p>
@@ -282,7 +335,30 @@ export default function ProfilePage() {
             <Divider />
             <InfoRow icon={Mail}    label="Email address" value={user?.email ?? "Loading..."} />
             <Divider />
-            <InfoRow icon={Phone}   label="Phone number"  value={(user as { phone?: string } | null)?.phone ?? "Not set"} />
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-[#F8F8F8] border border-[#EEEEEE] flex items-center justify-center flex-shrink-0">
+                <Phone size={15} className="text-[#767676]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-semibold text-[#AAAAAA] uppercase tracking-wide">Phone number</p>
+                <p className="text-sm text-[#333333] font-medium mt-0.5 truncate">
+                  {(user as { phone?: string } | null)?.phone ?? "Not set"}
+                </p>
+              </div>
+              {(user as { phone?: string } | null)?.phone && !(user as { isPhoneVerified?: boolean } | null)?.isPhoneVerified && !phoneVerified && (
+                <button
+                  onClick={() => { setShowPhoneVerify(true); setPhoneVerifyError(""); setPhoneOtpSent(false); setPhoneOtpCode(""); }}
+                  className="text-xs font-semibold text-[#DB0011] hover:text-[#900] transition-colors flex-shrink-0"
+                >
+                  Verify
+                </button>
+              )}
+              {((user as { isPhoneVerified?: boolean } | null)?.isPhoneVerified || phoneVerified) && (
+                <span className="text-xs font-semibold text-green-600 flex-shrink-0 flex items-center gap-1">
+                  <BadgeCheck size={13} /> Verified
+                </span>
+              )}
+            </div>
             <Divider />
             <InfoRow icon={Calendar} label="Date of birth" value={user?.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString("en-GB") : "Not set"} />
             <Divider />
@@ -400,6 +476,146 @@ export default function ProfilePage() {
         </div>
         <p className="text-center text-[10px] text-[#CCCCCC] pt-1">Lumina Bank · v1.0.0 · © 2026</p>
       </div>
+
+      {/* Phone Verification Sheet */}
+      {showPhoneVerify && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => { setShowPhoneVerify(false); setPhoneOtpSent(false); setPhoneOtpCode(""); setPhoneVerifyError(""); }} />
+          <div className="relative bg-white w-full max-w-lg rounded-t-3xl shadow-2xl flex flex-col max-h-[80vh]">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
+              <h2 className="text-base font-bold text-[#333]">Verify phone number</h2>
+              <button
+                onClick={() => { setShowPhoneVerify(false); setPhoneOtpSent(false); setPhoneOtpCode(""); setPhoneVerifyError(""); }}
+                className="p-1 text-[#999] hover:text-[#333]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-5 pb-6 space-y-5 overflow-y-auto">
+              {!phoneOtpSent ? (
+                /* Step 1 — send OTP */
+                <>
+                  <div className="bg-[#F8F8F8] rounded-xl px-4 py-3.5">
+                    <p className="text-[10px] font-semibold text-[#AAAAAA] uppercase tracking-wide mb-0.5">Phone number</p>
+                    <p className="text-sm font-semibold text-[#333]">
+                      {(user as { phone?: string } | null)?.phone}
+                    </p>
+                  </div>
+                  <p className="text-sm text-[#767676] leading-relaxed">
+                    We&apos;ll send a 6-digit verification code to this number.
+                  </p>
+                  {phoneVerifyError && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                      <p className="text-sm text-[#DB0011]">{phoneVerifyError}</p>
+                    </div>
+                  )}
+                  <button
+                    disabled={phoneVerifyLoading}
+                    onClick={async () => {
+                      setPhoneVerifyError("");
+                      setPhoneVerifyLoading(true);
+                      try {
+                        await authApi.sendPhoneOtp();
+                        setPhoneOtpSent(true);
+                      } catch (e: unknown) {
+                        const msg = (e as { response?: { data?: { message?: string; error?: { message?: string } } } })?.response?.data?.error?.message
+                          ?? (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+                          ?? "Failed to send code. Please try again.";
+                        setPhoneVerifyError(msg);
+                      } finally {
+                        setPhoneVerifyLoading(false);
+                      }
+                    }}
+                    className="w-full py-3.5 rounded-xl bg-[#DB0011] text-white font-bold text-sm hover:bg-[#b0000d] transition-colors disabled:opacity-50"
+                  >
+                    {phoneVerifyLoading ? "Sending…" : "Send verification code"}
+                  </button>
+                </>
+              ) : (
+                /* Step 2 — enter OTP */
+                <>
+                  <p className="text-sm text-[#767676] leading-relaxed">
+                    Enter the 6-digit code sent to{" "}
+                    <span className="font-semibold text-[#333]">
+                      {(user as { phone?: string } | null)?.phone}
+                    </span>
+                  </p>
+                  {/* 6-box OTP input */}
+                  <div className="flex gap-2 justify-center">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <input
+                        key={i}
+                        id={`phone-otp-${i}`}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={phoneOtpCode[i] ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "").slice(-1);
+                          const next = phoneOtpCode.split("");
+                          next[i] = val;
+                          const joined = next.join("").slice(0, 6);
+                          setPhoneOtpCode(joined);
+                          if (val && i < 5) {
+                            document.getElementById(`phone-otp-${i + 1}`)?.focus();
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Backspace" && !phoneOtpCode[i] && i > 0) {
+                            document.getElementById(`phone-otp-${i - 1}`)?.focus();
+                          }
+                        }}
+                        onPaste={(e) => {
+                          const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+                          if (pasted) { e.preventDefault(); setPhoneOtpCode(pasted); document.getElementById(`phone-otp-${Math.min(pasted.length, 5)}`)?.focus(); }
+                        }}
+                        className="w-11 h-12 text-center text-lg font-bold border-2 border-[#E3E3E3] rounded-xl focus:outline-none focus:border-[#DB0011] transition-colors bg-[#F8F8F8] focus:bg-white"
+                      />
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => { setPhoneOtpSent(false); setPhoneOtpCode(""); setPhoneVerifyError(""); }}
+                    className="text-xs text-[#AAAAAA] hover:text-[#DB0011] transition-colors text-center w-full"
+                  >
+                    Resend code
+                  </button>
+                  {phoneVerifyError && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                      <p className="text-sm text-[#DB0011]">{phoneVerifyError}</p>
+                    </div>
+                  )}
+                  <button
+                    disabled={phoneVerifyLoading || phoneOtpCode.length < 6}
+                    onClick={async () => {
+                      setPhoneVerifyError("");
+                      setPhoneVerifyLoading(true);
+                      try {
+                        await authApi.verifyPhoneOtp(phoneOtpCode);
+                        setPhoneVerified(true);
+                        setShowPhoneVerify(false);
+                        setPhoneOtpSent(false);
+                        setPhoneOtpCode("");
+                      } catch (e: unknown) {
+                        const msg = (e as { response?: { data?: { message?: string; error?: { message?: string } } } })?.response?.data?.error?.message
+                          ?? (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+                          ?? "Invalid code. Please try again.";
+                        setPhoneVerifyError(msg);
+                      } finally {
+                        setPhoneVerifyLoading(false);
+                      }
+                    }}
+                    className="w-full py-3.5 rounded-xl bg-[#DB0011] text-white font-bold text-sm hover:bg-[#b0000d] transition-colors disabled:opacity-50"
+                  >
+                    {phoneVerifyLoading ? "Verifying…" : "Verify"}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Profile Sheet */}
       {showEdit && (

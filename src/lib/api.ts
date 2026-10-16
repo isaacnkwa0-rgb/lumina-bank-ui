@@ -177,6 +177,8 @@ export const accountsApi = {
   get: (id: string) => api.get<ApiResponse<Account>>(`/accounts/${id}`),
   create: (data: { type: string; currency?: string }) =>
     api.post<ApiResponse<Account>>("/accounts", data),
+  setDefault: (id: string) => api.patch<ApiResponse<Account>>(`/accounts/${id}/default`),
+  getBalance: (id: string) => api.get<ApiResponse<{ balance: string; availableBalance: string; currency: string }>>(`/accounts/${id}/balance`),
   statement: (id: string, params?: { dateFrom?: string; dateTo?: string }) =>
     api.get<ApiResponse<Transaction[]>>(`/accounts/${id}/statement`, { params }),
 };
@@ -244,6 +246,10 @@ export const transfersApi = {
 export const cardsApi = {
   list: () => api.get<ApiResponse<Card[]>>("/cards"),
   get: (id: string) => api.get<ApiResponse<Card>>(`/cards/${id}`),
+  issue: (data: { accountId: string; type?: string; tier?: string }) =>
+    api.post<ApiResponse<Card>>("/cards", data),
+  issueVirtual: (accountId: string) =>
+    api.post<ApiResponse<Card>>("/cards/virtual", { accountId }),
   freeze: (id: string) => api.post<ApiResponse<Card>>(`/cards/${id}/freeze`),
   unfreeze: (id: string) => api.post<ApiResponse<Card>>(`/cards/${id}/unfreeze`),
   updateLimits: (id: string, limits: Partial<CardLimits>) =>
@@ -282,6 +288,13 @@ export const loansApi = {
 
 export const usersApi = {
   getProfile: () => api.get<ApiResponse<User>>("/users/profile"),
+  uploadAvatar: (file: File) => {
+    const fd = new FormData();
+    fd.append("avatar", file);
+    return api.post<ApiResponse<{ avatarUrl: string }>>("/users/avatar", fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
   updateProfile: (data: {
     firstName?: string;
     lastName?: string;
@@ -360,6 +373,8 @@ export const goalsApi = {
     api.post<ApiResponse<Goal>>("/goals", data),
   contribute: (id: string, amount: number, fromAccountId: string) =>
     api.post<ApiResponse<{ goal: Goal; contributed: number; achieved: boolean }>>(`/goals/${id}/contribute`, { amount, fromAccountId }),
+  withdraw: (id: string, amount: number, toAccountId: string) =>
+    api.post<ApiResponse<{ goal: Goal; withdrawn: number }>>(`/goals/${id}/withdraw`, { amount, toAccountId }),
 };
 
 export const analyticsApi = {
@@ -879,6 +894,7 @@ export interface User {
   status: string;
   kycStatus: string;
   isEmailVerified: boolean;
+  isPhoneVerified?: boolean;
   twoFactorEnabled: boolean;
   createdAt: string;
   profile?: {
