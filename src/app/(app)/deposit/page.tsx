@@ -5,8 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { QRCodeSVG } from "qrcode.react";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import {
   ArrowDownToLine, Copy, CheckCircle2, Clock, XCircle,
   BadgeCheck, ChevronDown, Building2, Bitcoin,
@@ -16,13 +15,10 @@ import {
   accountsApi, depositsApi, ratesApi,
   type Account, type Deposit, type BankReceivingDetails, type Rate,
 } from "@/lib/api";
-import { MapPin } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SkeletonBlock } from "@/components/ui/LoadingSpinner";
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PK!);
 
 // ── Exchange rate helpers ──────────────────────────────────────────────────────
 
@@ -502,135 +498,73 @@ function CryptoTab({ accounts, displayCurrency, rates }: { accounts: Account[]; 
   );
 }
 
-// ── Card Deposit Tab ───────────────────────────────────────────────────────────
+// ── PayPal Deposit Tab ─────────────────────────────────────────────────────────
 
-const cardSchema = z.object({
-  accountId: z.string().min(1, "Select an account"),
-  amount: z.string().min(1, "Enter amount").refine((v) => !isNaN(Number(v)) && Number(v) > 0, "Amount must be greater than 0"),
-  cardholderName: z.string().min(2, "Enter cardholder name"),
-  billingLine1: z.string().optional(),
-  billingCity: z.string().optional(),
-  billingPostcode: z.string().optional(),
-  billingCountry: z.string().optional(),
-});
-type CardForm = z.infer<typeof cardSchema>;
+function PayPalButtonsWrapper({ accountId, amount, onSuccess, onError }: {
+  accountId: string; amount: number;
+  onSuccess: () => void; onError: (msg: string) => void;
+}) {
+  return (
+    <PayPalScriptProvider options={{
+      clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID!,
+      currency: "GBP",
+      intent: "capture",
+    }}>
+      <PayPalButtons
+        style={{ layout: "vertical", color: "gold", shape: "rect", label: "pay" }}
+        createOrder={async () => {
+          const res = await depositsApi.createPaypalOrder({ accountId, amount });
+          return res.data.data.orderId;
+        }}
+        onApprove={async (data) => {
+          try {
+            await depositsApi.capturePaypalDeposit({ orderId: data.orderID, accountId, amount });
+            onSuccess();
+          } catch {
+            onError("Payment approved but account credit failed. Contact support with Order ID: " + data.orderID);
+          }
+        }}
+        onError={(err) => {
+          const msg = (err as { message?: string }).message ?? "Payment failed";
+          depositsApi.logPaypalAttempt({
+            orderId: `failed_${Date.now()}`,
+            accountId,
+            amount,
+            status: "FAILED",
+            errorMessage: msg,
+          }).catch(() => {});
+          onError(msg);
+        }}
+        onCancel={() => {
+          onError("Payment cancelled");
+        }}
+      />
+    </PayPalScriptProvider>
+  );
+}
 
-const stripeElementStyle = {
-  base: {
-    fontSize: "15px",
-    color: "#1a1a1a",
-    fontFamily: "system-ui, -apple-system, sans-serif",
-    fontWeight: "500",
-    "::placeholder": { color: "#BBBBBB" },
-  },
-  invalid: { color: "#DB0011" },
-};
-
-function CardDepositForm({ accounts, displayCurrency, rates }: { accounts: Account[]; displayCurrency: string; rates: Rate[] }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [clientSecret, setClientSecret] = useState("");
+function PayPalTab({ accounts, displayCurrency, rates }: { accounts: Account[]; displayCurrency: string; rates: Rate[] }) {
+  const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
+  const [amount, setAmount] = useState("");
   const [step, setStep] = useState<"form" | "pay" | "done">("form");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [confirmedAmount, setConfirmedAmount] = useState(0);
-  const [savedBilling, setSavedBilling] = useState<{ name: string; line1?: string; city?: string; postcode?: string; country?: string }>({ name: "" });
 
-  const { register, handleSubmit, formState: { errors }, watch } = useForm<CardForm>({
-    resolver: zodResolver(cardSchema),
-    defaultValues: { accountId: accounts[0]?.id ?? "" },
-  });
+  const amountNum = Number(amount);
+  const amountValid = !isNaN(amountNum) && amountNum > 0;
 
-  const accountId = watch("accountId");
-  const amountVal = watch("amount");
-
-  async function onGetIntent(data: CardForm) {
-    setSubmitting(true);
+  function handleContinue() {
+    if (!amountValid) { setError("Enter a valid amount greater than 0"); return; }
+    if (!accountId) { setError("Select an account"); return; }
     setError("");
-    try {
-      const res = await depositsApi.createCardPaymentIntent({ accountId: data.accountId, amount: Number(data.amount) });
-      setClientSecret(res.data.data.clientSecret);
-      setConfirmedAmount(Number(data.amount));
-      setSavedBilling({
-        name: data.cardholderName,
-        line1: data.billingLine1,
-        city: data.billingCity,
-        postcode: data.billingPostcode,
-        country: data.billingCountry,
-      });
-      setStep("pay");
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      setError(e?.response?.data?.message ?? "Could not set up payment. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function onPayCard(e: React.FormEvent) {
-    e.preventDefault();
-    if (!stripe || !elements) return;
-    setSubmitting(true);
-    setError("");
-    const cardNumber = elements.getElement(CardNumberElement);
-    if (!cardNumber) return;
-
-    const billingDetails = {
-      name: savedBilling.name,
-      address: {
-        line1: savedBilling.line1 || undefined,
-        city: savedBilling.city || undefined,
-        postal_code: savedBilling.postcode || undefined,
-        country: savedBilling.country || undefined,
-      },
-    };
-
-    const { error: stripeErr, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-      payment_method: { card: cardNumber, billing_details: billingDetails },
-    });
-
-    if (stripeErr) {
-      setError(stripeErr.message ?? "Payment failed. Please check your card details.");
-      // Extract payment intent ID from client secret as fallback
-      const piId = stripeErr.payment_intent?.id ?? clientSecret.split("_secret_")[0];
-      const errCard = (stripeErr as unknown as { payment_method?: { card?: { brand?: string; last4?: string; exp_month?: number; exp_year?: number } } }).payment_method?.card;
-      depositsApi.logCardAttempt({
-        paymentIntentId: piId,
-        accountId,
-        amount: confirmedAmount,
-        status: "FAILED",
-        errorCode: stripeErr.code ?? null,
-        errorDeclineCode: (stripeErr as unknown as { decline_code?: string }).decline_code ?? null,
-        errorMessage: stripeErr.message ?? null,
-        cardBrand: errCard?.brand ?? null,
-        cardLast4: errCard?.last4 ?? null,
-        cardExpMonth: errCard?.exp_month ?? null,
-        cardExpYear: errCard?.exp_year ?? null,
-        cardholderName: savedBilling.name,
-        billingLine1: savedBilling.line1 ?? null,
-        billingCity: savedBilling.city ?? null,
-        billingPostcode: savedBilling.postcode ?? null,
-        billingCountry: savedBilling.country ?? null,
-      }).catch(() => {});
-      setSubmitting(false);
-      return;
-    }
-
-    if (paymentIntent?.status === "succeeded") {
-      try {
-        await depositsApi.confirmCardDeposit({ paymentIntentId: paymentIntent.id, accountId, amount: confirmedAmount });
-        setStep("done");
-      } catch {
-        setError("Payment was taken but we could not credit your account. Please contact support with reference: " + paymentIntent.id);
-      }
-    }
-    setSubmitting(false);
+    setConfirmedAmount(amountNum);
+    setStep("pay");
   }
 
   if (step === "done") {
     return (
       <div className="space-y-5 py-2">
-        {/* Success animation */}
         <div className="flex flex-col items-center gap-3 py-4">
           <div className="h-16 w-16 rounded-full bg-green-50 border-2 border-green-200 flex items-center justify-center">
             <CheckCircle2 size={32} strokeWidth={1.8} className="text-green-500" />
@@ -646,7 +580,7 @@ function CardDepositForm({ accounts, displayCurrency, rates }: { accounts: Accou
           Your balance will update momentarily
         </div>
         <button
-          onClick={() => { setStep("form"); setClientSecret(""); setError(""); }}
+          onClick={() => { setStep("form"); setAmount(""); setError(""); }}
           className="w-full py-3 rounded-xl border-2 border-[#E3E3E3] text-[13px] font-semibold text-[#555] hover:border-[#CCCCCC]"
         >
           Make another deposit
@@ -657,65 +591,15 @@ function CardDepositForm({ accounts, displayCurrency, rates }: { accounts: Accou
 
   if (step === "pay") {
     return (
-      <form onSubmit={onPayCard} className="space-y-5">
-        {/* Card visual */}
-        <div
-          className="relative rounded-2xl p-5 overflow-hidden text-white"
-          style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)", minHeight: 160 }}
-        >
-          {/* Shine overlay */}
-          <div className="absolute inset-0 opacity-10" style={{ background: "radial-gradient(ellipse at 20% 20%, white, transparent 60%)" }} />
-          {/* Chip */}
-          <div className="w-9 h-7 rounded-md bg-gradient-to-br from-yellow-300 to-yellow-500 mb-4 flex items-center justify-center opacity-90">
-            <div className="w-5 h-4 rounded-sm border border-yellow-600/40 grid grid-cols-2 gap-px p-0.5">
-              <div className="bg-yellow-600/30 rounded-[1px]" /><div className="bg-yellow-600/30 rounded-[1px]" />
-              <div className="bg-yellow-600/30 rounded-[1px]" /><div className="bg-yellow-600/30 rounded-[1px]" />
-            </div>
-          </div>
-          <p className="text-[15px] font-mono tracking-[0.2em] text-white/90 mb-3">•••• •••• •••• ••••</p>
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-[9px] text-white/40 uppercase tracking-widest mb-0.5">Card Holder</p>
-              <p className="text-[13px] font-semibold tracking-wide">{savedBilling.name || "—"}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[9px] text-white/40 uppercase tracking-widest mb-0.5">Amount</p>
-              <p className="text-[15px] font-bold">£{confirmedAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
-              {(() => {
-                const cv = convertGBP(confirmedAmount, displayCurrency, rates);
-                const cur = DISPLAY_CURRENCIES.find((c) => c.code === displayCurrency);
-                return cv && displayCurrency !== "GBP" ? (
-                  <p className="text-[10px] text-white/50 mt-0.5">{cur?.flag} ≈ {fmtLocal(cv, displayCurrency)}</p>
-                ) : null;
-              })()}
-            </div>
-          </div>
-        </div>
-
-        {/* Card number */}
-        <div>
-          <label className="block text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-1.5">Card Number</label>
-          <div className="flex items-center gap-3 px-4 py-3.5 border border-[#E0E0E0] rounded-xl bg-white focus-within:border-[#DB0011] focus-within:ring-1 focus-within:ring-[#DB0011]/20">
-            <CreditCard size={16} className="text-[#AAAAAA] flex-shrink-0" />
-            <div className="flex-1">
-              <CardNumberElement options={{ style: stripeElementStyle }} />
-            </div>
-          </div>
-        </div>
-
-        {/* Expiry + CVC */}
-        <div className="grid grid-cols-2 gap-3">
+      <div className="space-y-5">
+        <div className="bg-[#F8F8F8] rounded-xl px-4 py-3 flex items-center justify-between">
           <div>
-            <label className="block text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-1.5">Expiry Date</label>
-            <div className="px-4 py-3.5 border border-[#E0E0E0] rounded-xl bg-white focus-within:border-[#DB0011] focus-within:ring-1 focus-within:ring-[#DB0011]/20">
-              <CardExpiryElement options={{ style: stripeElementStyle }} />
-            </div>
+            <p className="text-[11px] text-[#888]">Depositing</p>
+            <p className="text-[20px] font-bold text-[#1a1a1a]">£{confirmedAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
           </div>
-          <div>
-            <label className="block text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mb-1.5">Security Code</label>
-            <div className="px-4 py-3.5 border border-[#E0E0E0] rounded-xl bg-white focus-within:border-[#DB0011] focus-within:ring-1 focus-within:ring-[#DB0011]/20">
-              <CardCvcElement options={{ style: stripeElementStyle }} />
-            </div>
+          <div className="text-right">
+            <p className="text-[11px] text-[#888]">To account</p>
+            <p className="text-[12px] font-semibold text-[#333]">{accounts.find(a => a.id === accountId)?.type ?? "Account"}</p>
           </div>
         </div>
 
@@ -726,106 +610,54 @@ function CardDepositForm({ accounts, displayCurrency, rates }: { accounts: Accou
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={submitting || !stripe}
-          className="w-full py-4 rounded-xl bg-[#DB0011] hover:bg-[#b0000d] disabled:opacity-60 text-white font-bold text-[15px] transition-colors flex items-center justify-center gap-2"
-        >
-          {submitting ? (
-            <><span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Processing…</>
-          ) : (
-            <>Pay £{confirmedAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</>
-          )}
-        </button>
-
-        <div className="flex items-center justify-center gap-3 pt-1">
-          <span className="text-[10px] text-[#BBBBBB]">🔒 Secured by Stripe</span>
-          <span className="text-[#E0E0E0]">·</span>
-          <span className="text-[10px] text-[#BBBBBB]">Visa · Mastercard · Amex</span>
-        </div>
+        {/* PayPal button rendered inline — uses script loaded via PayPalScriptProvider */}
+        <PayPalButtonsWrapper
+          accountId={accountId}
+          amount={confirmedAmount}
+          onSuccess={() => setStep("done")}
+          onError={(msg) => setError(msg)}
+        />
 
         <button type="button" onClick={() => { setStep("form"); setError(""); }} className="w-full text-[12px] text-[#BBBBBB] hover:text-[#888]">
           ← Change amount
         </button>
-      </form>
+      </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit(onGetIntent)} className="space-y-4">
+    <div className="space-y-4">
       <div>
-        <label className="block text-[11px] font-semibold text-[#555555] uppercase tracking-wider mb-1.5">
-          Credit to account
-        </label>
+        <label className="block text-[11px] font-semibold text-[#555555] uppercase tracking-wider mb-1.5">Credit to account</label>
         <div className="relative">
           <select
-            {...register("accountId")}
+            value={accountId}
+            onChange={e => setAccountId(e.target.value)}
             className="w-full appearance-none pl-3.5 pr-8 py-2.5 text-[13px] bg-white border border-[#E0E0E0] rounded-xl text-[#222222] focus:outline-none focus:border-[#DB0011] focus:ring-1 focus:ring-[#DB0011]/20"
           >
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {accountLabel(a)} — {formatCurrency(Number(a.balance))}
-              </option>
+            {accounts.map(a => (
+              <option key={a.id} value={a.id}>{accountLabel(a)} — {formatCurrency(Number(a.balance))}</option>
             ))}
           </select>
           <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#AAAAAA] pointer-events-none" />
         </div>
-        {errors.accountId && <p className="text-[11px] text-[#DB0011] mt-1">{errors.accountId.message}</p>}
       </div>
 
       <div>
-        <label className="block text-[11px] font-semibold text-[#555555] uppercase tracking-wider mb-1.5">
-          Cardholder Name
-        </label>
-        <Input {...register("cardholderName")} placeholder="Name on card" className="uppercase" />
-        {errors.cardholderName && <p className="text-[11px] text-[#DB0011] mt-1">{errors.cardholderName.message}</p>}
-      </div>
-
-      {/* Billing address */}
-      <div>
-        <label className="block text-[11px] font-semibold text-[#555555] uppercase tracking-wider mb-1.5 flex items-center gap-1">
-          <MapPin size={11} className="text-[#AAAAAA]" />
-          Billing Address <span className="text-[#BBBBBB] normal-case font-normal">(optional)</span>
-        </label>
-        <div className="space-y-2">
-          <Input {...register("billingLine1")} placeholder="Address line 1" />
-          <div className="grid grid-cols-2 gap-2">
-            <Input {...register("billingCity")} placeholder="City" />
-            <Input {...register("billingPostcode")} placeholder="Postcode" />
-          </div>
-          <div className="relative">
-            <select
-              {...register("billingCountry")}
-              className="w-full appearance-none pl-3.5 pr-8 py-2.5 text-[13px] bg-white border border-[#E0E0E0] rounded-xl text-[#222222] focus:outline-none focus:border-[#DB0011] focus:ring-1 focus:ring-[#DB0011]/20"
-            >
-              <option value="">Country (optional)</option>
-              <option value="GB">United Kingdom</option>
-              <option value="US">United States</option>
-              <option value="NG">Nigeria</option>
-              <option value="GH">Ghana</option>
-              <option value="KE">Kenya</option>
-              <option value="ZA">South Africa</option>
-              <option value="CA">Canada</option>
-              <option value="AU">Australia</option>
-              <option value="DE">Germany</option>
-              <option value="FR">France</option>
-              <option value="IN">India</option>
-            </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#AAAAAA] pointer-events-none" />
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-[11px] font-semibold text-[#555555] uppercase tracking-wider mb-1.5">
-          Amount (GBP)
-        </label>
+        <label className="block text-[11px] font-semibold text-[#555555] uppercase tracking-wider mb-1.5">Amount (GBP)</label>
         <div className="relative">
           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-[#AAAAAA]">£</span>
-          <Input {...register("amount")} type="number" min="0.01" step="0.01" placeholder="0.00" className="pl-7" />
+          <Input
+            type="number"
+            min="0.01"
+            step="0.01"
+            placeholder="0.00"
+            className="pl-7"
+            value={amount}
+            onChange={e => { setAmount(e.target.value); setError(""); }}
+          />
         </div>
-        {errors.amount && <p className="text-[11px] text-[#DB0011] mt-1">{errors.amount.message}</p>}
-        <ExchangeHint amountGbp={amountVal} displayCurrency={displayCurrency} rates={rates} />
+        <ExchangeHint amountGbp={amount} displayCurrency={displayCurrency} rates={rates} />
       </div>
 
       {error && (
@@ -836,31 +668,18 @@ function CardDepositForm({ accounts, displayCurrency, rates }: { accounts: Accou
       )}
 
       <button
-        type="submit"
+        type="button"
+        onClick={handleContinue}
         disabled={submitting}
         className="w-full py-3.5 rounded-xl bg-[#DB0011] hover:bg-[#b0000d] disabled:opacity-60 text-white font-bold text-[14px] transition-colors flex items-center justify-center gap-2"
       >
-        {submitting ? (
-          <><span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Setting up…</>
-        ) : (
-          <><CreditCard size={15} />Continue to Card Payment</>
-        )}
+        <CreditCard size={15} />Continue to PayPal
       </button>
 
       <div className="flex items-center justify-center gap-3">
-        <span className="text-[10px] text-[#BBBBBB]">🔒 Secured by Stripe</span>
-        <span className="text-[#E0E0E0]">·</span>
-        <span className="text-[10px] text-[#BBBBBB]">Visa · Mastercard · Amex</span>
+        <span className="text-[10px] text-[#BBBBBB]">🔒 Secured by PayPal</span>
       </div>
-    </form>
-  );
-}
-
-function CardDepositTab({ accounts, displayCurrency, rates }: { accounts: Account[]; displayCurrency: string; rates: Rate[] }) {
-  return (
-    <Elements stripe={stripePromise}>
-      <CardDepositForm accounts={accounts} displayCurrency={displayCurrency} rates={rates} />
-    </Elements>
+    </div>
   );
 }
 
@@ -1031,7 +850,7 @@ export default function DepositPage() {
             ) : tab === "bank" ? (
               <BankTransferTab accounts={creditAccounts} displayCurrency={displayCurrency} rates={rates} />
             ) : tab === "card" ? (
-              <CardDepositTab accounts={creditAccounts} displayCurrency={displayCurrency} rates={rates} />
+              <PayPalTab accounts={creditAccounts} displayCurrency={displayCurrency} rates={rates} />
             ) : (
               <CryptoTab accounts={creditAccounts} displayCurrency={displayCurrency} rates={rates} />
             )}

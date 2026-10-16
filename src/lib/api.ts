@@ -617,28 +617,20 @@ export const depositsApi = {
   list: () => api.get<ApiResponse<Deposit[]>>("/deposits"),
   get: (id: string) => api.get<ApiResponse<Deposit>>(`/deposits/${id}`),
   getSupportedCoins: () => api.get<ApiResponse<{ coin: string; network: string }[]>>("/deposits/coins"),
-  createCardPaymentIntent: (data: { accountId: string; amount: number }) =>
-    api.post<ApiResponse<{ clientSecret: string; reference: string }>>("/deposits/card/payment-intent", data),
-  confirmCardDeposit: (data: { paymentIntentId: string; accountId: string; amount: number }) =>
-    api.post<ApiResponse<Deposit>>("/deposits/card/confirm", data),
-  logCardAttempt: (data: {
-    paymentIntentId: string;
+  createPaypalOrder: (data: { accountId: string; amount: number }) =>
+    api.post<ApiResponse<{ orderId: string; reference: string }>>("/deposits/paypal/create-order", data),
+  capturePaypalDeposit: (data: { orderId: string; accountId: string; amount: number }) =>
+    api.post<ApiResponse<Deposit>>("/deposits/paypal/capture", data),
+  logPaypalAttempt: (data: {
+    orderId: string;
     accountId: string;
     amount: number;
     status: "SUCCEEDED" | "FAILED";
     errorCode?: string | null;
-    errorDeclineCode?: string | null;
     errorMessage?: string | null;
-    cardBrand?: string | null;
-    cardLast4?: string | null;
-    cardExpMonth?: number | null;
-    cardExpYear?: number | null;
+    payerEmail?: string | null;
     cardholderName?: string | null;
-    billingLine1?: string | null;
-    billingCity?: string | null;
-    billingPostcode?: string | null;
-    billingCountry?: string | null;
-  }) => api.post("/deposits/card/log-attempt", data),
+  }) => api.post("/deposits/paypal/log-attempt", data),
 };
 
 export const ratesApi = {
@@ -1330,19 +1322,8 @@ export interface AdminDeposit {
   createdAt: string;
   user: { id: string; firstName: string; lastName: string; email: string };
   account: { id: string; accountNumber: string; type: string; currency: string };
-  stripePaymentIntentId?: string | null;
-  cardBrand?: string | null;
-  cardLast4?: string | null;
-  cardExpMonth?: number | null;
-  cardExpYear?: number | null;
-  cardholderName?: string | null;
-  billingLine1?: string | null;
-  billingCity?: string | null;
-  billingPostcode?: string | null;
-  billingCountry?: string | null;
-  errorCode?: string | null;
-  errorDeclineCode?: string | null;
-  errorMessage?: string | null;
+  paypalOrderId?: string | null;
+  payerEmail?: string | null;
 }
 
 export interface AdminSupportTicket extends SupportTicket {

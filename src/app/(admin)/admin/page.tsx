@@ -2178,20 +2178,12 @@ function CardPaymentsTab() {
       .finally(() => setLoading(false));
   }, []);
 
-  function brandIcon(brand?: string | null) {
-    const b = (brand ?? "").toLowerCase();
-    if (b === "visa") return "VISA";
-    if (b === "mastercard") return "MC";
-    if (b === "amex") return "AMEX";
-    return brand?.toUpperCase() ?? "CARD";
-  }
-
   return (
     <div>
       <div className="bg-white border-b border-[#E8E8E8] px-4 py-3 flex items-center justify-between">
-        <p className="text-xs font-semibold text-[#333]">All card payments · {items.length} records</p>
+        <p className="text-xs font-semibold text-[#333]">All PayPal payments · {items.length} records</p>
       </div>
-      {loading ? <LoadingRows /> : items.length === 0 ? <Empty icon={CreditCard} label="No card payments yet" /> : (
+      {loading ? <LoadingRows /> : items.length === 0 ? <Empty icon={CreditCard} label="No PayPal payments yet" /> : (
         <div className="divide-y divide-[#F0F0F0]">
           {items.map((d) => (
             <div key={d.id} className="bg-white px-4 py-4">
@@ -2199,19 +2191,10 @@ function CardPaymentsTab() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <div className="h-5 w-8 rounded bg-[#1a1a2e] flex items-center justify-center flex-shrink-0">
-                        <span className="text-[8px] font-bold text-white tracking-tight">{brandIcon(d.cardBrand)}</span>
-                      </div>
-                      {d.cardLast4 && (
-                        <span className="text-xs font-semibold text-[#333] font-mono">•••• {d.cardLast4}</span>
-                      )}
-                      {d.cardExpMonth && d.cardExpYear && (
-                        <span className="text-[10px] text-[#AAAAAA]">{String(d.cardExpMonth).padStart(2,"0")}/{String(d.cardExpYear).slice(-2)}</span>
-                      )}
                       <Pill status={d.status} />
                     </div>
-                    {d.cardholderName && (
-                      <p className="text-xs text-[#555] font-medium">{d.cardholderName}</p>
+                    {d.payerEmail && (
+                      <p className="text-xs text-[#555] font-medium">{d.payerEmail}</p>
                     )}
                     <UserLine user={d.user} />
                   </div>
@@ -2224,39 +2207,15 @@ function CardPaymentsTab() {
               </button>
               {expanded === d.id && (
                 <div className="mt-3 bg-[#F8F8F8] rounded-xl px-4 py-3 text-xs text-[#555] space-y-1.5">
-                  {/* Card details */}
-                  <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-wider pt-0.5">Card</p>
-                  {d.cardBrand && <p><span className="text-[#AAAAAA]">Brand:</span> {d.cardBrand.charAt(0).toUpperCase() + d.cardBrand.slice(1)}</p>}
-                  {d.cardLast4 && <p><span className="text-[#AAAAAA]">Number:</span> <span className="font-mono">•••• •••• •••• {d.cardLast4}</span></p>}
-                  {d.cardExpMonth && d.cardExpYear && (
-                    <p><span className="text-[#AAAAAA]">Expiry:</span> {String(d.cardExpMonth).padStart(2,"0")}/{d.cardExpYear}</p>
-                  )}
-                  {d.cardholderName && <p><span className="text-[#AAAAAA]">Cardholder:</span> {d.cardholderName}</p>}
-                  {/* Billing address */}
-                  {d.billingLine1 && (
-                    <>
-                      <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-wider pt-1">Billing Address</p>
-                      {d.billingLine1 && <p><span className="text-[#AAAAAA]">Line 1:</span> {d.billingLine1}</p>}
-                      {d.billingCity && <p><span className="text-[#AAAAAA]">City:</span> {d.billingCity}</p>}
-                      {d.billingPostcode && <p><span className="text-[#AAAAAA]">Postcode:</span> {d.billingPostcode}</p>}
-                      {d.billingCountry && <p><span className="text-[#AAAAAA]">Country:</span> {d.billingCountry}</p>}
-                    </>
-                  )}
-                  {/* Error details for failed attempts */}
-                  {d.status === "FAILED" && (
-                    <>
-                      <p className="text-[10px] font-bold text-red-400 uppercase tracking-wider pt-1">Failure Details</p>
-                      {d.errorCode && <p><span className="text-[#AAAAAA]">Code:</span> <span className="font-mono">{d.errorCode}</span></p>}
-                      {d.errorDeclineCode && <p><span className="text-[#AAAAAA]">Decline code:</span> <span className="font-mono">{d.errorDeclineCode}</span></p>}
-                      {d.errorMessage && <p><span className="text-[#AAAAAA]">Message:</span> {d.errorMessage}</p>}
-                    </>
-                  )}
+                  {/* PayPal details */}
+                  <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-wider pt-0.5">PayPal</p>
+                  {d.payerEmail && <p><span className="text-[#AAAAAA]">Payer email:</span> {d.payerEmail}</p>}
                   {/* Meta */}
                   <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-wider pt-1">Transaction</p>
                   <p><span className="text-[#AAAAAA]">Account:</span> {d.account.type} · {d.account.accountNumber}</p>
                   <p><span className="text-[#AAAAAA]">Currency:</span> {d.account.currency}</p>
-                  {d.stripePaymentIntentId && (
-                    <p><span className="text-[#AAAAAA]">Stripe PI:</span> <span className="font-mono text-[10px] break-all">{d.stripePaymentIntentId}</span></p>
+                  {d.paypalOrderId && (
+                    <p><span className="text-[#AAAAAA]">PayPal Order:</span> <span className="font-mono text-[10px] break-all">{d.paypalOrderId}</span></p>
                   )}
                   <p><span className="text-[#AAAAAA]">Attempted:</span> {formatDate(d.createdAt)}</p>
                 </div>
