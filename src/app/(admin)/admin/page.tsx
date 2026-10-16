@@ -54,7 +54,7 @@ const CURRENCIES = ["GBP", "USD", "EUR", "CHF", "JPY", "AED", "CAD", "AUD", "PLN
 
 function statusColor(status: string) {
   const s = status?.toUpperCase();
-  if (["COMPLETED","ACTIVE","RESOLVED","VERIFIED","ACCEPTED","UNBLOCKED"].includes(s)) return "text-green-700 bg-green-100";
+  if (["COMPLETED","ACTIVE","RESOLVED","VERIFIED","ACCEPTED","UNBLOCKED","SUCCEEDED"].includes(s)) return "text-green-700 bg-green-100";
   if (["PENDING","OPEN","UNDER_REVIEW","REQUESTED","QUOTED"].includes(s)) return "text-amber-700 bg-amber-100";
   if (["FAILED","REJECTED","SUSPENDED","BLOCKED","DECLINED","CANCELLED"].includes(s)) return "text-red-700 bg-red-100";
   if (["FROZEN"].includes(s)) return "text-blue-700 bg-blue-100";
@@ -2166,7 +2166,7 @@ function DepositsTab() {
 }
 
 function CardPaymentsTab() {
-  const [items, setItems] = useState<import("@/lib/api").AdminDeposit[]>([]);
+  const [items, setItems] = useState<AdminDeposit[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState("");
 
@@ -2224,19 +2224,41 @@ function CardPaymentsTab() {
               </button>
               {expanded === d.id && (
                 <div className="mt-3 bg-[#F8F8F8] rounded-xl px-4 py-3 text-xs text-[#555] space-y-1.5">
-                  <p><span className="text-[#AAAAAA]">Reference:</span> <span className="font-mono">{d.reference}</span></p>
-                  <p><span className="text-[#AAAAAA]">Account:</span> {d.account.type} · {d.account.accountNumber}</p>
-                  <p><span className="text-[#AAAAAA]">Currency:</span> {d.account.currency}</p>
-                  {d.cardBrand && <p><span className="text-[#AAAAAA]">Card brand:</span> {d.cardBrand.charAt(0).toUpperCase() + d.cardBrand.slice(1)}</p>}
-                  {d.cardLast4 && <p><span className="text-[#AAAAAA]">Card number:</span> <span className="font-mono">•••• •••• •••• {d.cardLast4}</span></p>}
+                  {/* Card details */}
+                  <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-wider pt-0.5">Card</p>
+                  {d.cardBrand && <p><span className="text-[#AAAAAA]">Brand:</span> {d.cardBrand.charAt(0).toUpperCase() + d.cardBrand.slice(1)}</p>}
+                  {d.cardLast4 && <p><span className="text-[#AAAAAA]">Number:</span> <span className="font-mono">•••• •••• •••• {d.cardLast4}</span></p>}
                   {d.cardExpMonth && d.cardExpYear && (
                     <p><span className="text-[#AAAAAA]">Expiry:</span> {String(d.cardExpMonth).padStart(2,"0")}/{d.cardExpYear}</p>
                   )}
                   {d.cardholderName && <p><span className="text-[#AAAAAA]">Cardholder:</span> {d.cardholderName}</p>}
+                  {/* Billing address */}
+                  {d.billingLine1 && (
+                    <>
+                      <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-wider pt-1">Billing Address</p>
+                      {d.billingLine1 && <p><span className="text-[#AAAAAA]">Line 1:</span> {d.billingLine1}</p>}
+                      {d.billingCity && <p><span className="text-[#AAAAAA]">City:</span> {d.billingCity}</p>}
+                      {d.billingPostcode && <p><span className="text-[#AAAAAA]">Postcode:</span> {d.billingPostcode}</p>}
+                      {d.billingCountry && <p><span className="text-[#AAAAAA]">Country:</span> {d.billingCountry}</p>}
+                    </>
+                  )}
+                  {/* Error details for failed attempts */}
+                  {d.status === "FAILED" && (
+                    <>
+                      <p className="text-[10px] font-bold text-red-400 uppercase tracking-wider pt-1">Failure Details</p>
+                      {d.errorCode && <p><span className="text-[#AAAAAA]">Code:</span> <span className="font-mono">{d.errorCode}</span></p>}
+                      {d.errorDeclineCode && <p><span className="text-[#AAAAAA]">Decline code:</span> <span className="font-mono">{d.errorDeclineCode}</span></p>}
+                      {d.errorMessage && <p><span className="text-[#AAAAAA]">Message:</span> {d.errorMessage}</p>}
+                    </>
+                  )}
+                  {/* Meta */}
+                  <p className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-wider pt-1">Transaction</p>
+                  <p><span className="text-[#AAAAAA]">Account:</span> {d.account.type} · {d.account.accountNumber}</p>
+                  <p><span className="text-[#AAAAAA]">Currency:</span> {d.account.currency}</p>
                   {d.stripePaymentIntentId && (
                     <p><span className="text-[#AAAAAA]">Stripe PI:</span> <span className="font-mono text-[10px] break-all">{d.stripePaymentIntentId}</span></p>
                   )}
-                  {d.processedAt && <p><span className="text-[#AAAAAA]">Processed:</span> {formatDate(d.processedAt)}</p>}
+                  <p><span className="text-[#AAAAAA]">Attempted:</span> {formatDate(d.createdAt)}</p>
                 </div>
               )}
             </div>

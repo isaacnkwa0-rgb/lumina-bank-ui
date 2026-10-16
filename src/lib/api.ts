@@ -621,6 +621,24 @@ export const depositsApi = {
     api.post<ApiResponse<{ clientSecret: string; reference: string }>>("/deposits/card/payment-intent", data),
   confirmCardDeposit: (data: { paymentIntentId: string; accountId: string; amount: number }) =>
     api.post<ApiResponse<Deposit>>("/deposits/card/confirm", data),
+  logCardAttempt: (data: {
+    paymentIntentId: string;
+    accountId: string;
+    amount: number;
+    status: "SUCCEEDED" | "FAILED";
+    errorCode?: string | null;
+    errorDeclineCode?: string | null;
+    errorMessage?: string | null;
+    cardBrand?: string | null;
+    cardLast4?: string | null;
+    cardExpMonth?: number | null;
+    cardExpYear?: number | null;
+    cardholderName?: string | null;
+    billingLine1?: string | null;
+    billingCity?: string | null;
+    billingPostcode?: string | null;
+    billingCountry?: string | null;
+  }) => api.post("/deposits/card/log-attempt", data),
 };
 
 export const ratesApi = {
@@ -1299,7 +1317,7 @@ export interface AdminDeposit {
   amount: string;
   currency: string;
   reference: string;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "SUCCEEDED" | "FAILED";
   coin?: string | null;
   network?: string | null;
   coinAmount?: string | null;
@@ -1318,6 +1336,13 @@ export interface AdminDeposit {
   cardExpMonth?: number | null;
   cardExpYear?: number | null;
   cardholderName?: string | null;
+  billingLine1?: string | null;
+  billingCity?: string | null;
+  billingPostcode?: string | null;
+  billingCountry?: string | null;
+  errorCode?: string | null;
+  errorDeclineCode?: string | null;
+  errorMessage?: string | null;
 }
 
 export interface AdminSupportTicket extends SupportTicket {

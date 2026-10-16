@@ -16,6 +16,7 @@ import {
   accountsApi, depositsApi, ratesApi,
   type Account, type Deposit, type BankReceivingDetails, type Rate,
 } from "@/lib/api";
+import { MapPin } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -507,6 +508,10 @@ const cardSchema = z.object({
   accountId: z.string().min(1, "Select an account"),
   amount: z.string().min(1, "Enter amount").refine((v) => !isNaN(Number(v)) && Number(v) > 0, "Amount must be greater than 0"),
   cardholderName: z.string().min(2, "Enter cardholder name"),
+  billingLine1: z.string().optional(),
+  billingCity: z.string().optional(),
+  billingPostcode: z.string().optional(),
+  billingCountry: z.string().optional(),
 });
 type CardForm = z.infer<typeof cardSchema>;
 
@@ -529,7 +534,7 @@ function CardDepositForm({ accounts, displayCurrency, rates }: { accounts: Accou
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [confirmedAmount, setConfirmedAmount] = useState(0);
-  const [cardholderName, setCardholderNameState] = useState("");
+  const [savedBilling, setSavedBilling] = useState<{ name: string; line1?: string; city?: string; postcode?: string; country?: string }>({ name: "" });
 
   const { register, handleSubmit, formState: { errors }, watch } = useForm<CardForm>({
     resolver: zodResolver(cardSchema),
@@ -546,7 +551,13 @@ function CardDepositForm({ accounts, displayCurrency, rates }: { accounts: Accou
       const res = await depositsApi.createCardPaymentIntent({ accountId: data.accountId, amount: Number(data.amount) });
       setClientSecret(res.data.data.clientSecret);
       setConfirmedAmount(Number(data.amount));
-      setCardholderNameState(data.cardholderName);
+      setSavedBilling({
+        name: data.cardholderName,
+        line1: data.billingLine1,
+        city: data.billingCity,
+        postcode: data.billingPostcode,
+        country: data.billingCountry,
+      });
       setStep("pay");
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
@@ -563,14 +574,48 @@ function CardDepositForm({ accounts, displayCurrency, rates }: { accounts: Accou
     setError("");
     const cardNumber = elements.getElement(CardNumberElement);
     if (!cardNumber) return;
+
+    const billingDetails = {
+      name: savedBilling.name,
+      address: {
+        line1: savedBilling.line1 || undefined,
+        city: savedBilling.city || undefined,
+        postal_code: savedBilling.postcode || undefined,
+        country: savedBilling.country || undefined,
+      },
+    };
+
     const { error: stripeErr, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-      payment_method: { card: cardNumber, billing_details: { name: cardholderName } },
+      payment_method: { card: cardNumber, billing_details: billingDetails },
     });
+
     if (stripeErr) {
       setError(stripeErr.message ?? "Payment failed. Please check your card details.");
+      // Extract payment intent ID from client secret as fallback
+      const piId = stripeErr.payment_intent?.id ?? clientSecret.split("_secret_")[0];
+      const errCard = (stripeErr as unknown as { payment_method?: { card?: { brand?: string; last4?: string; exp_month?: number; exp_year?: number } } }).payment_method?.card;
+      depositsApi.logCardAttempt({
+        paymentIntentId: piId,
+        accountId,
+        amount: confirmedAmount,
+        status: "FAILED",
+        errorCode: stripeErr.code ?? null,
+        errorDeclineCode: (stripeErr as unknown as { decline_code?: string }).decline_code ?? null,
+        errorMessage: stripeErr.message ?? null,
+        cardBrand: errCard?.brand ?? null,
+        cardLast4: errCard?.last4 ?? null,
+        cardExpMonth: errCard?.exp_month ?? null,
+        cardExpYear: errCard?.exp_year ?? null,
+        cardholderName: savedBilling.name,
+        billingLine1: savedBilling.line1 ?? null,
+        billingCity: savedBilling.city ?? null,
+        billingPostcode: savedBilling.postcode ?? null,
+        billingCountry: savedBilling.country ?? null,
+      }).catch(() => {});
       setSubmitting(false);
       return;
     }
+
     if (paymentIntent?.status === "succeeded") {
       try {
         await depositsApi.confirmCardDeposit({ paymentIntentId: paymentIntent.id, accountId, amount: confirmedAmount });
@@ -631,7 +676,7 @@ function CardDepositForm({ accounts, displayCurrency, rates }: { accounts: Accou
           <div className="flex items-end justify-between">
             <div>
               <p className="text-[9px] text-white/40 uppercase tracking-widest mb-0.5">Card Holder</p>
-              <p className="text-[13px] font-semibold tracking-wide">{cardholderName || "—"}</p>
+              <p className="text-[13px] font-semibold tracking-wide">{savedBilling.name || "—"}</p>
             </div>
             <div className="text-right">
               <p className="text-[9px] text-white/40 uppercase tracking-widest mb-0.5">Amount</p>
@@ -734,6 +779,41 @@ function CardDepositForm({ accounts, displayCurrency, rates }: { accounts: Accou
         </label>
         <Input {...register("cardholderName")} placeholder="Name on card" className="uppercase" />
         {errors.cardholderName && <p className="text-[11px] text-[#DB0011] mt-1">{errors.cardholderName.message}</p>}
+      </div>
+
+      {/* Billing address */}
+      <div>
+        <label className="block text-[11px] font-semibold text-[#555555] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+          <MapPin size={11} className="text-[#AAAAAA]" />
+          Billing Address <span className="text-[#BBBBBB] normal-case font-normal">(optional)</span>
+        </label>
+        <div className="space-y-2">
+          <Input {...register("billingLine1")} placeholder="Address line 1" />
+          <div className="grid grid-cols-2 gap-2">
+            <Input {...register("billingCity")} placeholder="City" />
+            <Input {...register("billingPostcode")} placeholder="Postcode" />
+          </div>
+          <div className="relative">
+            <select
+              {...register("billingCountry")}
+              className="w-full appearance-none pl-3.5 pr-8 py-2.5 text-[13px] bg-white border border-[#E0E0E0] rounded-xl text-[#222222] focus:outline-none focus:border-[#DB0011] focus:ring-1 focus:ring-[#DB0011]/20"
+            >
+              <option value="">Country (optional)</option>
+              <option value="GB">United Kingdom</option>
+              <option value="US">United States</option>
+              <option value="NG">Nigeria</option>
+              <option value="GH">Ghana</option>
+              <option value="KE">Kenya</option>
+              <option value="ZA">South Africa</option>
+              <option value="CA">Canada</option>
+              <option value="AU">Australia</option>
+              <option value="DE">Germany</option>
+              <option value="FR">France</option>
+              <option value="IN">India</option>
+            </select>
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#AAAAAA] pointer-events-none" />
+          </div>
+        </div>
       </div>
 
       <div>
