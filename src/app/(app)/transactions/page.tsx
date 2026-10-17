@@ -29,7 +29,7 @@ export default function TransactionsPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [offset, setOffset] = useState(0);
+  const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState("");
 
@@ -37,11 +37,11 @@ export default function TransactionsPage() {
     async (reset = false) => {
       if (reset) setLoading(true);
       setError("");
-      const currentOffset = reset ? 0 : offset;
+      const currentPage = reset ? 1 : page;
       try {
         const res = await transactionsApi.list({
           limit: PAGE_SIZE,
-          offset: currentOffset,
+          page: currentPage,
           category: category !== "All" ? category : undefined,
           type: type !== "all" ? type : undefined,
           startDate: startDate || undefined,
@@ -50,7 +50,7 @@ export default function TransactionsPage() {
         const data = res.data.data;
         setTransactions(reset ? data : (prev) => [...prev, ...data]);
         setHasMore(data.length === PAGE_SIZE);
-        setOffset(currentOffset + data.length);
+        if (reset) setPage(2); else setPage((p) => p + 1);
       } catch {
         setError(t("transactions.couldNotLoad"));
       } finally {
@@ -58,7 +58,7 @@ export default function TransactionsPage() {
         setRefreshing(false);
       }
     },
-    [category, type, startDate, endDate, offset, t]
+    [category, type, startDate, endDate, page, t]
   );
 
   useEffect(() => {

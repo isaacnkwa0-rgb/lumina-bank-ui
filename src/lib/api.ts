@@ -186,7 +186,7 @@ export const accountsApi = {
 export const transactionsApi = {
   list: (params?: {
     limit?: number;
-    offset?: number;
+    page?: number;
     accountId?: string;
     category?: string;
     type?: string;
