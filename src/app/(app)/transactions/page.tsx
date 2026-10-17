@@ -35,12 +35,13 @@ export default function TransactionsPage() {
 
   const fetchTransactions = useCallback(
     async (reset = false) => {
-      if (reset) { setLoading(true); setOffset(0); }
+      if (reset) setLoading(true);
       setError("");
+      const currentOffset = reset ? 0 : offset;
       try {
         const res = await transactionsApi.list({
           limit: PAGE_SIZE,
-          offset: reset ? 0 : offset,
+          offset: currentOffset,
           category: category !== "All" ? category : undefined,
           type: type !== "all" ? type : undefined,
           startDate: startDate || undefined,
@@ -49,7 +50,7 @@ export default function TransactionsPage() {
         const data = res.data.data;
         setTransactions(reset ? data : (prev) => [...prev, ...data]);
         setHasMore(data.length === PAGE_SIZE);
-        if (!reset) setOffset((prev) => prev + data.length);
+        setOffset(currentOffset + data.length);
       } catch {
         setError(t("transactions.couldNotLoad"));
       } finally {
