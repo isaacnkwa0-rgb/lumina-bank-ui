@@ -30,7 +30,7 @@ export default function AccountDetailPage() {
   const [category, setCategory] = useState("All");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [offset, setOffset] = useState(0);
+  const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -48,12 +48,12 @@ export default function AccountDetailPage() {
   const fetchTransactions = useCallback(
     async (reset = false) => {
       setTxLoading(true);
-      const currentOffset = reset ? 0 : offset;
+      const currentPage = reset ? 1 : page;
       try {
         const res = await transactionsApi.list({
           accountId: id,
           limit: PAGE_SIZE,
-          offset: currentOffset,
+          page: currentPage,
           category: category !== "All" ? category : undefined,
           startDate: startDate || undefined,
           endDate: endDate || undefined,
@@ -61,18 +61,18 @@ export default function AccountDetailPage() {
         const newTxs = res.data.data;
         setTransactions(reset ? newTxs : (prev) => [...prev, ...newTxs]);
         setHasMore(newTxs.length === PAGE_SIZE);
-        if (!reset) setOffset(currentOffset + newTxs.length);
+        if (reset) setPage(2); else setPage((p) => p + 1);
       } catch {
         // silently fail for tx
       } finally {
         setTxLoading(false);
       }
     },
-    [id, category, startDate, endDate, offset]
+    [id, category, startDate, endDate, page]
   );
 
   useEffect(() => {
-    setOffset(0);
+    setPage(1);
     setHasMore(true);
     fetchTransactions(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps

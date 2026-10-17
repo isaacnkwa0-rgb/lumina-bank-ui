@@ -243,7 +243,7 @@ export default function TransactionsPage() {
         )}
         {hasMore && transactions.length > 0 && (
           <div className="p-4">
-            <Button variant="secondary" fullWidth onClick={() => fetchTransactions(false)} isLoading={loading && offset > 0}>
+            <Button variant="secondary" fullWidth onClick={() => fetchTransactions(false)} isLoading={loading && page > 1}>
               {t("transactions.loadMore")}
             </Button>
           </div>
