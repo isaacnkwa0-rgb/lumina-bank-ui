@@ -321,13 +321,18 @@ function CardSection({
   freezeLoading: boolean;
   t: (key: TranslationKey) => string;
 }) {
-  const statusConfig = {
-    ACTIVE:  { label: t("cards.statusActive"),  variant: "success" as const },
-    FROZEN:  { label: t("cards.statusFrozen"),  variant: "info"    as const },
-    BLOCKED: { label: t("cards.statusBlocked"), variant: "danger"  as const },
+  const statusConfig: Record<string, { label: string; variant: "success" | "info" | "danger" | "warning" | "default" }> = {
+    PENDING:    { label: "Pending",    variant: "warning" },
+    PROCESSING: { label: "Processing", variant: "warning" },
+    SHIPPED:    { label: "Shipped",    variant: "info"    },
+    ACTIVE:     { label: t("cards.statusActive"),  variant: "success" },
+    FROZEN:     { label: t("cards.statusFrozen"),  variant: "info"    },
+    BLOCKED:    { label: t("cards.statusBlocked"), variant: "danger"  },
+    CANCELLED:  { label: "Cancelled",  variant: "default" },
   };
 
-  const status = statusConfig[card.status];
+  const status = statusConfig[card.status] ?? { label: card.status, variant: "default" as const };
+  const isDelivery = card.status === "PENDING" || card.status === "PROCESSING" || card.status === "SHIPPED";
   const isFrozen = card.status === "FROZEN";
   const isBlocked = card.status === "BLOCKED";
 
@@ -341,8 +346,10 @@ function CardSection({
   return (
     <div className="space-y-4">
       <div
-        className={`relative rounded-lg p-5 aspect-[1.586/1] flex flex-col justify-between shadow-md overflow-hidden ${
-          isFrozen   ? "bg-gradient-to-br from-blue-400 to-blue-600"
+        onClick={onViewDetails}
+        className={`relative rounded-lg p-5 aspect-[1.586/1] flex flex-col justify-between shadow-md overflow-hidden cursor-pointer hover:opacity-90 transition-opacity ${
+          isDelivery  ? "bg-gradient-to-br from-gray-400 to-gray-600"
+          : isFrozen  ? "bg-gradient-to-br from-blue-400 to-blue-600"
           : isBlocked ? "bg-gradient-to-br from-gray-400 to-gray-600"
           : "bg-gradient-to-br from-[#DB0011] to-[#8B000A]"
         }`}
@@ -372,66 +379,99 @@ function CardSection({
             <SnowflakeIcon size={48} className="text-white/60" />
           </div>
         )}
+        {isDelivery && (
+          <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-1">
+            <span className="text-2xl">📬</span>
+            <p className="text-white text-xs font-semibold">Card on its way</p>
+          </div>
+        )}
       </div>
 
-      <div className="bg-white border border-[#E3E3E3] rounded-sm p-4">
-        <div className="flex items-center justify-between mb-4">
-          <Badge variant={status.variant}>{status.label}</Badge>
-          <div className="flex items-center gap-2">
-            {!isBlocked && (
-              <Button
-                variant={isFrozen ? "secondary" : "danger"}
-                size="sm"
-                onClick={onToggleFreeze}
-                isLoading={freezeLoading}
-              >
-                {isFrozen ? (
-                  <><span className="mr-1">☀️</span> {t("cards.unfreeze")}</>
-                ) : (
-                  <><SnowflakeIcon size={13} className="mr-1" /> {t("cards.freeze")}</>
-                )}
-              </Button>
-            )}
-            <button
-              onClick={onViewDetails}
-              className="flex items-center gap-0.5 text-xs font-medium text-[#DB0011] hover:underline"
-            >
-              {t("cards.details")} <ChevronRight size={14} />
-            </button>
+      {isDelivery && (
+        <div className="bg-amber-50 border border-amber-200 rounded-sm p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-amber-500">📦</span>
+            <p className="text-sm font-semibold text-amber-800">Card delivery in progress</p>
           </div>
-        </div>
-
-        <div className="space-y-2 mb-4 pb-4 border-b border-[#E3E3E3]">
-          <p className="text-xs font-medium text-[#767676] uppercase tracking-wide">{t("cards.spendingLimits")}</p>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { label: t("cards.daily"),   value: card.spendingLimits.daily },
-              { label: t("cards.monthly"), value: card.spendingLimits.monthly },
-              { label: t("cards.perTxn"), value: card.spendingLimits.perTransaction },
-            ].map(({ label, value }) => (
-              <div key={label} className="text-center bg-[#F8F8F8] rounded-sm p-2">
-                <p className="text-xs text-[#767676] mb-0.5">{label}</p>
-                <p className="text-sm font-semibold text-[#333333]">{formatCurrency(value)}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <p className="text-xs font-medium text-[#767676] uppercase tracking-wide mb-3">{t("cards.controls")}</p>
-          <div className="space-y-3">
-            {controls.map(({ key, label, icon }) => (
-              <div key={key} className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm text-[#333333]">
-                  <span className="text-[#767676]">{icon}</span>
-                  {label}
+          <div className="flex items-center justify-between text-xs">
+            {(["PENDING", "PROCESSING", "SHIPPED"] as const).map((stage, i) => {
+              const stageIndex = ["PENDING", "PROCESSING", "SHIPPED"].indexOf(card.status);
+              const done = i <= stageIndex;
+              return (
+                <div key={stage} className="flex flex-col items-center gap-1 flex-1">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${done ? "bg-amber-500 text-white" : "bg-amber-100 text-amber-400"}`}>
+                    {i + 1}
+                  </div>
+                  <span className={done ? "text-amber-700 font-medium" : "text-amber-300"}>
+                    {stage === "PENDING" ? "Ordered" : stage === "PROCESSING" ? "Processing" : "Shipped"}
+                  </span>
                 </div>
-                <Toggle checked={card.controls[key]} onChange={(v) => onUpdateControl(key, v)} disabled={isBlocked} />
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
-      </div>
+      )}
+
+      {!isDelivery && (
+        <div className="bg-white border border-[#E3E3E3] rounded-sm p-4">
+          <div className="flex items-center justify-between mb-4">
+            <Badge variant={status.variant}>{status.label}</Badge>
+            <div className="flex items-center gap-2">
+              {!isBlocked && (
+                <Button
+                  variant={isFrozen ? "secondary" : "danger"}
+                  size="sm"
+                  onClick={onToggleFreeze}
+                  isLoading={freezeLoading}
+                >
+                  {isFrozen ? (
+                    <><span className="mr-1">☀️</span> {t("cards.unfreeze")}</>
+                  ) : (
+                    <><SnowflakeIcon size={13} className="mr-1" /> {t("cards.freeze")}</>
+                  )}
+                </Button>
+              )}
+              <button
+                onClick={onViewDetails}
+                className="flex items-center gap-0.5 text-xs font-medium text-[#DB0011] hover:underline"
+              >
+                {t("cards.details")} <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2 mb-4 pb-4 border-b border-[#E3E3E3]">
+            <p className="text-xs font-medium text-[#767676] uppercase tracking-wide">{t("cards.spendingLimits")}</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: t("cards.daily"),   value: card.spendingLimits.daily },
+                { label: t("cards.monthly"), value: card.spendingLimits.monthly },
+                { label: t("cards.perTxn"), value: card.spendingLimits.perTransaction },
+              ].map(({ label, value }) => (
+                <div key={label} className="text-center bg-[#F8F8F8] rounded-sm p-2">
+                  <p className="text-xs text-[#767676] mb-0.5">{label}</p>
+                  <p className="text-sm font-semibold text-[#333333]">{formatCurrency(value)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-medium text-[#767676] uppercase tracking-wide mb-3">{t("cards.controls")}</p>
+            <div className="space-y-3">
+              {controls.map(({ key, label, icon }) => (
+                <div key={key} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-[#333333]">
+                    <span className="text-[#767676]">{icon}</span>
+                    {label}
+                  </div>
+                  <Toggle checked={card.controls[key]} onChange={(v) => onUpdateControl(key, v)} disabled={isBlocked} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {isBlocked && (
         <div className="bg-red-50 border-l-4 border-[#DB0011] p-4 rounded-sm flex gap-2">

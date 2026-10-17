@@ -678,8 +678,19 @@ function InsuranceTab() {
 
 // ── Cards ─────────────────────────────────────────────────────────────────────
 
+const DELIVERY_NEXT: Record<string, "PROCESSING" | "SHIPPED" | "ACTIVE"> = {
+  PENDING: "PROCESSING",
+  PROCESSING: "SHIPPED",
+  SHIPPED: "ACTIVE",
+};
+const DELIVERY_LABEL: Record<string, string> = {
+  PENDING: "Mark Processing",
+  PROCESSING: "Mark Shipped",
+  SHIPPED: "Activate",
+};
+
 function CardsTab() {
-  const [filter, setFilter] = useState<"ACTIVE" | "FROZEN" | "BLOCKED" | "ALL">("ALL");
+  const [filter, setFilter] = useState<"ALL" | "PENDING" | "PROCESSING" | "SHIPPED" | "ACTIVE" | "FROZEN" | "BLOCKED">("ALL");
   const [items, setItems] = useState<AdminCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState("");
@@ -713,10 +724,23 @@ function CardsTab() {
     finally { setActionId(""); }
   }
 
+  async function advanceCardStatus(id: string, next: "PROCESSING" | "SHIPPED" | "ACTIVE") {
+    setActionId(id);
+    try {
+      await adminApi.updateCardStatus(id, next);
+      setItems((p) => p.map((c) => c.id === id ? { ...c, status: next } : c));
+    } catch (e: unknown) { alert((e as any)?.response?.data?.message || "Failed"); }
+    finally { setActionId(""); }
+  }
+
   return (
     <div>
-      <FilterBar filters={["ALL","ACTIVE","FROZEN","BLOCKED"]} active={filter} onSelect={(f) => setFilter(f as any)}
-        labels={{ ALL: "All", ACTIVE: "Active", FROZEN: "Frozen", BLOCKED: "Blocked" }} />
+      <FilterBar
+        filters={["ALL","PENDING","PROCESSING","SHIPPED","ACTIVE","FROZEN","BLOCKED"]}
+        active={filter}
+        onSelect={(f) => setFilter(f as any)}
+        labels={{ ALL: "All", PENDING: "Pending", PROCESSING: "Processing", SHIPPED: "Shipped", ACTIVE: "Active", FROZEN: "Frozen", BLOCKED: "Blocked" }}
+      />
       {loading ? <LoadingRows /> : items.length === 0 ? <Empty icon={CreditCard} label="No cards" /> : (
         <div className="divide-y divide-[#F0F0F0]">
           {items.map((c) => (
@@ -731,8 +755,16 @@ function CardsTab() {
                   <UserLine user={c.user} />
                   <p className="text-xs text-[#AAAAAA] mt-0.5">{c.account.type} · {c.account.accountNumber} · Exp {c.expiryMonth}/{c.expiryYear}</p>
                 </div>
-                <div className="flex gap-2 flex-shrink-0 ml-3">
-                  {c.status !== "BLOCKED" && c.status !== "CANCELLED" && c.status !== "EXPIRED" && (
+                <div className="flex gap-2 flex-shrink-0 ml-3 flex-wrap justify-end">
+                  {DELIVERY_NEXT[c.status] && (
+                    <ActButton
+                      label={DELIVERY_LABEL[c.status]}
+                      variant="approve"
+                      onClick={() => advanceCardStatus(c.id, DELIVERY_NEXT[c.status])}
+                      loading={actionId === c.id}
+                    />
+                  )}
+                  {c.status !== "BLOCKED" && c.status !== "CANCELLED" && c.status !== "EXPIRED" && !DELIVERY_NEXT[c.status] && (
                     <ActButton label="Block" variant="block" onClick={() => blockCard(c.id)} loading={actionId === c.id} />
                   )}
                   {c.status === "BLOCKED" && (

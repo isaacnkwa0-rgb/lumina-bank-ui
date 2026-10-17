@@ -485,6 +485,8 @@ export const adminApi = {
     api.get<ApiResponse<AdminCard[]>>("/admin/cards", { params }),
   blockCard: (id: string) => api.patch<ApiResponse<AdminCard>>(`/admin/cards/${id}/block`),
   unblockCard: (id: string) => api.patch<ApiResponse<AdminCard>>(`/admin/cards/${id}/unblock`),
+  updateCardStatus: (id: string, status: "PROCESSING" | "SHIPPED" | "ACTIVE") =>
+    api.patch<ApiResponse<AdminCard>>(`/admin/cards/${id}/status`, { status }),
   // Transactions
   allTransactions: (params?: { page?: number; limit?: number; status?: string; type?: string }) =>
     api.get<ApiResponse<AdminTransaction[]>>("/admin/transactions", { params }),
@@ -740,7 +742,8 @@ export interface Card {
   expiryYear: number;
   cardholderName: string;
   currency: string;
-  status: "ACTIVE" | "FROZEN" | "BLOCKED";
+  status: "PENDING" | "PROCESSING" | "SHIPPED" | "ACTIVE" | "FROZEN" | "BLOCKED" | "EXPIRED" | "CANCELLED";
+  createdAt: string;
   isFrozen: boolean;
   isVirtual: boolean;
   spendingLimits: CardLimits;

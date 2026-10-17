@@ -188,14 +188,19 @@ export default function CardDetailPage() {
   const isFrozen = card.status === "FROZEN";
   const isBlocked = card.status === "BLOCKED";
 
-  const statusConfig: Record<string, { labelKey: TranslationKey; variant: "success" | "info" | "danger" | "warning" | "default" }> = {
-    ACTIVE:    { labelKey: "cards.statusActive",    variant: "success" },
-    FROZEN:    { labelKey: "cards.statusFrozen",    variant: "info"    },
-    BLOCKED:   { labelKey: "cards.statusBlocked",   variant: "danger"  },
-    CANCELLED: { labelKey: "cards.statusCancelled", variant: "default" },
+  const statusConfig: Record<string, { label: string; variant: "success" | "info" | "danger" | "warning" | "default" }> = {
+    PENDING:    { label: "Pending",                   variant: "warning" },
+    PROCESSING: { label: "Processing",                variant: "warning" },
+    SHIPPED:    { label: "Shipped",                   variant: "info"    },
+    ACTIVE:     { label: t("cards.statusActive"),     variant: "success" },
+    FROZEN:     { label: t("cards.statusFrozen"),     variant: "info"    },
+    BLOCKED:    { label: t("cards.statusBlocked"),    variant: "danger"  },
+    CANCELLED:  { label: t("cards.statusCancelled"),  variant: "default" },
+    EXPIRED:    { label: "Expired",                   variant: "default" },
   };
 
-  const status = statusConfig[card.status] ?? { labelKey: "cards.statusActive" as TranslationKey, variant: "default" as const };
+  const status = statusConfig[card.status] ?? { label: card.status, variant: "default" as const };
+  const isDelivery = card.status === "PENDING" || card.status === "PROCESSING" || card.status === "SHIPPED";
 
   const controls: { key: keyof CardControls; labelKey: TranslationKey; icon: React.ReactNode }[] = [
     { key: "online",        labelKey: "cards.online",       icon: <Wifi size={16} /> },
@@ -223,7 +228,7 @@ export default function CardDetailPage() {
         </button>
         <h1 className="text-base font-semibold text-[#333333]">{t("cards.cardDetails")}</h1>
         <div className="ml-auto">
-          <Badge variant={status.variant}>{t(status.labelKey)}</Badge>
+          <Badge variant={status.variant}>{status.label}</Badge>
         </div>
       </div>
 
@@ -280,8 +285,42 @@ export default function CardDetailPage() {
               <AlertCircle size={56} className="text-white/60" />
             </div>
           )}
+          {isDelivery && (
+            <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-2">
+              <span className="text-3xl">📬</span>
+              <p className="text-white text-sm font-semibold">Card on its way</p>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Delivery progress */}
+      {isDelivery && (
+        <div className="mx-4 mt-4 bg-amber-50 border border-amber-200 rounded-sm p-4">
+          <p className="text-sm font-semibold text-amber-800 mb-3">📦 Delivery status</p>
+          <div className="flex items-center justify-between text-xs mb-2">
+            {(["PENDING", "PROCESSING", "SHIPPED"] as const).map((stage, i) => {
+              const stageIndex = ["PENDING", "PROCESSING", "SHIPPED"].indexOf(card.status);
+              const done = i <= stageIndex;
+              return (
+                <div key={stage} className="flex flex-col items-center gap-1 flex-1">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold ${done ? "bg-amber-500 text-white" : "bg-amber-100 text-amber-300"}`}>
+                    {done ? "✓" : i + 1}
+                  </div>
+                  <span className={`text-center ${done ? "text-amber-700 font-medium" : "text-amber-300"}`}>
+                    {stage === "PENDING" ? "Ordered" : stage === "PROCESSING" ? "Processing" : "Shipped"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-amber-600 mt-2">
+            {card.status === "PENDING"    && "Your card application has been received and is awaiting processing."}
+            {card.status === "PROCESSING" && "Your card is being personalised and prepared for dispatch."}
+            {card.status === "SHIPPED"    && "Your card is on its way. Expected delivery: 3–5 working days."}
+          </p>
+        </div>
+      )}
 
       {/* Action error */}
       {actionError && (
@@ -291,7 +330,7 @@ export default function CardDetailPage() {
       )}
 
       {/* Quick actions */}
-      {!isBlocked && (
+      {!isBlocked && !isDelivery && (
         <div className="mx-4 mt-3 grid grid-cols-3 gap-2">
           <button
             onClick={handleFreeze}
