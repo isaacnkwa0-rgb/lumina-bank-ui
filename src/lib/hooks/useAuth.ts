@@ -84,13 +84,16 @@ export function useAuth(): UseAuthReturn {
       return;
     }
 
-    const { accessToken, refreshToken, user } = data as { accessToken: string; refreshToken: string; user: AuthUser };
+    const { accessToken, refreshToken } = data as { accessToken: string; refreshToken: string; user: AuthUser };
     setToken(accessToken);
     setRefreshToken(refreshToken);
-    setUser(user);
     setTokenState(accessToken);
-    setUserState(user);
-    router.push(user.role === "ADMIN" || user.role === "AGENT" ? "/admin" : "/dashboard");
+    // Fetch full profile — login response only returns minimal fields
+    const meResponse = await authApi.me();
+    const userData = meResponse.data.data as AuthUser;
+    setUser(userData);
+    setUserState(userData);
+    router.push(userData.role === "ADMIN" || userData.role === "AGENT" ? "/admin" : "/dashboard");
   }, [router]);
 
   const finishTwoFactorLogin = useCallback(async (accessToken: string, refreshToken: string) => {

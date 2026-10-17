@@ -118,7 +118,7 @@ const SUPPORTED_LANGUAGES: { code: Language; label: string; flag: string }[] = [
 ];
 
 export default function ProfilePage() {
-  const { user, logout, logoutAll } = useAuth();
+  const { user, logout, logoutAll, refreshUser } = useAuth();
   const [logoutAllLoading, setLogoutAllLoading] = useState(false);
   const router = useRouter();
   const { lang, setLang } = useLanguage();
@@ -134,7 +134,7 @@ export default function ProfilePage() {
   // Avatar upload
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
-    () => (user as { profile?: { avatarUrl?: string | null } | null } | null)?.profile?.avatarUrl ?? null
+    () => user?.profile?.avatarUrl ?? null
   );
   const [avatarLoading, setAvatarLoading] = useState(false);
 
@@ -181,12 +181,12 @@ export default function ProfilePage() {
     setPhone(user.phone ?? "");
     setDob(user.dateOfBirth ? user.dateOfBirth.split("T")[0] : "");
     setNationality(user.nationality ?? "");
-    const addr = (user as { address?: { street?: string; city?: string; postalCode?: string; country?: string } | null }).address;
+    const addr = user.address;
     setStreet(addr?.street ?? "");
     setCity(addr?.city ?? "");
     setPostalCode(addr?.postalCode ?? "");
     setCountry(addr?.country ?? "");
-    const prof = (user as { profile?: { occupation?: string; preferredLanguage?: string } | null }).profile;
+    const prof = user.profile;
     setOccupation(prof?.occupation ?? "");
     // Pre-fill language from profile or current context
     const profLang = prof?.preferredLanguage;
@@ -202,16 +202,16 @@ export default function ProfilePage() {
       const prefs = r.data.data as Record<string, boolean>;
       setNotifSettings((p) => ({ ...p, ...prefs }));
     }).catch(() => {});
-    // Sync preferred language from user profile into context
-    if (user) {
-      const profLang = (user as { profile?: { preferredLanguage?: string } | null })?.profile?.preferredLanguage;
+    // Hydrate full user fields — stored login user may be minimal
+    refreshUser().then(() => {
+      const profLang = user?.profile?.preferredLanguage;
       if (profLang) {
         const syncFn = (window as unknown as Record<string, unknown>).__luminaSyncLang as
           | ((l: string) => void)
           | undefined;
         if (typeof syncFn === "function") syncFn(profLang);
       }
-    }
+    }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -259,7 +259,7 @@ export default function ProfilePage() {
     usersApi.updateNotifPrefs(next).catch(() => {});
   }
 
-  const addr = (user as { address?: { street?: string; city?: string; postalCode?: string; country?: string } | null } | null)?.address;
+  const addr = user?.address;
   const addressStr = addr ? [addr.street, addr.city, addr.postalCode, addr.country].filter(Boolean).join(", ") : "Not set";
 
   return (
@@ -310,7 +310,7 @@ export default function ProfilePage() {
           <div className="flex items-center gap-2 mt-1">
             <span className="flex items-center gap-1 bg-white/15 border border-white/20 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
               <Star size={10} className="fill-white" />
-              {(user as { tier?: string } | null)?.tier ?? "Standard"}
+              {user?.tier ?? "Standard"}
             </span>
             {kycStatus === "VERIFIED" && (
               <span className="flex items-center gap-1 bg-green-500/20 border border-green-300/30 text-green-100 text-xs font-semibold px-2.5 py-1 rounded-full">
@@ -342,10 +342,10 @@ export default function ProfilePage() {
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] font-semibold text-[#AAAAAA] uppercase tracking-wide">Phone number</p>
                 <p className="text-sm text-[#333333] font-medium mt-0.5 truncate">
-                  {(user as { phone?: string } | null)?.phone ?? "Not set"}
+                  {user?.phone ?? "Not set"}
                 </p>
               </div>
-              {(user as { phone?: string } | null)?.phone && !(user as { isPhoneVerified?: boolean } | null)?.isPhoneVerified && !phoneVerified && (
+              {user?.phone && !user?.isPhoneVerified && !phoneVerified && (
                 <button
                   onClick={() => { setShowPhoneVerify(true); setPhoneVerifyError(""); setPhoneOtpSent(false); setPhoneOtpCode(""); }}
                   className="text-xs font-semibold text-[#DB0011] hover:text-[#900] transition-colors flex-shrink-0"
@@ -353,7 +353,7 @@ export default function ProfilePage() {
                   Verify
                 </button>
               )}
-              {((user as { isPhoneVerified?: boolean } | null)?.isPhoneVerified || phoneVerified) && (
+              {(user?.isPhoneVerified || phoneVerified) && (
                 <span className="text-xs font-semibold text-green-600 flex-shrink-0 flex items-center gap-1">
                   <BadgeCheck size={13} /> Verified
                 </span>
@@ -366,7 +366,7 @@ export default function ProfilePage() {
             <Divider />
             <InfoRow icon={MapPin}  label="Address"       value={addressStr} />
             <Divider />
-            <InfoRow icon={Briefcase} label="Occupation"  value={(user as { profile?: { occupation?: string } | null } | null)?.profile?.occupation ?? "Not set"} />
+            <InfoRow icon={Briefcase} label="Occupation"  value={user?.profile?.occupation ?? "Not set"} />
           </div>
         </Card>
 
@@ -377,7 +377,7 @@ export default function ProfilePage() {
             onClick={() => router.push("/profile/change-password")} />
           <Divider />
           <MenuRow icon={Shield}     bg="bg-amber-100" color="text-amber-600"   label="Two-factor authentication"
-            badge={(user as { twoFactorEnabled?: boolean })?.twoFactorEnabled ? "On" : "Off"}
+            badge={user?.twoFactorEnabled ? "On" : "Off"}
             onClick={() => router.push("/profile/2fa")} />
           <Divider />
           <MenuRow icon={KeyRound}   bg="bg-blue-100"  color="text-blue-600"    label="Transfer PIN"
@@ -500,7 +500,7 @@ export default function ProfilePage() {
                   <div className="bg-[#F8F8F8] rounded-xl px-4 py-3.5">
                     <p className="text-[10px] font-semibold text-[#AAAAAA] uppercase tracking-wide mb-0.5">Phone number</p>
                     <p className="text-sm font-semibold text-[#333]">
-                      {(user as { phone?: string } | null)?.phone}
+                      {user?.phone}
                     </p>
                   </div>
                   <p className="text-sm text-[#767676] leading-relaxed">
@@ -539,7 +539,7 @@ export default function ProfilePage() {
                   <p className="text-sm text-[#767676] leading-relaxed">
                     Enter the 6-digit code sent to{" "}
                     <span className="font-semibold text-[#333]">
-                      {(user as { phone?: string } | null)?.phone}
+                      {user?.phone}
                     </span>
                   </p>
                   {/* 6-box OTP input */}

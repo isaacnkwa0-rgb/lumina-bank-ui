@@ -10,10 +10,27 @@ export interface AuthUser {
   phone?: string;
   role?: string;
   gender?: string;
+  tier?: string;
+  status?: string;
   dateOfBirth?: string;
   nationality?: string;
+  address?: { street?: string; city?: string; postalCode?: string; country?: string } | null;
+  isEmailVerified?: boolean;
+  isPhoneVerified?: boolean;
   twoFactorEnabled?: boolean;
   twoFactorMethod?: string;
+  kycStatus?: string;
+  onboardingStep?: number;
+  createdAt?: string;
+  profile?: {
+    avatarUrl?: string | null;
+    occupation?: string | null;
+    employer?: string | null;
+    annualIncome?: number | null;
+    preferredCurrency?: string | null;
+    preferredLanguage?: string | null;
+    notificationPreferences?: Record<string, boolean> | null;
+  } | null;
 }
 
 export function getToken(): string | null {
