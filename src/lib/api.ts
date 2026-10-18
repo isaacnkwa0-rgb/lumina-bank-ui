@@ -47,8 +47,17 @@ api.interceptors.response.use(
 
     const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     const isRefreshEndpoint = original?.url?.includes("/auth/refresh");
+    // These endpoints authenticate via credentials/OTP, not an access token.
+    // A 401 from them means bad input, not an expired session — never try to refresh.
+    const isPublicAuthEndpoint = [
+      "/auth/login",
+      "/auth/register",
+      "/auth/2fa/verify",
+      "/auth/reset-password",
+      "/auth/verify-email",
+    ].some((ep) => original?.url?.includes(ep));
 
-    if (error.response?.status === 401 && !original?._retry && !isRefreshEndpoint) {
+    if (error.response?.status === 401 && !original?._retry && !isRefreshEndpoint && !isPublicAuthEndpoint) {
       if (isRefreshing) {
         return new Promise<string>((resolve, reject) => {
           failedQueue.push({ resolve, reject });

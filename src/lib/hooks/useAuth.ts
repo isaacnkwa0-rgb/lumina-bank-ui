@@ -32,7 +32,9 @@ export function useAuth(): UseAuthReturn {
 
   const logout = useCallback(() => {
     if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
-    removeToken();
+    // Only clear the short-lived access token. The refresh token persists so the
+    // 401 interceptor can silently re-authenticate if the user returns promptly.
+    clearAccessToken();
     setTokenState(null);
     setUserState(null);
     router.push("/login?reason=session_expired");
