@@ -15,6 +15,26 @@ function getInitialMode(method: string): Mode {
   return "totp";
 }
 
+const MAX_WARM_RETRIES = 4;
+
+function isColdStart(err: unknown): { yes: boolean; retryAfter: number } {
+  const e = err as {
+    response?: {
+      status?: number;
+      data?: { error?: { code?: string; retryAfter?: number } };
+    };
+  };
+  const code = e.response?.data?.error?.code;
+  const status = e.response?.status;
+  const yes =
+    code === "SYS_WARMING" ||
+    !e.response ||
+    status === 502 ||
+    status === 503 ||
+    status === 504;
+  return { yes, retryAfter: e.response?.data?.error?.retryAfter ?? 10 };
+}
+
 export default function VerifyTwoFactorPage() {
   const { verifyTwoFactor, verifyTwoFactorWithRecovery } = useAuth();
   const router = useRouter();
@@ -24,6 +44,7 @@ export default function VerifyTwoFactorPage() {
   const [recoveryCode, setRecoveryCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [warmingUp, setWarmingUp] = useState(false);
   const [resent, setResent] = useState(false);
   const [resending, setResending] = useState(false);
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
@@ -39,6 +60,7 @@ export default function VerifyTwoFactorPage() {
   function switchMode(next: Mode) {
     setMode(next);
     setError("");
+    setWarmingUp(false);
     setCode(["", "", "", "", "", ""]);
     setRecoveryCode("");
   }
@@ -47,26 +69,46 @@ export default function VerifyTwoFactorPage() {
     const val = mode === "recovery" ? recoveryCode.trim() : (fullCode ?? code.join(""));
     if (!val || (mode !== "recovery" && val.length < 6)) return;
     setError("");
+    setWarmingUp(false);
     setLoading(true);
-    try {
-      if (mode === "recovery") {
-        await verifyTwoFactorWithRecovery(val);
-      } else {
-        await verifyTwoFactor(val);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        if (mode === "recovery") {
+          await verifyTwoFactorWithRecovery(val);
+        } else {
+          await verifyTwoFactor(val);
+        }
+        setWarmingUp(false);
+        setLoading(false);
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUp(true);
+          await new Promise<void>((resolve) => setTimeout(resolve, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+
+        setWarmingUp(false);
+        setLoading(false);
+        const msg =
+          (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          (err as { message?: string })?.message ||
+          "Invalid or expired code. Please try again.";
+        setError(msg);
+        if (mode !== "recovery") {
+          setCode(["", "", "", "", "", ""]);
+          setTimeout(() => inputs.current[0]?.focus(), 50);
+        }
+        return;
       }
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        (err as { message?: string })?.message ||
-        "Invalid or expired code. Please try again.";
-      setError(msg);
-      if (mode !== "recovery") {
-        setCode(["", "", "", "", "", ""]);
-        setTimeout(() => inputs.current[0]?.focus(), 50);
-      }
-    } finally {
-      setLoading(false);
     }
+
+    setWarmingUp(false);
+    setLoading(false);
   }
 
   async function handleResend() {
@@ -134,12 +176,19 @@ export default function VerifyTwoFactorPage() {
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); submit(); }} className="px-6 py-6">
-        {error && (
+        {warmingUp && (
+          <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-sm mb-5">
+            <p className="text-sm text-amber-700 font-medium">Connecting to server, please wait…</p>
+          </div>
+        )}
+
+        {error && !warmingUp && (
           <div className="bg-red-50 border-l-4 border-[#DB0011] p-4 rounded-sm mb-5">
             <p className="text-sm text-[#DB0011] font-medium">{error}</p>
           </div>
         )}
-        {resent && (
+
+        {resent && !warmingUp && (
           <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-sm mb-5">
             <p className="text-sm text-green-700 font-medium">A new code has been sent to your email.</p>
           </div>

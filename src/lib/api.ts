@@ -159,11 +159,11 @@ export const authApi = {
   disable2FA: (token: string, password: string) =>
     api.post<ApiResponse<{ message: string }>>("/auth/2fa/disable", { token, password }),
   resend2FA: (tempToken: string) =>
-    api.post<ApiResponse<{ sent: boolean }>>("/auth/2fa/resend", { tempToken }),
+    api.post<ApiResponse<{ sent: boolean }>>("/auth/2fa/resend", { tempToken }, { timeout: 35000 }),
   verify2FA: (tempToken: string, token: string) =>
-    api.post<ApiResponse<{ accessToken: string; refreshToken: string; expiresIn: number }>>("/auth/2fa/verify", { tempToken, token }),
+    api.post<ApiResponse<{ accessToken: string; refreshToken: string; expiresIn: number }>>("/auth/2fa/verify", { tempToken, token }, { timeout: 35000 }),
   verify2FAWithRecovery: (tempToken: string, recoveryCode: string) =>
-    api.post<ApiResponse<{ accessToken: string; refreshToken: string; expiresIn: number }>>("/auth/2fa/verify", { tempToken, recoveryCode }),
+    api.post<ApiResponse<{ accessToken: string; refreshToken: string; expiresIn: number }>>("/auth/2fa/verify", { tempToken, recoveryCode }, { timeout: 35000 }),
   logoutAll: () => api.post<ApiResponse<null>>("/auth/logout-all"),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post<ApiResponse<{ message: string }>>("/auth/change-password", { currentPassword, newPassword }),
