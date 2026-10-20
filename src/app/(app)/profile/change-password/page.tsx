@@ -6,6 +6,26 @@ import { Lock, ArrowLeft, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { authApi } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 
+const MAX_WARM_RETRIES = 4;
+
+function isColdStart(err: unknown): { yes: boolean; retryAfter: number } {
+  const e = err as {
+    response?: {
+      status?: number;
+      data?: { error?: { code?: string; retryAfter?: number } };
+    };
+  };
+  const code = e.response?.data?.error?.code;
+  const status = e.response?.status;
+  const yes =
+    code === "SYS_WARMING" ||
+    !e.response ||
+    status === 502 ||
+    status === 503 ||
+    status === 504;
+  return { yes, retryAfter: e.response?.data?.error?.retryAfter ?? 10 };
+}
+
 export default function ChangePasswordPage() {
   const router = useRouter();
   const { t } = useLanguage();
@@ -15,6 +35,7 @@ export default function ChangePasswordPage() {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNext, setShowNext]       = useState(false);
   const [submitting, setSubmitting]   = useState(false);
+  const [warmingUp, setWarmingUp]     = useState(false);
   const [error, setError]             = useState("");
   const [success, setSuccess]         = useState(false);
 
@@ -29,17 +50,38 @@ export default function ChangePasswordPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!allOk) return;
-    setError(""); setSubmitting(true);
-    try {
-      await authApi.changePassword(current, next);
-      setSuccess(true);
-      setTimeout(() => router.push("/profile"), 2000);
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || "Failed to change password.");
-    } finally {
-      setSubmitting(false);
+    setError("");
+    setWarmingUp(false);
+    setSubmitting(true);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        await authApi.changePassword(current, next);
+        setWarmingUp(false);
+        setSubmitting(false);
+        setSuccess(true);
+        setTimeout(() => router.push("/profile"), 2000);
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUp(true);
+          await new Promise<void>((resolve) => setTimeout(resolve, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+
+        setWarmingUp(false);
+        setSubmitting(false);
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setError(msg || "Failed to change password.");
+        return;
+      }
     }
+
+    setWarmingUp(false);
+    setSubmitting(false);
   }
 
   return (
@@ -154,7 +196,13 @@ export default function ChangePasswordPage() {
               </div>
             )}
 
-            {error && (
+            {warmingUp && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <p className="text-sm text-amber-700 font-medium">Connecting to server, please wait…</p>
+              </div>
+            )}
+
+            {error && !warmingUp && (
               <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
                 <p className="text-sm text-[#DB0011]">{error}</p>
               </div>

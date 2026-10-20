@@ -166,7 +166,7 @@ export const authApi = {
     api.post<ApiResponse<{ accessToken: string; refreshToken: string; expiresIn: number }>>("/auth/2fa/verify", { tempToken, recoveryCode }, { timeout: 35000 }),
   logoutAll: () => api.post<ApiResponse<null>>("/auth/logout-all"),
   changePassword: (currentPassword: string, newPassword: string) =>
-    api.post<ApiResponse<{ message: string }>>("/auth/change-password", { currentPassword, newPassword }),
+    api.post<ApiResponse<{ message: string }>>("/auth/change-password", { currentPassword, newPassword }, { timeout: 35000 }),
   verifyPassword: (password: string) =>
     api.post<ApiResponse<{ verified: boolean }>>("/auth/verify-password", { password }),
   requestTransferOtp: () =>
