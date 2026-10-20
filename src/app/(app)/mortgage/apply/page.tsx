@@ -32,6 +32,26 @@ function calcInterestOnly(principal: number, annualRate: number): number {
   return (principal * annualRate) / 100 / 12;
 }
 
+const MAX_WARM_RETRIES = 4;
+
+function isColdStart(err: unknown): { yes: boolean; retryAfter: number } {
+  const e = err as {
+    response?: {
+      status?: number;
+      data?: { error?: { code?: string; retryAfter?: number } };
+    };
+  };
+  const code = e.response?.data?.error?.code;
+  const status = e.response?.status;
+  const yes =
+    code === "SYS_WARMING" ||
+    !e.response ||
+    status === 502 ||
+    status === 503 ||
+    status === 504;
+  return { yes, retryAfter: e.response?.data?.error?.retryAfter ?? 10 };
+}
+
 export default function MortgageApplyPage() {
   const router = useRouter();
   const { t } = useLanguage();
@@ -40,6 +60,7 @@ export default function MortgageApplyPage() {
   const [termYears, setTermYears] = useState(25);
   const [repaymentType, setRepaymentType] = useState<"repayment" | "interest">("repayment");
   const [submitting, setSubmitting] = useState(false);
+  const [warmingUp, setWarmingUp] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
@@ -75,16 +96,36 @@ export default function MortgageApplyPage() {
     if (loanAmount < 10000) { setError("Minimum mortgage amount is £10,000."); return; }
     if (loanAmount > 500000) { setError("Maximum mortgage amount is £500,000."); return; }
 
+    setWarmingUp(false);
     setSubmitting(true);
-    try {
-      await loansApi.apply({ type: "MORTGAGE", amount: loanAmount, termMonths });
-      setSuccess(true);
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || "Application failed. Please try again.");
-    } finally {
-      setSubmitting(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        await loansApi.apply({ type: "MORTGAGE", amount: loanAmount, termMonths });
+        setWarmingUp(false);
+        setSubmitting(false);
+        setSuccess(true);
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUp(true);
+          await new Promise<void>((resolve) => setTimeout(resolve, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+
+        setWarmingUp(false);
+        setSubmitting(false);
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setError(msg || "Application failed. Please try again.");
+        return;
+      }
     }
+
+    setWarmingUp(false);
+    setSubmitting(false);
   }
 
   if (success) {
@@ -310,7 +351,13 @@ export default function MortgageApplyPage() {
           </div>
         )}
 
-        {error && (
+        {warmingUp && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+            <p className="text-sm text-amber-700 font-medium">Connecting to server, please wait…</p>
+          </div>
+        )}
+
+        {error && !warmingUp && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
             <p className="text-sm text-[#DB0011]">{error}</p>
           </div>

@@ -66,54 +66,102 @@ export default function TwoFAPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [warmingUp, setWarmingUp] = useState(false);
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [resent, setResent] = useState(false);
 
   const twoFaEnabled = (user as { twoFactorEnabled?: boolean })?.twoFactorEnabled ?? false;
   const currentMethod = ((user as { twoFactorMethod?: string })?.twoFactorMethod ?? "TOTP") as Method;
 
+  function isColdStart2fa(err: unknown): { yes: boolean; retryAfter: number } {
+    const e = err as { response?: { status?: number; data?: { error?: { code?: string; retryAfter?: number } } } };
+    const coldStart =
+      e.response?.data?.error?.code === "SYS_WARMING" ||
+      !e.response ||
+      e.response?.status === 502 ||
+      e.response?.status === 503 ||
+      e.response?.status === 504;
+    return { yes: coldStart, retryAfter: e.response?.data?.error?.retryAfter ?? 10 };
+  }
+
   async function startSetup(method: Method) {
     setError("");
+    setWarmingUp(false);
     setLoading(true);
-    try {
-      const res = await authApi.setup2FA(method);
-      const data = res.data.data;
-      setSelectedMethod(method);
-      if (method === "EMAIL") {
-        setMaskedEmail(data.maskedEmail ?? "");
-        setStep("enable-email");
-      } else {
-        setQrUrl(data.qrCode ?? "");
-        setSecret(data.secret ?? "");
-        setStep("setup-totp");
+
+    for (let attempt = 0; attempt <= 4; attempt++) {
+      try {
+        const res = await authApi.setup2FA(method);
+        const data = res.data.data;
+        setWarmingUp(false);
+        setLoading(false);
+        setSelectedMethod(method);
+        if (method === "EMAIL") {
+          setMaskedEmail(data.maskedEmail ?? "");
+          setStep("enable-email");
+        } else {
+          setQrUrl(data.qrCode ?? "");
+          setSecret(data.secret ?? "");
+          setStep("setup-totp");
+        }
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart2fa(err);
+        if (yes && attempt < 4) {
+          setWarmingUp(true);
+          await new Promise<void>((resolve) => setTimeout(resolve, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+        setWarmingUp(false);
+        setLoading(false);
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setError(msg || "Failed to start 2FA setup.");
+        return;
       }
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || "Failed to start 2FA setup.");
-    } finally {
-      setLoading(false);
     }
+
+    setWarmingUp(false);
+    setLoading(false);
   }
 
   async function handleEnable() {
     if (token.length < 6) { setError("Enter the 6-digit code."); return; }
     setError("");
+    setWarmingUp(false);
     setLoading(true);
-    try {
-      const res = await authApi.enable2FA(token, selectedMethod);
-      await refreshUser();
-      if (res.data.data.recoveryCodes?.length) {
-        setRecoveryCodes(res.data.data.recoveryCodes);
-        setStep("recovery");
-      } else {
-        setStep("done");
+
+    for (let attempt = 0; attempt <= 4; attempt++) {
+      try {
+        const res = await authApi.enable2FA(token, selectedMethod);
+        await refreshUser();
+        setWarmingUp(false);
+        setLoading(false);
+        if (res.data.data.recoveryCodes?.length) {
+          setRecoveryCodes(res.data.data.recoveryCodes);
+          setStep("recovery");
+        } else {
+          setStep("done");
+        }
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart2fa(err);
+        if (yes && attempt < 4) {
+          setWarmingUp(true);
+          await new Promise<void>((resolve) => setTimeout(resolve, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+        setWarmingUp(false);
+        setLoading(false);
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setError(msg || "Invalid code. Please try again.");
+        return;
       }
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || "Invalid code. Please try again.");
-    } finally {
-      setLoading(false);
     }
+
+    setWarmingUp(false);
+    setLoading(false);
   }
 
   async function handleResendSetupOtp() {
@@ -133,51 +181,111 @@ export default function TwoFAPage() {
   }
 
   async function handleRegenerateCodes() {
+    setWarmingUp(false);
     setLoading(true);
-    try {
-      const res = await authApi.regenerateRecoveryCodes();
-      setRecoveryCodes(res.data.data.recoveryCodes);
-      setStep("recovery");
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || "Failed to regenerate codes.");
-    } finally { setLoading(false); }
+
+    for (let attempt = 0; attempt <= 4; attempt++) {
+      try {
+        const res = await authApi.regenerateRecoveryCodes();
+        setWarmingUp(false);
+        setLoading(false);
+        setRecoveryCodes(res.data.data.recoveryCodes);
+        setStep("recovery");
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart2fa(err);
+        if (yes && attempt < 4) {
+          setWarmingUp(true);
+          await new Promise<void>((resolve) => setTimeout(resolve, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+        setWarmingUp(false);
+        setLoading(false);
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setError(msg || "Failed to regenerate codes.");
+        return;
+      }
+    }
+
+    setWarmingUp(false);
+    setLoading(false);
   }
 
   async function handleRequestDisableCode() {
-    // For EMAIL method, request a fresh OTP before showing the disable form
     setError("");
+    setWarmingUp(false);
     setLoading(true);
-    try {
-      await authApi.setup2FA("EMAIL");
-      setToken(""); setPassword(""); setError("");
-      setStep("disable");
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || "Failed to send code.");
-    } finally {
-      setLoading(false);
+
+    for (let attempt = 0; attempt <= 4; attempt++) {
+      try {
+        await authApi.setup2FA("EMAIL");
+        setWarmingUp(false);
+        setLoading(false);
+        setToken(""); setPassword(""); setError("");
+        setStep("disable");
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart2fa(err);
+        if (yes && attempt < 4) {
+          setWarmingUp(true);
+          await new Promise<void>((resolve) => setTimeout(resolve, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+        setWarmingUp(false);
+        setLoading(false);
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setError(msg || "Failed to send code.");
+        return;
+      }
     }
+
+    setWarmingUp(false);
+    setLoading(false);
   }
 
   async function handleDisable() {
     if (!password) { setError("Enter your password."); return; }
     if (token.length < 6) { setError("Enter the 6-digit code."); return; }
     setError("");
+    setWarmingUp(false);
     setLoading(true);
-    try {
-      await authApi.disable2FA(token, password);
-      await refreshUser();
-      setStep("done");
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || "Invalid code or password. Please try again.");
-    } finally {
-      setLoading(false);
+
+    for (let attempt = 0; attempt <= 4; attempt++) {
+      try {
+        await authApi.disable2FA(token, password);
+        await refreshUser();
+        setWarmingUp(false);
+        setLoading(false);
+        setStep("done");
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart2fa(err);
+        if (yes && attempt < 4) {
+          setWarmingUp(true);
+          await new Promise<void>((resolve) => setTimeout(resolve, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+        setWarmingUp(false);
+        setLoading(false);
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setError(msg || "Invalid code or password. Please try again.");
+        return;
+      }
     }
+
+    setWarmingUp(false);
+    setLoading(false);
   }
 
-  function ErrorBanner() {
+  function StatusBanner() {
+    if (warmingUp) return (
+      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+        <p className="text-sm text-amber-700 font-medium">Connecting to server, please wait…</p>
+      </div>
+    );
     if (!error) return null;
     return (
       <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
@@ -185,6 +293,7 @@ export default function TwoFAPage() {
       </div>
     );
   }
+  function ErrorBanner() { return <StatusBanner />; }
 
   const methodCards: { value: Method; icon: React.ReactNode; title: string; desc: string }[] = [
     {

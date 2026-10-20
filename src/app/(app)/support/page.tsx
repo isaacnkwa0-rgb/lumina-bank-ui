@@ -97,6 +97,7 @@ export default function SupportPage() {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [warmingUp, setWarmingUp] = useState(false);
   const [formError, setFormError] = useState("");
 
   useEffect(() => {
@@ -109,16 +110,44 @@ export default function SupportPage() {
   async function handleCreate() {
     if (subject.trim().length < 5) { setFormError("Subject must be at least 5 characters"); return; }
     if (body.trim().length < 10) { setFormError("Message must be at least 10 characters"); return; }
-    setSubmitting(true);
     setFormError("");
-    try {
-      const res = await supportApi.createTicket(subject.trim(), body.trim());
-      const ticket = res.data.data as SupportTicket;
-      router.push(`/support/ticket/${ticket.id}`);
-    } catch {
-      setFormError("Could not start conversation. Please try again.");
-      setSubmitting(false);
+    setWarmingUp(false);
+    setSubmitting(true);
+
+    for (let attempt = 0; attempt <= 4; attempt++) {
+      try {
+        const res = await supportApi.createTicket(subject.trim(), body.trim());
+        const ticket = res.data.data as SupportTicket;
+        setWarmingUp(false);
+        setSubmitting(false);
+        router.push(`/support/ticket/${ticket.id}`);
+        return;
+      } catch (err: unknown) {
+        const e = err as { response?: { status?: number; data?: { error?: { code?: string; retryAfter?: number } } } };
+        const coldStart =
+          e.response?.data?.error?.code === "SYS_WARMING" ||
+          !e.response ||
+          e.response?.status === 502 ||
+          e.response?.status === 503 ||
+          e.response?.status === 504;
+        const retryAfter = e.response?.data?.error?.retryAfter ?? 10;
+
+        if (coldStart && attempt < 4) {
+          setWarmingUp(true);
+          await new Promise<void>((resolve) => setTimeout(resolve, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+
+        setWarmingUp(false);
+        setSubmitting(false);
+        setFormError("Could not start conversation. Please try again.");
+        return;
+      }
     }
+
+    setWarmingUp(false);
+    setSubmitting(false);
   }
 
   return (
@@ -173,7 +202,8 @@ export default function SupportPage() {
                 rows={3}
                 className="w-full border border-[#E8E8E8] rounded-xl px-3.5 py-2.5 text-sm text-[#333] placeholder-[#BBBBBB] focus:outline-none focus:border-[#DB0011] resize-none mb-2"
               />
-              {formError && <p className="text-xs text-[#DB0011] mb-2">{formError}</p>}
+              {warmingUp && <p className="text-xs text-amber-700 font-medium mb-2">Connecting to server, please wait…</p>}
+              {formError && !warmingUp && <p className="text-xs text-[#DB0011] mb-2">{formError}</p>}
               <div className="flex gap-2">
                 <button
                   onClick={() => { setShowNewForm(false); setSubject(""); setBody(""); setFormError(""); }}

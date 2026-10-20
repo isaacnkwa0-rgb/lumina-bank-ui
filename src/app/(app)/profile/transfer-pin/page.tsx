@@ -17,6 +17,7 @@ export default function TransferPinPage() {
   const [currentPin, setCurrentPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [warmingUp, setWarmingUp] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -109,16 +110,44 @@ export default function TransferPinPage() {
   async function handleSetPin(confirmPinValue?: string) {
     const cp = confirmPinValue ?? confirmPin;
     if (newPin !== cp) { setError("PINs don't match. Please try again."); setConfirmPin(""); setStep("confirm-new"); return; }
-    setLoading(true); setError("");
-    try {
-      await authApi.setupTransferPin(newPin, hasPin ? currentPin : undefined);
-      setStep("success");
-    } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || "Failed to set PIN. Please try again.");
-      setStep(hasPin ? "enter-current" : "enter-new");
-      setNewPin(""); setConfirmPin(""); setCurrentPin("");
-    } finally { setLoading(false); }
+    setLoading(true); setError(""); setWarmingUp(false);
+
+    for (let attempt = 0; attempt <= 4; attempt++) {
+      try {
+        await authApi.setupTransferPin(newPin, hasPin ? currentPin : undefined);
+        setWarmingUp(false);
+        setLoading(false);
+        setStep("success");
+        return;
+      } catch (e: unknown) {
+        const err = e as { response?: { status?: number; data?: { error?: { code?: string; retryAfter?: number }; message?: string } } };
+        const coldStart =
+          err.response?.data?.error?.code === "SYS_WARMING" ||
+          !err.response ||
+          err.response?.status === 502 ||
+          err.response?.status === 503 ||
+          err.response?.status === 504;
+        const retryAfter = err.response?.data?.error?.retryAfter ?? 10;
+
+        if (coldStart && attempt < 4) {
+          setWarmingUp(true);
+          await new Promise<void>((resolve) => setTimeout(resolve, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+
+        setWarmingUp(false);
+        setLoading(false);
+        const msg = err.response?.data?.message;
+        setError(msg || "Failed to set PIN. Please try again.");
+        setStep(hasPin ? "enter-current" : "enter-new");
+        setNewPin(""); setConfirmPin(""); setCurrentPin("");
+        return;
+      }
+    }
+
+    setWarmingUp(false);
+    setLoading(false);
   }
 
   return (
@@ -189,7 +218,12 @@ export default function TransferPinPage() {
               setConfirmPin(v);
               setTimeout(() => handleSetPin(v), 80);
             }} />
-            {loading && (
+            {warmingUp && (
+              <div className="flex items-center justify-center gap-2 text-xs text-amber-700">
+                <Loader2 size={13} className="animate-spin" /> Connecting to server…
+              </div>
+            )}
+            {loading && !warmingUp && (
               <div className="flex items-center justify-center gap-2 text-xs text-[#767676]">
                 <Loader2 size={13} className="animate-spin" /> Saving PIN…
               </div>

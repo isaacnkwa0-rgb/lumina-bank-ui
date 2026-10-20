@@ -41,52 +41,106 @@ function Avatar({ name, size = 44 }: { name: string; size?: number }) {
   );
 }
 
+// ── Cold-start retry helpers ───────────────────────────────────────────────────
+
+const MAX_WARM_RETRIES = 4;
+
+function isColdStart(err: unknown): { yes: boolean; retryAfter: number } {
+  const e = err as { response?: { status?: number; data?: { error?: { code?: string; retryAfter?: number } } } };
+  const yes =
+    e.response?.data?.error?.code === "SYS_WARMING" ||
+    !e.response ||
+    e.response?.status === 502 ||
+    e.response?.status === 503 ||
+    e.response?.status === 504;
+  return { yes, retryAfter: e.response?.data?.error?.retryAfter ?? 10 };
+}
+
 // ── Add payee sheet ────────────────────────────────────────────────────────────
 function AddPayeeSheet({ onClose, onAdded }: { onClose: () => void; onAdded: (b: Beneficiary) => void }) {
   const { t } = useLanguage();
   const [accountNumber, setAccountNumber] = useState("");
   const [bankCode, setBankCode] = useState("LMN");
   const [verifying, setVerifying] = useState(false);
+  const [warmingUpVerify, setWarmingUpVerify] = useState(false);
   const [verified, setVerified] = useState<{ accountName: string; bankName: string } | null>(null);
   const [nickname, setNickname] = useState("");
   const [isFavorite, setIsFavorite] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [warmingUpSave, setWarmingUpSave] = useState(false);
   const [error, setError] = useState("");
 
   async function verify() {
     if (!accountNumber || !bankCode) return;
-    setError(""); setVerifying(true); setVerified(null);
-    try {
-      const r = await beneficiariesApi.verify({ accountNumber, bankCode });
-      const d = r.data.data;
-      setVerified({ accountName: d.accountName, bankName: d.bankName });
-      setNickname(d.accountName);
-    } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || "Account not found. Check the details and try again.");
-    } finally { setVerifying(false); }
+    setError(""); setVerifying(true); setVerified(null); setWarmingUpVerify(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        const r = await beneficiariesApi.verify({ accountNumber, bankCode });
+        const d = r.data.data;
+        setWarmingUpVerify(false);
+        setVerifying(false);
+        setVerified({ accountName: d.accountName, bankName: d.bankName });
+        setNickname(d.accountName);
+        return;
+      } catch (e: unknown) {
+        const { yes, retryAfter } = isColdStart(e);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUpVerify(true);
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          setWarmingUpVerify(false);
+          continue;
+        }
+        setWarmingUpVerify(false);
+        setVerifying(false);
+        const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setError(msg || "Account not found. Check the details and try again.");
+        return;
+      }
+    }
+
+    setWarmingUpVerify(false);
+    setVerifying(false);
   }
 
   async function save() {
     if (!verified || !nickname) return;
-    setError(""); setSaving(true);
-    try {
-      const r = await beneficiariesApi.create({
-        nickname,
-        accountName: verified.accountName,
-        accountNumber,
-        bankName: verified.bankName,
-        bankCode,
-        country: "GB",
-        currency: "GBP",
-        isFavorite,
-      });
-      onAdded(r.data.data);
-    } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || "Could not save payee.");
-      setSaving(false);
+    setError(""); setSaving(true); setWarmingUpSave(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        const r = await beneficiariesApi.create({
+          nickname,
+          accountName: verified.accountName,
+          accountNumber,
+          bankName: verified.bankName,
+          bankCode,
+          country: "GB",
+          currency: "GBP",
+          isFavorite,
+        });
+        setWarmingUpSave(false);
+        setSaving(false);
+        onAdded(r.data.data);
+        return;
+      } catch (e: unknown) {
+        const { yes, retryAfter } = isColdStart(e);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUpSave(true);
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          setWarmingUpSave(false);
+          continue;
+        }
+        setWarmingUpSave(false);
+        setSaving(false);
+        const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setError(msg || "Could not save payee.");
+        return;
+      }
     }
+
+    setWarmingUpSave(false);
+    setSaving(false);
   }
 
   return (
@@ -165,7 +219,12 @@ function AddPayeeSheet({ onClose, onAdded }: { onClose: () => void; onAdded: (b:
             </>
           )}
 
-          {error && (
+          {(warmingUpVerify || warmingUpSave) && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              <p className="text-sm text-amber-700">Connecting to server, please wait…</p>
+            </div>
+          )}
+          {error && !warmingUpVerify && !warmingUpSave && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
               <p className="text-sm text-[#DB0011]">{error}</p>
             </div>
@@ -242,18 +301,37 @@ function BeneficiaryCard({
 // ── Delete confirm sheet ────────────────────────────────────────────────────────
 function DeleteSheet({ beneficiary, onCancel, onConfirm }: { beneficiary: Beneficiary; onCancel: () => void; onConfirm: () => void }) {
   const [loading, setLoading] = useState(false);
+  const [warmingUp, setWarmingUp] = useState(false);
   const [err, setErr] = useState("");
 
   async function doDelete() {
-    setLoading(true); setErr("");
-    try {
-      await beneficiariesApi.delete(beneficiary.id);
-      onConfirm();
-    } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setErr(msg || "Could not remove payee.");
-      setLoading(false);
+    setLoading(true); setErr(""); setWarmingUp(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        await beneficiariesApi.delete(beneficiary.id);
+        setWarmingUp(false);
+        setLoading(false);
+        onConfirm();
+        return;
+      } catch (e: unknown) {
+        const { yes, retryAfter } = isColdStart(e);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUp(true);
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+        setWarmingUp(false);
+        setLoading(false);
+        const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setErr(msg || "Could not remove payee.");
+        return;
+      }
     }
+
+    setWarmingUp(false);
+    setLoading(false);
   }
 
   return (
@@ -272,7 +350,8 @@ function DeleteSheet({ beneficiary, onCancel, onConfirm }: { beneficiary: Benefi
         <p className="text-xs text-[#999] mb-5 leading-relaxed">
           This payee will be removed from your saved list. You can still send money by entering their details manually.
         </p>
-        {err && <p className="text-xs text-[#DB0011] bg-red-50 rounded-lg px-3 py-2 mb-3">{err}</p>}
+        {warmingUp && <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">Connecting to server, please wait…</p>}
+        {err && !warmingUp && <p className="text-xs text-[#DB0011] bg-red-50 rounded-lg px-3 py-2 mb-3">{err}</p>}
         <div className="flex gap-3">
           <button onClick={onCancel} className="flex-1 py-3 rounded-xl border-2 border-[#E3E3E3] text-sm font-semibold text-[#555]">Cancel</button>
           <button onClick={doDelete} disabled={loading} className="flex-1 py-3 rounded-xl bg-[#DB0011] text-white text-sm font-semibold disabled:opacity-60">

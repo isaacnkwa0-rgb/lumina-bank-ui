@@ -607,6 +607,21 @@ function ReviewStep({ loan, allData }: { loan: Loan; allData: AllData }) {
   );
 }
 
+// ── Cold-start retry helpers ───────────────────────────────────────────────────
+
+const MAX_WARM_RETRIES = 4;
+
+function isColdStart(err: unknown): { yes: boolean; retryAfter: number } {
+  const e = err as { response?: { status?: number; data?: { error?: { code?: string; retryAfter?: number } } } };
+  const yes =
+    e.response?.data?.error?.code === "SYS_WARMING" ||
+    !e.response ||
+    e.response?.status === 502 ||
+    e.response?.status === 503 ||
+    e.response?.status === 504;
+  return { yes, retryAfter: e.response?.data?.error?.retryAfter ?? 10 };
+}
+
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function LoanContinuePage() {
@@ -618,6 +633,7 @@ export default function LoanContinuePage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [warmingUp, setWarmingUp] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -700,37 +716,73 @@ export default function LoanContinuePage() {
     }
 
     setSaving(true);
+    setWarmingUp(false);
     const stepData: Record<string, unknown> = {};
     if (currentStep === 1) stepData.personal = personal;
     if (currentStep === 2) stepData.employment = employment;
     if (currentStep === 3) stepData.financial = financial;
     if (currentStep === 4) stepData.documents = documents;
     if (currentStep === 5) stepData.guarantor = guarantor;
-    try {
-      await loansApi.saveDraft(loanId, currentStep + 1, stepData);
-      setCurrentStep((s) => s + 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || "Failed to save. Please try again.");
-    } finally {
-      setSaving(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        await loansApi.saveDraft(loanId, currentStep + 1, stepData);
+        setWarmingUp(false);
+        setSaving(false);
+        setCurrentStep((s) => s + 1);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      } catch (e: unknown) {
+        const { yes, retryAfter } = isColdStart(e);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUp(true);
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+        setWarmingUp(false);
+        setSaving(false);
+        const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setError(msg || "Failed to save. Please try again.");
+        return;
+      }
     }
+
+    setWarmingUp(false);
+    setSaving(false);
   }
 
   async function handleSubmit() {
     setSubmitting(true);
     setError("");
-    try {
-      await loansApi.submitApplication(loanId);
-      setSubmitted(true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || "Submission failed. Please try again.");
-    } finally {
-      setSubmitting(false);
+    setWarmingUp(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        await loansApi.submitApplication(loanId);
+        setWarmingUp(false);
+        setSubmitting(false);
+        setSubmitted(true);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      } catch (e: unknown) {
+        const { yes, retryAfter } = isColdStart(e);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUp(true);
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+        setWarmingUp(false);
+        setSubmitting(false);
+        const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setError(msg || "Submission failed. Please try again.");
+        return;
+      }
     }
+
+    setWarmingUp(false);
+    setSubmitting(false);
   }
 
   if (loading) {
@@ -855,7 +907,13 @@ export default function LoanContinuePage() {
           {currentStep === 6 && <ReviewStep loan={loan} allData={allData} />}
         </div>
 
-        {error && (
+        {warmingUp && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 flex items-center gap-2">
+            <Loader2 size={14} className="text-amber-600 flex-shrink-0 animate-spin" />
+            <p className="text-sm text-amber-700">Connecting to server, please wait…</p>
+          </div>
+        )}
+        {error && !warmingUp && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 flex items-center gap-2">
             <X size={14} className="text-[#DB0011] flex-shrink-0" />
             <p className="text-sm text-[#DB0011]">{error}</p>

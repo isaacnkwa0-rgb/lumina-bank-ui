@@ -6,11 +6,32 @@ import { authApi } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { CheckCircle2, Mail } from "lucide-react";
 
+const MAX_WARM_RETRIES = 4;
+
+function isColdStart(err: unknown): { yes: boolean; retryAfter: number } {
+  const e = err as {
+    response?: {
+      status?: number;
+      data?: { error?: { code?: string; retryAfter?: number } };
+    };
+  };
+  const code = e.response?.data?.error?.code;
+  const status = e.response?.status;
+  const yes =
+    code === "SYS_WARMING" ||
+    !e.response ||
+    status === 502 ||
+    status === 503 ||
+    status === 504;
+  return { yes, retryAfter: e.response?.data?.error?.retryAfter ?? 10 };
+}
+
 export default function VerifyEmailPage() {
   const router = useRouter();
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [warmingUp, setWarmingUp] = useState(false);
   const [resent, setResent] = useState(false);
   const [done, setDone] = useState(false);
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
@@ -18,16 +39,36 @@ export default function VerifyEmailPage() {
   async function verify(fullCode: string) {
     if (fullCode.length < 6 || loading) return;
     setError("");
+    setWarmingUp(false);
     setLoading(true);
-    try {
-      await authApi.verifyEmail(fullCode);
-      setDone(true);
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || "Invalid or expired code. Please try again.");
-    } finally {
-      setLoading(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        await authApi.verifyEmail(fullCode);
+        setWarmingUp(false);
+        setLoading(false);
+        setDone(true);
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUp(true);
+          await new Promise<void>((resolve) => setTimeout(resolve, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+
+        setWarmingUp(false);
+        setLoading(false);
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setError(msg || "Invalid or expired code. Please try again.");
+        return;
+      }
     }
+
+    setWarmingUp(false);
+    setLoading(false);
   }
 
   function handleChange(idx: number, val: string) {
@@ -103,7 +144,13 @@ export default function VerifyEmailPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="px-6 py-6">
-        {error && (
+        {warmingUp && (
+          <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-sm mb-5">
+            <p className="text-sm text-amber-700 font-medium">Connecting to server, please wait…</p>
+          </div>
+        )}
+
+        {error && !warmingUp && (
           <div className="bg-red-50 border-l-4 border-[#DB0011] p-4 rounded-sm mb-5">
             <p className="text-sm text-[#DB0011] font-medium">{error}</p>
           </div>

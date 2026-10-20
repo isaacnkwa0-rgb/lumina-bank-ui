@@ -752,6 +752,21 @@ const COUNTRY_FILTERS = [
   { code: "🌍",   label: "Global",    flag: "🌐" },
 ];
 
+// ── Cold-start retry helpers ───────────────────────────────────────────────────
+
+const MAX_WARM_RETRIES = 4;
+
+function isColdStart(err: unknown): { yes: boolean; retryAfter: number } {
+  const e = err as { response?: { status?: number; data?: { error?: { code?: string; retryAfter?: number } } } };
+  const yes =
+    e.response?.data?.error?.code === "SYS_WARMING" ||
+    !e.response ||
+    e.response?.status === 502 ||
+    e.response?.status === 503 ||
+    e.response?.status === 504;
+  return { yes, retryAfter: e.response?.data?.error?.retryAfter ?? 10 };
+}
+
 // ── OTP code input ────────────────────────────────────────────────────────────
 
 function OtpCodeInput({ onConfirm, onCancel, isLoading }: {
@@ -805,9 +820,11 @@ function PaymentModal({
     accounts.find((a) => a.isDefault)?.id ?? accounts[0]?.id ?? ""
   );
   const [submitting, setSubmitting]     = useState(false);
+  const [warmingUp, setWarmingUp]       = useState(false);
   const [error, setError]               = useState("");
   const [otpStep, setOtpStep]           = useState<{ description: string; maskedEmail: string } | null>(null);
   const [otpLoading, setOtpLoading]     = useState(false);
+  const [otpWarmingUp, setOtpWarmingUp] = useState(false);
 
   const amount = selectedPlan
     ? selectedPlan.amount
@@ -825,39 +842,75 @@ function PaymentModal({
       : billerRef.trim();
 
     setSubmitting(true);
-    try {
-      const r = await authApi.requestTransferOtp();
-      setOtpStep({ description, maskedEmail: r.data.data.maskedEmail });
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
-      setError(msg || "Failed to send OTP. Please try again.");
-    } finally {
-      setSubmitting(false);
+    setWarmingUp(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        const r = await authApi.requestTransferOtp();
+        setWarmingUp(false);
+        setSubmitting(false);
+        setOtpStep({ description, maskedEmail: r.data.data.maskedEmail });
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUp(true);
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+        setWarmingUp(false);
+        setSubmitting(false);
+        const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+        setError(msg || "Failed to send OTP. Please try again.");
+        return;
+      }
     }
+
+    setWarmingUp(false);
+    setSubmitting(false);
   }
 
   async function executePay(otp: string) {
     if (!otpStep) return;
     setOtpLoading(true);
-    try {
-      await transfersApi.domestic({
-        fromAccountId,
-        toAccountNumber: biller.accountNumber,
-        toBankCode: biller.bankCode,
-        toAccountName: biller.name,
-        amount,
-        description: otpStep.description,
-        transferOtp: otp,
-      });
-      setOtpStep(null);
-      onSuccess();
-    } catch (err: unknown) {
-      setOtpStep(null);
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || "Payment failed. Please try again.");
-    } finally {
-      setOtpLoading(false);
+    setOtpWarmingUp(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        await transfersApi.domestic({
+          fromAccountId,
+          toAccountNumber: biller.accountNumber,
+          toBankCode: biller.bankCode,
+          toAccountName: biller.name,
+          amount,
+          description: otpStep.description,
+          transferOtp: otp,
+        });
+        setOtpWarmingUp(false);
+        setOtpLoading(false);
+        setOtpStep(null);
+        onSuccess();
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setOtpWarmingUp(true);
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          setOtpWarmingUp(false);
+          continue;
+        }
+        setOtpWarmingUp(false);
+        setOtpLoading(false);
+        setOtpStep(null);
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setError(msg || "Payment failed. Please try again.");
+        return;
+      }
     }
+
+    setOtpWarmingUp(false);
+    setOtpLoading(false);
   }
 
   return (
@@ -873,6 +926,11 @@ function PaymentModal({
             Enter the 6-digit code sent to<br />
             <span className="font-semibold text-[#333]">{otpStep.maskedEmail}</span>
           </p>
+          {otpWarmingUp && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-4">
+              <p className="text-sm text-amber-700 text-center">Connecting to server, please wait…</p>
+            </div>
+          )}
           <OtpCodeInput onConfirm={executePay} onCancel={() => setOtpStep(null)} isLoading={otpLoading} />
         </div>
       </div>
@@ -1090,7 +1148,12 @@ function PaymentModal({
             </div>
           )}
 
-          {error && (
+          {warmingUp && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              <p className="text-sm text-amber-700">Connecting to server, please wait…</p>
+            </div>
+          )}
+          {error && !warmingUp && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
               <p className="text-sm text-[#DB0011]">{error}</p>
             </div>

@@ -15,6 +15,26 @@ const SUBJECT_KEYS: { value: string; key: TranslationKey }[] = [
   { value: "Other issue",               key: "disputes.issueOther"        },
 ];
 
+const MAX_WARM_RETRIES = 4;
+
+function isColdStart(err: unknown): { yes: boolean; retryAfter: number } {
+  const e = err as {
+    response?: {
+      status?: number;
+      data?: { error?: { code?: string; retryAfter?: number } };
+    };
+  };
+  const code = e.response?.data?.error?.code;
+  const status = e.response?.status;
+  const yes =
+    code === "SYS_WARMING" ||
+    !e.response ||
+    status === 502 ||
+    status === 503 ||
+    status === 504;
+  return { yes, retryAfter: e.response?.data?.error?.retryAfter ?? 10 };
+}
+
 function NewDisputeForm() {
   const router = useRouter();
   const { t } = useLanguage();
@@ -29,6 +49,7 @@ function NewDisputeForm() {
     txRef ? `Transaction reference: ${txRef}\n\n` : ""
   );
   const [loading, setLoading] = useState(false);
+  const [warmingUp, setWarmingUp] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
 
@@ -38,16 +59,36 @@ function NewDisputeForm() {
     if (!finalSubject) { setError("Please select or enter a subject."); return; }
     if (description.trim().length < 20) { setError("Please provide more detail (at least 20 characters)."); return; }
     setError("");
+    setWarmingUp(false);
     setLoading(true);
-    try {
-      await disputesApi.create({ subject: finalSubject, description: description.trim(), transactionId: txId });
-      setDone(true);
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || "Failed to submit dispute. Please try again.");
-    } finally {
-      setLoading(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        await disputesApi.create({ subject: finalSubject, description: description.trim(), transactionId: txId });
+        setWarmingUp(false);
+        setLoading(false);
+        setDone(true);
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUp(true);
+          await new Promise<void>((resolve) => setTimeout(resolve, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+
+        setWarmingUp(false);
+        setLoading(false);
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setError(msg || "Failed to submit dispute. Please try again.");
+        return;
+      }
     }
+
+    setWarmingUp(false);
+    setLoading(false);
   }
 
   if (done) {
@@ -148,7 +189,13 @@ function NewDisputeForm() {
             <p className="text-xs text-[#AAAAAA] mt-1">{description.trim().length} characters (min 20)</p>
           </div>
 
-          {error && (
+          {warmingUp && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              <p className="text-sm text-amber-700 font-medium">Connecting to server, please wait…</p>
+            </div>
+          )}
+
+          {error && !warmingUp && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
               <p className="text-sm text-[#DB0011]">{error}</p>
             </div>

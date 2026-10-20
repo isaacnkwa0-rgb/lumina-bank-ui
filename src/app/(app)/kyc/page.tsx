@@ -106,6 +106,7 @@ export default function KycPage() {
   const [status, setStatus]     = useState<KycStatus>(null);
   const [loading, setLoading]   = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [warmingUp, setWarmingUp] = useState(false);
   const [success, setSuccess]   = useState(false);
   const [error, setError]       = useState("");
   const [files, setFiles]       = useState<Record<string, File | null>>({ idFront: null, idBack: null, selfie: null });
@@ -128,21 +129,48 @@ export default function KycPage() {
       setError(t("kyc.allRequired"));
       return;
     }
+    setWarmingUp(false);
     setSubmitting(true);
-    try {
-      const fd = new FormData();
-      fd.append("idFront", files.idFront);
-      fd.append("idBack",  files.idBack);
-      fd.append("selfie",  files.selfie);
-      await kycApi.submit(fd);
-      setSuccess(true);
-      setStatus("PENDING");
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || "Submission failed. Please try again.");
-    } finally {
-      setSubmitting(false);
+    const fd = new FormData();
+    fd.append("idFront", files.idFront);
+    fd.append("idBack",  files.idBack);
+    fd.append("selfie",  files.selfie);
+
+    for (let attempt = 0; attempt <= 4; attempt++) {
+      try {
+        await kycApi.submit(fd);
+        setWarmingUp(false);
+        setSubmitting(false);
+        setSuccess(true);
+        setStatus("PENDING");
+        return;
+      } catch (err: unknown) {
+        const e = err as { response?: { status?: number; data?: { error?: { code?: string; retryAfter?: number } } } };
+        const coldStart =
+          e.response?.data?.error?.code === "SYS_WARMING" ||
+          !e.response ||
+          e.response?.status === 502 ||
+          e.response?.status === 503 ||
+          e.response?.status === 504;
+        const retryAfter = e.response?.data?.error?.retryAfter ?? 10;
+
+        if (coldStart && attempt < 4) {
+          setWarmingUp(true);
+          await new Promise<void>((resolve) => setTimeout(resolve, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+
+        setWarmingUp(false);
+        setSubmitting(false);
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setError(msg || "Submission failed. Please try again.");
+        return;
+      }
     }
+
+    setWarmingUp(false);
+    setSubmitting(false);
   }
 
   return (
@@ -191,7 +219,13 @@ export default function KycPage() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <StatusBanner status={status} />
 
-              {error && (
+              {warmingUp && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                  <p className="text-sm text-amber-700 font-medium">Connecting to server, please wait…</p>
+                </div>
+              )}
+
+              {error && !warmingUp && (
                 <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
                   <p className="text-sm text-[#DB0011]">{error}</p>
                 </div>

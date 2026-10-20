@@ -233,6 +233,21 @@ function FeeNotice({ children }: { children: ReactNode }) {
   );
 }
 
+// ── Cold-start retry helpers ───────────────────────────────────────────────────
+
+const MAX_WARM_RETRIES = 4;
+
+function isColdStart(err: unknown): { yes: boolean; retryAfter: number } {
+  const e = err as { response?: { status?: number; data?: { error?: { code?: string; retryAfter?: number } } } };
+  const yes =
+    e.response?.data?.error?.code === "SYS_WARMING" ||
+    !e.response ||
+    e.response?.status === 502 ||
+    e.response?.status === 503 ||
+    e.response?.status === 504;
+  return { yes, retryAfter: e.response?.data?.error?.retryAfter ?? 10 };
+}
+
 // ── Main page ────────────────────────────────────────────────────────────────
 
 export default function TransferPage() {
@@ -342,12 +357,13 @@ function TransferPageInner() {
 
 // ── OTP Modal ────────────────────────────────────────────────────────────────
 
-function OtpModal({ maskedEmail, onConfirm, onCancel, isLoading, error }: {
+function OtpModal({ maskedEmail, onConfirm, onCancel, isLoading, error, warmingUp }: {
   maskedEmail: string;
   onConfirm: (code: string) => void;
   onCancel: () => void;
   isLoading: boolean;
   error?: string;
+  warmingUp?: boolean;
 }) {
   const [code, setCode] = useState("");
 
@@ -366,7 +382,12 @@ function OtpModal({ maskedEmail, onConfirm, onCancel, isLoading, error }: {
           Enter the 6-digit code sent to<br />
           <span className="font-semibold text-[#333]">{maskedEmail}</span>
         </p>
-        {error && (
+        {warmingUp && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-4">
+            <p className="text-sm text-amber-700 text-center">Connecting to server, please wait…</p>
+          </div>
+        )}
+        {error && !warmingUp && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 mb-4">
             <p className="text-sm text-[#DB0011] text-center">{error}</p>
           </div>
@@ -418,16 +439,27 @@ function OwnAccountsForm({
   const toAccountId = watch("toAccountId") ?? "";
   const [otpStep, setOtpStep] = useState<{ formData: OwnForm; maskedEmail: string } | null>(null);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [otpWarmingUp, setOtpWarmingUp] = useState(false);
   const [otpError, setOtpError] = useState("");
 
   async function onSubmit(data: OwnForm) {
     onError("");
-    try {
-      const r = await authApi.requestTransferOtp();
-      setOtpError("");
-      setOtpStep({ formData: data, maskedEmail: r.data.data.maskedEmail });
-    } catch (err: unknown) {
-      onError((err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "Failed to send OTP. Try again.");
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        const r = await authApi.requestTransferOtp();
+        setOtpError("");
+        setOtpStep({ formData: data, maskedEmail: r.data.data.maskedEmail });
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          continue;
+        }
+        onError((err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "Failed to send OTP. Try again.");
+        return;
+      }
     }
   }
 
@@ -435,22 +467,40 @@ function OwnAccountsForm({
     if (!otpStep) return;
     setOtpLoading(true);
     setOtpError("");
-    try {
-      const res = await transfersApi.internal({ ...otpStep.formData, amount: Number(otpStep.formData.amount), transferOtp: otp });
-      setOtpStep(null);
-      onSuccess(res.data.data);
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed. Please try again.";
-      setOtpError(msg);
-    } finally {
-      setOtpLoading(false);
+    setOtpWarmingUp(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        const res = await transfersApi.internal({ ...otpStep.formData, amount: Number(otpStep.formData.amount), transferOtp: otp });
+        setOtpWarmingUp(false);
+        setOtpLoading(false);
+        setOtpStep(null);
+        onSuccess(res.data.data);
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setOtpWarmingUp(true);
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          setOtpWarmingUp(false);
+          continue;
+        }
+        setOtpWarmingUp(false);
+        setOtpLoading(false);
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed. Please try again.";
+        setOtpError(msg);
+        return;
+      }
     }
+
+    setOtpWarmingUp(false);
+    setOtpLoading(false);
   }
 
   return (
     <>
     {otpStep && (
-      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => { setOtpStep(null); setOtpError(""); }} isLoading={otpLoading} error={otpError} />
+      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => { setOtpStep(null); setOtpError(""); }} isLoading={otpLoading} error={otpError} warmingUp={otpWarmingUp} />
     )}
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
       <div>
@@ -533,6 +583,7 @@ function DomesticForm({
   const [isConfirming, setIsConfirming] = useState(false);
   const [otpStep, setOtpStep] = useState<{ formData: DomesticFormValues; maskedEmail: string } | null>(null);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [otpWarmingUp, setOtpWarmingUp] = useState(false);
   const [otpError, setOtpError] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -607,37 +658,67 @@ function DomesticForm({
   async function requestOtp(data: DomesticFormValues) {
     setPendingData(null);
     setIsConfirming(true);
-    try {
-      const r = await authApi.requestTransferOtp();
-      setOtpError("");
-      setOtpStep({ formData: data, maskedEmail: r.data.data.maskedEmail });
-    } catch (err: unknown) {
-      onError((err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "Failed to send OTP. Try again.");
-    } finally {
-      setIsConfirming(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        const r = await authApi.requestTransferOtp();
+        setIsConfirming(false);
+        setOtpError("");
+        setOtpStep({ formData: data, maskedEmail: r.data.data.maskedEmail });
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          continue;
+        }
+        setIsConfirming(false);
+        onError((err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "Failed to send OTP. Try again.");
+        return;
+      }
     }
+
+    setIsConfirming(false);
   }
 
   async function executeTransfer(otp: string) {
     if (!otpStep) return;
     setOtpLoading(true);
     setOtpError("");
-    try {
-      const res = await transfersApi.domestic({ ...otpStep.formData, amount: Number(otpStep.formData.amount), transferOtp: otp });
-      setOtpStep(null);
-      onSuccess(res.data.data);
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed. Please try again.";
-      setOtpError(msg);
-    } finally {
-      setOtpLoading(false);
+    setOtpWarmingUp(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        const res = await transfersApi.domestic({ ...otpStep.formData, amount: Number(otpStep.formData.amount), transferOtp: otp });
+        setOtpWarmingUp(false);
+        setOtpLoading(false);
+        setOtpStep(null);
+        onSuccess(res.data.data);
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setOtpWarmingUp(true);
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          setOtpWarmingUp(false);
+          continue;
+        }
+        setOtpWarmingUp(false);
+        setOtpLoading(false);
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed. Please try again.";
+        setOtpError(msg);
+        return;
+      }
     }
+
+    setOtpWarmingUp(false);
+    setOtpLoading(false);
   }
 
   return (
     <>
     {otpStep && (
-      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => { setOtpStep(null); setOtpError(""); }} isLoading={otpLoading} error={otpError} />
+      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => { setOtpStep(null); setOtpError(""); }} isLoading={otpLoading} error={otpError} warmingUp={otpWarmingUp} />
     )}
     {pendingData && (
       <ConfirmModal
@@ -877,6 +958,7 @@ function InternationalForm({
   const [isConfirming, setIsConfirming] = useState(false);
   const [otpStep, setOtpStep] = useState<{ formData: InternationalFormValues; maskedEmail: string } | null>(null);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [otpWarmingUp, setOtpWarmingUp] = useState(false);
   const [otpError, setOtpError] = useState("");
 
   const {
@@ -929,37 +1011,67 @@ function InternationalForm({
   async function requestOtp(data: InternationalFormValues) {
     setPendingData(null);
     setIsConfirming(true);
-    try {
-      const r = await authApi.requestTransferOtp();
-      setOtpError("");
-      setOtpStep({ formData: data, maskedEmail: r.data.data.maskedEmail });
-    } catch (err: unknown) {
-      onError((err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "Failed to send OTP. Try again.");
-    } finally {
-      setIsConfirming(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        const r = await authApi.requestTransferOtp();
+        setIsConfirming(false);
+        setOtpError("");
+        setOtpStep({ formData: data, maskedEmail: r.data.data.maskedEmail });
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          continue;
+        }
+        setIsConfirming(false);
+        onError((err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "Failed to send OTP. Try again.");
+        return;
+      }
     }
+
+    setIsConfirming(false);
   }
 
   async function executeTransfer(otp: string) {
     if (!otpStep) return;
     setOtpLoading(true);
     setOtpError("");
-    try {
-      const res = await transfersApi.international({ ...otpStep.formData, amount: Number(otpStep.formData.amount), transferOtp: otp });
-      setOtpStep(null);
-      onSuccess(res.data.data);
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed. Please try again.";
-      setOtpError(msg);
-    } finally {
-      setOtpLoading(false);
+    setOtpWarmingUp(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        const res = await transfersApi.international({ ...otpStep.formData, amount: Number(otpStep.formData.amount), transferOtp: otp });
+        setOtpWarmingUp(false);
+        setOtpLoading(false);
+        setOtpStep(null);
+        onSuccess(res.data.data);
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setOtpWarmingUp(true);
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          setOtpWarmingUp(false);
+          continue;
+        }
+        setOtpWarmingUp(false);
+        setOtpLoading(false);
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Transfer failed. Please try again.";
+        setOtpError(msg);
+        return;
+      }
     }
+
+    setOtpWarmingUp(false);
+    setOtpLoading(false);
   }
 
   return (
     <>
     {otpStep && (
-      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => { setOtpStep(null); setOtpError(""); }} isLoading={otpLoading} error={otpError} />
+      <OtpModal maskedEmail={otpStep.maskedEmail} onConfirm={executeTransfer} onCancel={() => { setOtpStep(null); setOtpError(""); }} isLoading={otpLoading} error={otpError} warmingUp={otpWarmingUp} />
     )}
     {pendingData && (
       <ConfirmModal

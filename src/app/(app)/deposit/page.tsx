@@ -174,12 +174,28 @@ const cryptoSchema = z.object({
 type BankForm   = z.infer<typeof bankSchema>;
 type CryptoForm = z.infer<typeof cryptoSchema>;
 
+// ── Cold-start retry helpers ───────────────────────────────────────────────────
+
+const MAX_WARM_RETRIES = 4;
+
+function isColdStart(err: unknown): { yes: boolean; retryAfter: number } {
+  const e = err as { response?: { status?: number; data?: { error?: { code?: string; retryAfter?: number } } } };
+  const yes =
+    e.response?.data?.error?.code === "SYS_WARMING" ||
+    !e.response ||
+    e.response?.status === 502 ||
+    e.response?.status === 503 ||
+    e.response?.status === 504;
+  return { yes, retryAfter: e.response?.data?.error?.retryAfter ?? 10 };
+}
+
 // ── Bank Transfer Tab ──────────────────────────────────────────────────────────
 
 function BankTransferTab({ accounts, displayCurrency, rates }: { accounts: Account[]; displayCurrency: string; rates: Rate[] }) {
   const [bankDetails, setBankDetails] = useState<BankReceivingDetails | null>(null);
   const [depositRef, setDepositRef]   = useState("");
   const [submitting, setSubmitting]   = useState(false);
+  const [warmingUp, setWarmingUp]     = useState(false);
   const [error, setError]             = useState("");
 
   const { register, handleSubmit, formState: { errors }, watch } = useForm<BankForm>({
@@ -190,21 +206,39 @@ function BankTransferTab({ accounts, displayCurrency, rates }: { accounts: Accou
   async function onSubmit(data: BankForm) {
     setSubmitting(true);
     setError("");
-    try {
-      const res = await depositsApi.initiateBankTransfer({
-        accountId:  data.accountId,
-        amount:     Number(data.amount),
-        senderName: data.senderName || undefined,
-        senderBank: data.senderBank || undefined,
-      });
-      setBankDetails(res.data.data.bankDetails);
-      setDepositRef(res.data.data.deposit.reference);
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      setError(e?.response?.data?.message ?? "Something went wrong");
-    } finally {
-      setSubmitting(false);
+    setWarmingUp(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        const res = await depositsApi.initiateBankTransfer({
+          accountId:  data.accountId,
+          amount:     Number(data.amount),
+          senderName: data.senderName || undefined,
+          senderBank: data.senderBank || undefined,
+        });
+        setWarmingUp(false);
+        setSubmitting(false);
+        setBankDetails(res.data.data.bankDetails);
+        setDepositRef(res.data.data.deposit.reference);
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUp(true);
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+        setWarmingUp(false);
+        setSubmitting(false);
+        const e = err as { response?: { data?: { message?: string } } };
+        setError(e?.response?.data?.message ?? "Something went wrong");
+        return;
+      }
     }
+
+    setWarmingUp(false);
+    setSubmitting(false);
   }
 
   if (bankDetails) {
@@ -297,7 +331,13 @@ function BankTransferTab({ accounts, displayCurrency, rates }: { accounts: Accou
         </div>
       </div>
 
-      {error && (
+      {warmingUp && (
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-[12px]">
+          <AlertCircle size={14} strokeWidth={2} className="flex-shrink-0" />
+          Connecting to server, please wait…
+        </div>
+      )}
+      {error && !warmingUp && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-[#DB0011] text-[12px]">
           <AlertCircle size={14} strokeWidth={2} className="flex-shrink-0" />
           {error}
@@ -318,6 +358,7 @@ function CryptoTab({ accounts, displayCurrency, rates }: { accounts: Account[]; 
     address: string; coin: string; network: string; coinAmount: string; amountGbp: number;
   } | null>(null);
   const [submitting, setSubmitting]     = useState(false);
+  const [warmingUp, setWarmingUp]       = useState(false);
   const [error, setError]               = useState("");
   const [prices, setPrices]             = useState<Record<string, number>>({});
   const [pricesLoading, setPricesLoading] = useState(true);
@@ -345,27 +386,45 @@ function CryptoTab({ accounts, displayCurrency, rates }: { accounts: Account[]; 
   async function onSubmit(data: CryptoForm) {
     setSubmitting(true);
     setError("");
+    setWarmingUp(false);
     const coin = COIN_OPTIONS[Number(data.coinIndex)] ?? COIN_OPTIONS[0];
-    try {
-      const res = await depositsApi.initiateCrypto({
-        accountId: data.accountId,
-        coin:      coin.coin,
-        amountGbp: Number(data.amountGbp),
-        priceGbp:  prices[coin.coin] ?? 0,
-      });
-      setWalletInfo({
-        address:   res.data.data.walletAddress,
-        coin:      res.data.data.coin,
-        network:   res.data.data.network,
-        coinAmount: res.data.data.coinAmount,
-        amountGbp: res.data.data.amountGbp,
-      });
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      setError(e?.response?.data?.message ?? "Something went wrong");
-    } finally {
-      setSubmitting(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        const res = await depositsApi.initiateCrypto({
+          accountId: data.accountId,
+          coin:      coin.coin,
+          amountGbp: Number(data.amountGbp),
+          priceGbp:  prices[coin.coin] ?? 0,
+        });
+        setWarmingUp(false);
+        setSubmitting(false);
+        setWalletInfo({
+          address:   res.data.data.walletAddress,
+          coin:      res.data.data.coin,
+          network:   res.data.data.network,
+          coinAmount: res.data.data.coinAmount,
+          amountGbp: res.data.data.amountGbp,
+        });
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUp(true);
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+        setWarmingUp(false);
+        setSubmitting(false);
+        const e = err as { response?: { data?: { message?: string } } };
+        setError(e?.response?.data?.message ?? "Something went wrong");
+        return;
+      }
     }
+
+    setWarmingUp(false);
+    setSubmitting(false);
   }
 
   if (walletInfo) {
@@ -484,7 +543,13 @@ function CryptoTab({ accounts, displayCurrency, rates }: { accounts: Account[]; 
         {errors.amountGbp && <p className="text-[11px] text-[#DB0011] mt-1">{errors.amountGbp.message}</p>}
       </div>
 
-      {error && (
+      {warmingUp && (
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-[12px]">
+          <AlertCircle size={14} strokeWidth={2} className="flex-shrink-0" />
+          Connecting to server, please wait…
+        </div>
+      )}
+      {error && !warmingUp && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-[#DB0011] text-[12px]">
           <AlertCircle size={14} strokeWidth={2} className="flex-shrink-0" />
           {error}

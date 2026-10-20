@@ -31,6 +31,19 @@ function Ring({ pct, size = 56, stroke = 5, color = "#DB0011" }: {
 
 // ── Contribute / Add-goal modal ────────────────────────────────────────────────
 
+const MAX_WARM_RETRIES = 4;
+
+function isColdStart(err: unknown): { yes: boolean; retryAfter: number } {
+  const e = err as { response?: { status?: number; data?: { error?: { code?: string; retryAfter?: number } } } };
+  const yes =
+    e.response?.data?.error?.code === "SYS_WARMING" ||
+    !e.response ||
+    e.response?.status === 502 ||
+    e.response?.status === 503 ||
+    e.response?.status === 504;
+  return { yes, retryAfter: e.response?.data?.error?.retryAfter ?? 10 };
+}
+
 function ContributeSheet({
   goal, accounts, onClose, onDone,
 }: {
@@ -40,6 +53,7 @@ function ContributeSheet({
   const [amount, setAmount]   = useState("");
   const [accId, setAccId]     = useState(accounts[0]?.id ?? "");
   const [loading, setLoading] = useState(false);
+  const [warmingUp, setWarmingUp] = useState(false);
   const [error, setError]     = useState("");
   const [done, setDone]       = useState(false);
 
@@ -52,22 +66,34 @@ function ContributeSheet({
   async function submit() {
     setLoading(true);
     setError("");
-    try {
-      const res = await goalsApi.contribute(goal.id, num, accId);
-      setDone(true);
-      setTimeout(() => {
-        onDone(res.data.data.goal);
-      }, 1200);
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string; error?: { message?: string } } } };
-      setError(
-        e?.response?.data?.error?.message ||
-        e?.response?.data?.message ||
-        "Could not add contribution. Please try again."
-      );
-    } finally {
-      setLoading(false);
+    setWarmingUp(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        const res = await goalsApi.contribute(goal.id, num, accId);
+        setWarmingUp(false);
+        setLoading(false);
+        setDone(true);
+        setTimeout(() => { onDone(res.data.data.goal); }, 1200);
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUp(true);
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+        setWarmingUp(false);
+        setLoading(false);
+        const e = err as { response?: { data?: { message?: string; error?: { message?: string } } } };
+        setError(e?.response?.data?.error?.message || e?.response?.data?.message || "Could not add contribution. Please try again.");
+        return;
+      }
     }
+
+    setWarmingUp(false);
+    setLoading(false);
   }
 
   return (
@@ -150,7 +176,13 @@ function ContributeSheet({
               )}
             </div>
 
-            {error && (
+            {warmingUp && (
+              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+                <AlertCircle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700">Connecting to server, please wait…</p>
+              </div>
+            )}
+            {error && !warmingUp && (
               <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
                 <AlertCircle size={14} className="text-[#DB0011] flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-[#DB0011]">{error}</p>
@@ -179,6 +211,7 @@ function WithdrawSheet({
   const [amount, setAmount]   = useState("");
   const [accId, setAccId]     = useState(accounts[0]?.id ?? "");
   const [loading, setLoading] = useState(false);
+  const [warmingUp, setWarmingUp] = useState(false);
   const [error, setError]     = useState("");
   const [done, setDone]       = useState(false);
 
@@ -191,22 +224,34 @@ function WithdrawSheet({
   async function submit() {
     setLoading(true);
     setError("");
-    try {
-      const res = await goalsApi.withdraw(goal.id, num, accId);
-      setDone(true);
-      setTimeout(() => {
-        onDone(res.data.data.goal);
-      }, 1200);
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string; error?: { message?: string } } } };
-      setError(
-        e?.response?.data?.error?.message ||
-        e?.response?.data?.message ||
-        "Could not process withdrawal. Please try again."
-      );
-    } finally {
-      setLoading(false);
+    setWarmingUp(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        const res = await goalsApi.withdraw(goal.id, num, accId);
+        setWarmingUp(false);
+        setLoading(false);
+        setDone(true);
+        setTimeout(() => { onDone(res.data.data.goal); }, 1200);
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUp(true);
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+        setWarmingUp(false);
+        setLoading(false);
+        const e = err as { response?: { data?: { message?: string; error?: { message?: string } } } };
+        setError(e?.response?.data?.error?.message || e?.response?.data?.message || "Could not process withdrawal. Please try again.");
+        return;
+      }
     }
+
+    setWarmingUp(false);
+    setLoading(false);
   }
 
   return (
@@ -294,7 +339,13 @@ function WithdrawSheet({
               </div>
             </div>
 
-            {error && (
+            {warmingUp && (
+              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+                <AlertCircle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700">Connecting to server, please wait…</p>
+              </div>
+            )}
+            {error && !warmingUp && (
               <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
                 <AlertCircle size={14} className="text-[#DB0011] flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-[#DB0011]">{error}</p>
@@ -323,26 +374,45 @@ function AddGoalSheet({ onClose, onCreated }: {
   const [target, setTarget]     = useState("");
   const [date, setDate]         = useState("");
   const [loading, setLoading]   = useState(false);
+  const [warmingUp, setWarmingUp] = useState(false);
   const [error, setError]       = useState("");
 
   async function submit() {
     if (!name.trim() || !target) return;
     setLoading(true);
     setError("");
-    try {
-      const res = await goalsApi.create({
-        name: name.trim(),
-        emoji: emoji || undefined,
-        targetAmount: parseFloat(target),
-        targetDate: date || undefined,
-      });
-      onCreated(res.data.data);
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string; error?: { message?: string } } } };
-      setError(e?.response?.data?.error?.message || e?.response?.data?.message || "Could not create goal.");
-    } finally {
-      setLoading(false);
+    setWarmingUp(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        const res = await goalsApi.create({
+          name: name.trim(),
+          emoji: emoji || undefined,
+          targetAmount: parseFloat(target),
+          targetDate: date || undefined,
+        });
+        setWarmingUp(false);
+        setLoading(false);
+        onCreated(res.data.data);
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUp(true);
+          await new Promise<void>((r) => setTimeout(r, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+        setWarmingUp(false);
+        setLoading(false);
+        const e = err as { response?: { data?: { message?: string; error?: { message?: string } } } };
+        setError(e?.response?.data?.error?.message || e?.response?.data?.message || "Could not create goal.");
+        return;
+      }
     }
+
+    setWarmingUp(false);
+    setLoading(false);
   }
 
   return (
@@ -391,7 +461,12 @@ function AddGoalSheet({ onClose, onCreated }: {
               className="w-full h-12 px-4 border-2 border-[#E3E3E3] rounded-2xl text-sm text-[#222] outline-none focus:border-[#DB0011]" />
           </div>
 
-          {error && (
+          {warmingUp && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+              <p className="text-xs text-amber-700">Connecting to server, please wait…</p>
+            </div>
+          )}
+          {error && !warmingUp && (
             <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
               <p className="text-xs text-[#DB0011]">{error}</p>
             </div>

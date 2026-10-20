@@ -143,7 +143,7 @@ export const authApi = {
     api.get<ApiResponse<{ onboardingStep: number; kycStatus: string }>>("/auth/onboarding-status"),
   me: () => api.get<ApiResponse<unknown>>("/auth/me"),
   verifyEmail: (code: string, email?: string) =>
-    api.post<ApiResponse<{ message: string }>>("/auth/verify-email", { code, ...(email ? { email } : {}) }),
+    api.post<ApiResponse<{ message: string }>>("/auth/verify-email", { code, ...(email ? { email } : {}) }, { timeout: 35000 }),
   resendVerification: (email?: string) =>
     api.post<ApiResponse<{ message: string }>>("/auth/resend-verification", email ? { email } : {}),
   forgotPassword: (email: string) =>
@@ -151,13 +151,13 @@ export const authApi = {
   resetPassword: (data: { email: string; code: string; newPassword: string }) =>
     api.post<ApiResponse<{ message: string }>>("/auth/reset-password", data, { timeout: 35000 }),
   setup2FA: (method: "TOTP" | "EMAIL" | "BOTH" = "TOTP") =>
-    api.post<ApiResponse<{ method: string; qrCode?: string; secret?: string; maskedEmail?: string }>>("/auth/2fa/setup", { method }),
+    api.post<ApiResponse<{ method: string; qrCode?: string; secret?: string; maskedEmail?: string }>>("/auth/2fa/setup", { method }, { timeout: 35000 }),
   enable2FA: (token: string, method?: "TOTP" | "EMAIL" | "BOTH") =>
-    api.post<ApiResponse<{ message: string; recoveryCodes?: string[] }>>("/auth/2fa/enable", { token, ...(method ? { method } : {}) }),
+    api.post<ApiResponse<{ message: string; recoveryCodes?: string[] }>>("/auth/2fa/enable", { token, ...(method ? { method } : {}) }, { timeout: 35000 }),
   regenerateRecoveryCodes: () =>
-    api.post<ApiResponse<{ recoveryCodes: string[] }>>("/auth/2fa/regenerate-recovery-codes"),
+    api.post<ApiResponse<{ recoveryCodes: string[] }>>("/auth/2fa/regenerate-recovery-codes", {}, { timeout: 35000 }),
   disable2FA: (token: string, password: string) =>
-    api.post<ApiResponse<{ message: string }>>("/auth/2fa/disable", { token, password }),
+    api.post<ApiResponse<{ message: string }>>("/auth/2fa/disable", { token, password }, { timeout: 35000 }),
   resend2FA: (tempToken: string) =>
     api.post<ApiResponse<{ sent: boolean }>>("/auth/2fa/resend", { tempToken }, { timeout: 35000 }),
   verify2FA: (tempToken: string, token: string) =>
@@ -170,13 +170,13 @@ export const authApi = {
   verifyPassword: (password: string) =>
     api.post<ApiResponse<{ verified: boolean }>>("/auth/verify-password", { password }),
   requestTransferOtp: () =>
-    api.post<ApiResponse<{ sent: boolean; maskedEmail: string }>>("/auth/transfer-otp"),
+    api.post<ApiResponse<{ sent: boolean; maskedEmail: string }>>("/auth/transfer-otp", {}, { timeout: 35000 }),
   verifyTransferOtp: (code: string) =>
     api.post<ApiResponse<{ verified: boolean }>>("/auth/verify-transfer-otp", { code }),
   getTransferPinStatus: () =>
     api.get<ApiResponse<{ hasPin: boolean }>>("/auth/transfer-pin/status"),
   setupTransferPin: (pin: string, currentPin?: string) =>
-    api.post<ApiResponse<{ set: boolean }>>("/auth/transfer-pin/setup", { pin, ...(currentPin ? { currentPin } : {}) }),
+    api.post<ApiResponse<{ set: boolean }>>("/auth/transfer-pin/setup", { pin, ...(currentPin ? { currentPin } : {}) }, { timeout: 35000 }),
   verifyTransferPin: (pin: string) =>
     api.post<ApiResponse<{ verified: boolean }>>("/auth/transfer-pin/verify", { pin }),
 };
@@ -214,7 +214,7 @@ export const transfersApi = {
     amount: number;
     description: string;
     transferOtp: string;
-  }) => api.post<ApiResponse<Transfer>>("/transfers/internal", data),
+  }) => api.post<ApiResponse<Transfer>>("/transfers/internal", data, { timeout: 35000 }),
   domestic: (data: {
     fromAccountId: string;
     toAccountNumber: string;
@@ -224,7 +224,7 @@ export const transfersApi = {
     description: string;
     saveBeneficiary?: boolean;
     transferOtp: string;
-  }) => api.post<ApiResponse<Transfer>>("/transfers/domestic", data),
+  }) => api.post<ApiResponse<Transfer>>("/transfers/domestic", data, { timeout: 35000 }),
   international: (data: {
     fromAccountId: string;
     toAccountNumber: string;
@@ -236,7 +236,7 @@ export const transfersApi = {
     amount: number;
     description: string;
     transferOtp: string;
-  }) => api.post<ApiResponse<Transfer>>("/transfers/international", data),
+  }) => api.post<ApiResponse<Transfer>>("/transfers/international", data, { timeout: 35000 }),
   quote: (params: { fromCurrency: string; toCurrency: string; amount: number }) =>
     api.post<ApiResponse<FxQuote>>("/transfers/quote", params),
   getScheduled: () => api.get<ApiResponse<Transfer[]>>("/transfers/scheduled"),
@@ -278,15 +278,15 @@ export const loansApi = {
   get: (id: string) => api.get<ApiResponse<Loan>>(`/loans/${id}`),
   eligibility: () => api.get<ApiResponse<LoanEligibility>>("/loans/eligibility"),
   apply: (data: { type: string; amount: number; termMonths: number; accountId?: string }) =>
-    api.post<ApiResponse<Loan>>("/loans/apply", data),
+    api.post<ApiResponse<Loan>>("/loans/apply", data, { timeout: 35000 }),
   schedule: (id: string) =>
     api.get<ApiResponse<{ loan: Loan; schedule: AmortizationEntry[] }>>(`/loans/${id}/schedule`),
   repay: (id: string, amount: number) =>
     api.post<ApiResponse<{ loanId: string; amountPaid: number; remainingBalance: number }>>(`/loans/${id}/repay`, { amount }),
   saveDraft: (id: string, step: number, data: Record<string, unknown>) =>
-    api.patch<ApiResponse<Loan>>(`/loans/${id}/draft`, { step, data }),
+    api.patch<ApiResponse<Loan>>(`/loans/${id}/draft`, { step, data }, { timeout: 35000 }),
   submitApplication: (id: string) =>
-    api.post<ApiResponse<Loan>>(`/loans/${id}/submit`),
+    api.post<ApiResponse<Loan>>(`/loans/${id}/submit`, {}, { timeout: 35000 }),
   getApplicationData: (id: string) =>
     api.get<ApiResponse<{ loan: Loan; applicationData: Record<string, unknown> }>>(`/loans/${id}/application`),
   uploadDocument: (id: string, formData: FormData) =>
@@ -379,11 +379,11 @@ export const investmentsApi = {
 export const goalsApi = {
   list: () => api.get<ApiResponse<Goal[]>>("/goals"),
   create: (data: { name: string; targetAmount: number; emoji?: string; targetDate?: string }) =>
-    api.post<ApiResponse<Goal>>("/goals", data),
+    api.post<ApiResponse<Goal>>("/goals", data, { timeout: 35000 }),
   contribute: (id: string, amount: number, fromAccountId: string) =>
-    api.post<ApiResponse<{ goal: Goal; contributed: number; achieved: boolean }>>(`/goals/${id}/contribute`, { amount, fromAccountId }),
+    api.post<ApiResponse<{ goal: Goal; contributed: number; achieved: boolean }>>(`/goals/${id}/contribute`, { amount, fromAccountId }, { timeout: 35000 }),
   withdraw: (id: string, amount: number, toAccountId: string) =>
-    api.post<ApiResponse<{ goal: Goal; withdrawn: number }>>(`/goals/${id}/withdraw`, { amount, toAccountId }),
+    api.post<ApiResponse<{ goal: Goal; withdrawn: number }>>(`/goals/${id}/withdraw`, { amount, toAccountId }, { timeout: 35000 }),
 };
 
 export const analyticsApi = {
@@ -582,7 +582,7 @@ export const disputesApi = {
   list: () => api.get<ApiResponse<Dispute[]>>("/disputes"),
   get: (id: string) => api.get<ApiResponse<Dispute>>(`/disputes/${id}`),
   create: (data: { subject: string; description: string; transactionId?: string }) =>
-    api.post<ApiResponse<Dispute>>("/disputes", data),
+    api.post<ApiResponse<Dispute>>("/disputes", data, { timeout: 35000 }),
   close: (id: string) => api.patch<ApiResponse<Dispute>>(`/disputes/${id}/close`),
 };
 
@@ -590,7 +590,7 @@ export const supportApi = {
   listTickets: () => api.get<ApiResponse<SupportTicket[]>>("/support/tickets"),
   getTicket: (id: string) => api.get<ApiResponse<SupportTicket>>(`/support/tickets/${id}`),
   createTicket: (subject: string, body: string) =>
-    api.post<ApiResponse<SupportTicket>>("/support/tickets", { subject, body }),
+    api.post<ApiResponse<SupportTicket>>("/support/tickets", { subject, body }, { timeout: 35000 }),
   postMessage: (id: string, body: string) =>
     api.post<ApiResponse<SupportMessage>>(`/support/tickets/${id}/messages`, { body }),
   closeTicket: (id: string) => api.patch<ApiResponse<SupportTicket>>(`/support/tickets/${id}/close`),
@@ -622,9 +622,9 @@ export const cryptoApi = {
 
 export const depositsApi = {
   initiateBankTransfer: (data: { accountId: string; amount: number; senderName?: string; senderBank?: string }) =>
-    api.post<ApiResponse<{ deposit: Deposit; bankDetails: BankReceivingDetails }>>("/deposits/bank-transfer", data),
+    api.post<ApiResponse<{ deposit: Deposit; bankDetails: BankReceivingDetails }>>("/deposits/bank-transfer", data, { timeout: 35000 }),
   initiateCrypto: (data: { accountId: string; coin: string; amountGbp: number; priceGbp: number }) =>
-    api.post<ApiResponse<{ deposit: Deposit; walletAddress: string; network: string; coin: string; coinAmount: string; amountGbp: number }>>("/deposits/crypto", data),
+    api.post<ApiResponse<{ deposit: Deposit; walletAddress: string; network: string; coin: string; coinAmount: string; amountGbp: number }>>("/deposits/crypto", data, { timeout: 35000 }),
   list: () => api.get<ApiResponse<Deposit[]>>("/deposits"),
   get: (id: string) => api.get<ApiResponse<Deposit>>(`/deposits/${id}`),
   getSupportedCoins: () => api.get<ApiResponse<{ coin: string; network: string }[]>>("/deposits/coins"),
@@ -665,14 +665,15 @@ export const beneficiariesApi = {
     country?: string;
     currency?: string;
     isFavorite?: boolean;
-  }) => api.post<ApiResponse<Beneficiary>>("/beneficiaries", data),
+  }) => api.post<ApiResponse<Beneficiary>>("/beneficiaries", data, { timeout: 35000 }),
   update: (id: string, data: { nickname?: string; isFavorite?: boolean }) =>
     api.patch<ApiResponse<Beneficiary>>(`/beneficiaries/${id}`, data),
   delete: (id: string) => api.delete<ApiResponse<null>>(`/beneficiaries/${id}`),
   verify: (data: { accountNumber: string; bankCode: string }) =>
     api.post<ApiResponse<{ accountName: string; accountNumber: string; bankName: string; bankCode: string }>>(
       "/beneficiaries/verify",
-      data
+      data,
+      { timeout: 35000 }
     ),
 };
 
@@ -698,6 +699,7 @@ export const kycApi = {
   submit: (formData: FormData) =>
     api.post<ApiResponse<{ status: string; message: string }>>("/kyc/submit", formData, {
       headers: { "Content-Type": "multipart/form-data" },
+      timeout: 35000,
     }),
   getDocuments: () =>
     api.get<ApiResponse<{ status: string; documents: Record<string, string> | null }>>("/kyc/documents"),
