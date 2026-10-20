@@ -16,10 +16,31 @@ const schema = z.object({
 });
 type FormValues = z.infer<typeof schema>;
 
+const MAX_WARM_RETRIES = 4;
+
+function isColdStart(err: unknown): { yes: boolean; retryAfter: number } {
+  const e = err as {
+    response?: {
+      status?: number;
+      data?: { error?: { code?: string; retryAfter?: number } };
+    };
+  };
+  const code = e.response?.data?.error?.code;
+  const status = e.response?.status;
+  const yes =
+    code === "SYS_WARMING" ||
+    !e.response ||
+    status === 502 ||
+    status === 503 ||
+    status === 504;
+  return { yes, retryAfter: e.response?.data?.error?.retryAfter ?? 10 };
+}
+
 export default function ForgotPasswordPage() {
   const { t } = useLanguage();
   const [sent, setSent] = useState(false);
   const [apiError, setApiError] = useState("");
+  const [warmingUp, setWarmingUp] = useState(false);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -27,12 +48,29 @@ export default function ForgotPasswordPage() {
 
   async function onSubmit(data: FormValues) {
     setApiError("");
-    try {
-      await authApi.forgotPassword(data.email);
-      setSent(true);
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setApiError(msg || "Something went wrong. Please try again.");
+    setWarmingUp(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        await authApi.forgotPassword(data.email);
+        setWarmingUp(false);
+        setSent(true);
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUp(true);
+          await new Promise<void>((resolve) => setTimeout(resolve, retryAfter * 1000));
+          setWarmingUp(false);
+          continue;
+        }
+
+        setWarmingUp(false);
+        const e = err as { response?: { data?: { message?: string } } };
+        setApiError(e.response?.data?.message ?? "Something went wrong. Please try again.");
+        return;
+      }
     }
   }
 
@@ -70,7 +108,13 @@ export default function ForgotPasswordPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-6 space-y-6">
-        {apiError && (
+        {warmingUp && (
+          <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-sm">
+            <p className="text-sm text-amber-700 font-medium">Connecting to server, please wait…</p>
+          </div>
+        )}
+
+        {apiError && !warmingUp && (
           <div className="bg-red-50 border-l-4 border-[#DB0011] p-4 rounded-sm">
             <p className="text-sm text-[#DB0011] font-medium">{apiError}</p>
           </div>

@@ -147,7 +147,7 @@ export const authApi = {
   resendVerification: (email?: string) =>
     api.post<ApiResponse<{ message: string }>>("/auth/resend-verification", email ? { email } : {}),
   forgotPassword: (email: string) =>
-    api.post<ApiResponse<{ message: string }>>("/auth/forgot-password", { email }),
+    api.post<ApiResponse<{ message: string }>>("/auth/forgot-password", { email }, { timeout: 35000 }),
   resetPassword: (data: { email: string; code: string; newPassword: string }) =>
     api.post<ApiResponse<{ message: string }>>("/auth/reset-password", data),
   setup2FA: (method: "TOTP" | "EMAIL" | "BOTH" = "TOTP") =>
