@@ -134,7 +134,7 @@ export const authApi = {
     taxResidency?: string | string[];
     accountType?: string;
     ssn?: string;
-  }) => api.post<ApiResponse<{ accessToken: string; refreshToken: string; user: unknown }>>("/auth/register", data),
+  }) => api.post<ApiResponse<{ accessToken: string; refreshToken: string; user: unknown }>>("/auth/register", data, { timeout: 35000 }),
   sendPhoneOtp: () =>
     api.post<ApiResponse<{ message: string }>>("/auth/send-phone-otp", {}),
   verifyPhoneOtp: (code: string) =>

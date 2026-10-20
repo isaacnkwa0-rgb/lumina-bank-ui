@@ -92,6 +92,8 @@ const SOURCE_OPTIONS = [
   "Savings", "Inheritance", "Pension", "Other",
 ];
 
+const MAX_WARM_RETRIES = 4;
+
 const STORAGE_KEY = "lumina_onboarding";
 const STORAGE_TTL = 7 * 24 * 60 * 60 * 1000;
 
@@ -650,6 +652,7 @@ function Stage4({
   const { t } = useLanguage();
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [warmingUp, setWarmingUp] = useState(false);
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
@@ -666,50 +669,72 @@ function Stage4({
   async function handleNext() {
     if (!validate()) return;
     dispatch({ type: "SUBMITTING", value: true });
-    try {
-      const prefixDigits = state.phonePrefix.replace("+", "");
-      let rawPhone = state.phoneNumber.replace(/\s/g, "");
-      // Auto-strip country code if user accidentally included it (e.g. entered 234XXXXXXX with +234 prefix)
-      if (rawPhone.startsWith(prefixDigits) && rawPhone.slice(prefixDigits.length).length >= 7) {
-        rawPhone = rawPhone.slice(prefixDigits.length);
+    setWarmingUp(false);
+
+    const prefixDigits = state.phonePrefix.replace("+", "");
+    let rawPhone = state.phoneNumber.replace(/\s/g, "");
+    if (rawPhone.startsWith(prefixDigits) && rawPhone.slice(prefixDigits.length).length >= 7) {
+      rawPhone = rawPhone.slice(prefixDigits.length);
+    }
+    const phone = `${state.phonePrefix}${rawPhone}`;
+    const genderValue = ["MALE", "FEMALE", "OTHER"].includes(state.gender)
+      ? (state.gender as "MALE" | "FEMALE" | "OTHER")
+      : undefined;
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        const res = await authApi.register({
+          firstName: state.firstName,
+          lastName: state.lastName,
+          email: state.email,
+          phone,
+          password: state.password,
+          gender: genderValue,
+          dateOfBirth: state.dateOfBirth || undefined,
+          nationality: state.nationality || undefined,
+          countryOfResidence: state.countryOfResidence,
+          taxResidency: state.taxResidency ? [state.taxResidency] : undefined,
+          accountType: state.accountType || undefined,
+          ssn: state.ssn || undefined,
+        });
+        const data = res.data.data as { accessToken: string; refreshToken: string; user: { firstName: string } };
+        setToken(data.accessToken);
+        setRefreshToken(data.refreshToken);
+        setUser(data.user as Parameters<typeof setUser>[0]);
+        setWarmingUp(false);
+        dispatch({ type: "SUBMITTING", value: false });
+        dispatch({ type: "COMPLETE", step: 4 });
+        dispatch({ type: "NEXT" });
+        return;
+      } catch (err: unknown) {
+        const e = err as {
+          response?: {
+            status?: number;
+            data?: { error?: { code?: string; retryAfter?: number; message?: string }; message?: string };
+          };
+        };
+        const code = e.response?.data?.error?.code;
+        const status = e.response?.status;
+        const cold = code === "SYS_WARMING" || !e.response || status === 502 || status === 503 || status === 504;
+
+        if (cold && attempt < MAX_WARM_RETRIES) {
+          const delay = (e.response?.data?.error?.retryAfter ?? 10) * 1000;
+          setWarmingUp(true);
+          await new Promise<void>((resolve) => setTimeout(resolve, delay));
+          setWarmingUp(false);
+          continue;
+        }
+
+        const errData = e.response?.data;
+        const serverMsg: string = errData?.error?.message ?? errData?.message ?? "";
+        const msg = serverMsg.toLowerCase().includes("email")
+          ? "This email address is already registered."
+          : serverMsg.toLowerCase().includes("phone")
+          ? "Please enter a valid phone number without the country code."
+          : serverMsg || "Something went wrong. Please check your details and try again.";
+        dispatch({ type: "API_ERROR", message: msg });
+        return;
       }
-      const phone = `${state.phonePrefix}${rawPhone}`;
-      // Backend enum only accepts MALE | FEMALE | OTHER
-      const genderValue = ["MALE", "FEMALE", "OTHER"].includes(state.gender)
-        ? (state.gender as "MALE" | "FEMALE" | "OTHER")
-        : undefined;
-      const res = await authApi.register({
-        firstName: state.firstName,
-        lastName: state.lastName,
-        email: state.email,
-        phone,
-        password: state.password,
-        gender: genderValue,
-        dateOfBirth: state.dateOfBirth || undefined,
-        nationality: state.nationality || undefined,
-        countryOfResidence: state.countryOfResidence,
-        taxResidency: state.taxResidency ? [state.taxResidency] : undefined,
-        accountType: state.accountType || undefined,
-        ssn: state.ssn || undefined,
-      });
-      const data = res.data.data as { accessToken: string; refreshToken: string; user: { firstName: string } };
-      setToken(data.accessToken);
-      setRefreshToken(data.refreshToken);
-      setUser(data.user as Parameters<typeof setUser>[0]);
-      dispatch({ type: "SUBMITTING", value: false });
-      dispatch({ type: "COMPLETE", step: 4 });
-      dispatch({ type: "NEXT" });
-    } catch (err: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const errData = (err as any)?.response?.data;
-      const serverMsg: string = errData?.error?.message ?? errData?.message ?? "";
-      // Map common server errors to friendly messages
-      const msg = serverMsg.toLowerCase().includes("email")
-        ? "This email address is already registered."
-        : serverMsg.toLowerCase().includes("phone")
-        ? "Please enter a valid phone number without the country code."
-        : serverMsg || "Something went wrong. Please check your details and try again.";
-      dispatch({ type: "API_ERROR", message: msg });
     }
   }
 
@@ -720,7 +745,13 @@ function Stage4({
         <p className="text-sm text-[#767676] mt-1">{t("onboarding.contact.subtitle")}</p>
       </div>
 
-      {state.apiError && (
+      {warmingUp && (
+        <div className="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-sm">
+          <p className="text-sm text-amber-700 font-medium">Connecting to server, please wait…</p>
+        </div>
+      )}
+
+      {state.apiError && !warmingUp && (
         <div className="bg-red-50 border-l-4 border-[#DB0011] p-3 rounded-sm" role="alert">
           <p className="text-sm text-[#DB0011]">{state.apiError}</p>
         </div>
