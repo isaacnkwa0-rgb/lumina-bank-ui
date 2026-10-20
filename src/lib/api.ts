@@ -149,7 +149,7 @@ export const authApi = {
   forgotPassword: (email: string) =>
     api.post<ApiResponse<{ message: string }>>("/auth/forgot-password", { email }, { timeout: 35000 }),
   resetPassword: (data: { email: string; code: string; newPassword: string }) =>
-    api.post<ApiResponse<{ message: string }>>("/auth/reset-password", data),
+    api.post<ApiResponse<{ message: string }>>("/auth/reset-password", data, { timeout: 35000 }),
   setup2FA: (method: "TOTP" | "EMAIL" | "BOTH" = "TOTP") =>
     api.post<ApiResponse<{ method: string; qrCode?: string; secret?: string; maskedEmail?: string }>>("/auth/2fa/setup", { method }),
   enable2FA: (token: string, method?: "TOTP" | "EMAIL" | "BOTH") =>
