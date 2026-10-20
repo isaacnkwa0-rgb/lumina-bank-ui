@@ -17,10 +17,32 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
+const MAX_WARM_RETRIES = 4;
+
+function isColdStart(err: unknown): { yes: boolean; retryAfter: number } {
+  const e = err as {
+    response?: {
+      status?: number;
+      data?: { error?: { code?: string; retryAfter?: number } };
+    };
+  };
+  const code = e.response?.data?.error?.code;
+  const status = e.response?.status;
+  const yes =
+    code === "SYS_WARMING" ||
+    !e.response ||
+    status === 502 ||
+    status === 503 ||
+    status === 504;
+  const retryAfter = e.response?.data?.error?.retryAfter ?? 10;
+  return { yes, retryAfter };
+}
+
 export default function LoginPage() {
   const { login } = useAuth();
   const { t } = useLanguage();
   const [apiError, setApiError] = useState<string>("");
+  const [warmingUp, setWarmingUp] = useState(false);
 
   const {
     register,
@@ -32,13 +54,31 @@ export default function LoginPage() {
 
   async function onSubmit(data: LoginForm) {
     setApiError("");
-    try {
-      await login(data.identifier.trim(), data.password);
-    } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || t("auth.login.invalidCredentials");
-      setApiError(message);
+    setWarmingUp(false);
+
+    for (let attempt = 0; attempt <= MAX_WARM_RETRIES; attempt++) {
+      try {
+        await login(data.identifier.trim(), data.password);
+        return;
+      } catch (err: unknown) {
+        const { yes, retryAfter } = isColdStart(err);
+
+        if (yes && attempt < MAX_WARM_RETRIES) {
+          setWarmingUp(true);
+          await new Promise<void>((resolve) =>
+            setTimeout(resolve, retryAfter * 1000)
+          );
+          setWarmingUp(false);
+          continue;
+        }
+
+        setWarmingUp(false);
+        const e = err as { response?: { data?: { message?: string } } };
+        const message =
+          e.response?.data?.message ?? t("auth.login.invalidCredentials");
+        setApiError(message);
+        return;
+      }
     }
   }
 
@@ -54,7 +94,15 @@ export default function LoginPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-6 space-y-6">
-        {apiError && (
+        {warmingUp && (
+          <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-sm">
+            <p className="text-sm text-amber-700 font-medium">
+              Connecting to server, please wait…
+            </p>
+          </div>
+        )}
+
+        {apiError && !warmingUp && (
           <div className="bg-red-50 border-l-4 border-[#DB0011] p-4 rounded-sm">
             <p className="text-sm text-[#DB0011] font-medium">{apiError}</p>
           </div>

@@ -119,7 +119,7 @@ export const authApi = {
     api.post<ApiResponse<
       | { requiresTwoFactor: true; tempToken: string; twoFactorMethod: string }
       | { requiresTwoFactor: false; accessToken: string; refreshToken: string; expiresIn: number; user: unknown }
-    >>("/auth/login", { identifier, password }),
+    >>("/auth/login", { identifier, password }, { timeout: 35000 }),
   register: (data: {
     firstName: string;
     lastName: string;
